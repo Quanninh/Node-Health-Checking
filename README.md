@@ -1,24 +1,26 @@
 # Node-Health-Checking
 
 ## Workflow
+```
 [Many Computers (Nodes)]
-↓
-send data (CPU, Memory)
-↓
+        ↓
+  send data (CPU, Memory)
+        ↓
 [Central Server]
-↓
-process + store data
-↓
+        ↓
+  process + store data
+        ↓
 [GUI Dashboard]
-↓
-show status to users
+        ↓
+  show status to users
+```
 
 
 ## Directory structure
-monitoring-system/
+monitoring-system/monitoring-system/
 │
-|── server/
-│   ├── src/main/java/com/monitoring/	
+├── server/
+│   ├── src/main/java/com/monitoring/
 │   │   ├── MonitoringApplication.java
 │   │   │
 │   │   ├── controller/
@@ -39,7 +41,7 @@ monitoring-system/
 │   │
 │   ├── src/main/resources/
 │   │   ├── application.properties
-│   │   └── data.sql 
+│   │   └── data.sql
 │   │
 │   └── pom.xml
 │
