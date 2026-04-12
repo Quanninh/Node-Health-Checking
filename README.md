@@ -17,6 +17,7 @@
 
 
 ## Directory structure
+```
 monitoring-system/monitoring-system/
 │
 ├── server/
@@ -50,3 +51,4 @@ monitoring-system/monitoring-system/
 │
 └── dashboard/
     └── index.html
+```
