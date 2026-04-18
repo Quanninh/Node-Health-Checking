@@ -7,8 +7,7 @@ WORKDIR /app
 # Copy all files into container
 COPY . .
 
-# Make mvnw executable
-RUN chmod +x mvnw
+RUN apt-get update && apt-get install -y maven
 
 # Build the Spring Boot app
 RUN mvnw clean package
