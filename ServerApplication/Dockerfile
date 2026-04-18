@@ -1,19 +1,22 @@
-# Use Java 17 runtime
-FROM maven:3.9.9-eclipse-temurin-21
+# ===== Build stage =====
+FROM maven:3.9.9-eclipse-temurin-21 AS build
 
-# Set working directory
+WORKDIR /app/ServerApplication
+
+# Copy only project folder
+COPY ServerApplication/ .
+
+RUN mvn clean package -DskipTests
+
+
+# ===== Run stage =====
+FROM eclipse-temurin:21-jdk
+
 WORKDIR /app
 
-# Copy all files into container
-COPY . .
+# Copy built jar (correct nested path)
+COPY --from=build /app/ServerApplication/target/ServerApplication-0.0.1-SNAPSHOT.jar app.jar
 
-RUN apt-get update && apt-get install -y maven
-
-# Build the Spring Boot app
-RUN mvn clean package
-
-# Expose port (Render uses PORT env)
 EXPOSE 8080
 
-# Run the jar file
-CMD ["sh", "-c", "java -jar target/*.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
