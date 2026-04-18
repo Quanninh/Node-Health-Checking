@@ -11,7 +11,7 @@ COPY . .
 RUN chmod +x mvnw
 
 # Build the Spring Boot app
-RUN ./mvnw clean package
+RUN mvnw clean package
 
 # Expose port (Render uses PORT env)
 EXPOSE 8080
