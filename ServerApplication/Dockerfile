@@ -1,5 +1,5 @@
 # Use Java 17 runtime
-FROM eclipse-temurin:17-jdk
+FROM maven:3.9.9-eclipse-temurin-21
 
 # Set working directory
 WORKDIR /app
