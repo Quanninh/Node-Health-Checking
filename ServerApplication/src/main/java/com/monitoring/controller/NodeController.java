@@ -22,7 +22,7 @@ public class NodeController {
     public String receiveHeartbeat(@RequestBody Node node, HttpServletRequest request){
         // get sender IP address
         String ipAddress = request.getRemoteAddr();
-        node.setIpAddress(ipAddress);
+        //node.setIpAddress(ipAddress);
 
         // forward to service layer
         nodeService.processHeartbeat(node);
@@ -37,7 +37,7 @@ public class NodeController {
     }
 
     // Get node by ID
-    @GetMapping("/nodes/{id")
+    @GetMapping("/nodes/{id}")
     public Node getNodeById(@PathVariable String id){
         return nodeService.getNodeById(id);
     }
