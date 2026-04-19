@@ -41,4 +41,10 @@ public class NodeController {
     public Node getNodeById(@PathVariable String id){
         return nodeService.getNodeById(id);
     }
+
+    // Get node history 
+    @GetMapping("/nodes/{id}/history")
+    public List<NodeHistory> getNodeHistory(@PathVariable String id){
+        return nodeService.getNodeHistory(id);
+    }
 }

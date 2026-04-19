@@ -28,4 +28,8 @@ public class NodeService {
     public Node getNodeById(String id){
         return nodeRepository.findById(id).orElse(null);
     }
+
+    public List<NodeHistory> getNodeHistory(String id){
+        return historyRepository.findByNodeId(id);
+    }
 }
