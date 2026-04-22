@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Node Monitoring Dashboard</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<header>
+    Node Monitoring Dashboard
+</header>
+
+<div class="container">
+
+    <!-- ALERT -->
+    <div id="alertBox" class="alert hidden"></div>
+
+    <!-- CARDS -->
+    <div class="cards">
+        <div class="card">
+            <h2 id="totalNodes">0</h2>
+            <p>Total Nodes</p>
+        </div>
+        <div class="card green">
+            <h2 id="upNodes">0</h2>
+            <p>UP</p>
+        </div>
+        <div class="card red">
+            <h2 id="downNodes">0</h2>
+            <p>DOWN</p>
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <table>
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>IP</th>
+            <th>CPU</th>
+            <th>Memory</th>
+            <th>Status</th>
+        </tr>
+        </thead>
+        <tbody id="nodeTable"></tbody>
+    </table>
+
+    <!-- CHART -->
+    <div class="chart-container">
+        <h3 id="chartTitle">Select a node to view CPU history</h3>
+        <canvas id="cpuChart"></canvas>
+    </div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
