@@ -19,6 +19,8 @@ public class NodeService {
 
     @Autowired
     private NodeHistoryRepository historyRepository;
+
+    // Implement this method
     public void processHeartbeat(Node node){}
 
     public List<Node> getAllNodes(){
