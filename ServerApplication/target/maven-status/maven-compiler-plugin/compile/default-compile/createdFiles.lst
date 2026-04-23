@@ -1,1 +1,8 @@
+com/monitoring/repository/NodeHistoryRepository.class
+com/monitoring/repository/NodeRepository.class
+com/monitoring/model/NodeHistory.class
+com/monitoring/controller/NodeController.class
+com/monitoring/config/WebConfig.class
+com/monitoring/service/NodeService.class
 com/monitoring/ServerApplication/ServerApplication.class
+com/monitoring/model/Node.class
