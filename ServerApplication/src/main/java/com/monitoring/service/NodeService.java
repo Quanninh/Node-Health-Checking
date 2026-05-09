@@ -21,17 +21,30 @@ public class NodeService {
     private NodeHistoryRepository historyRepository;
 
     // Implement this method
-    public void processHeartbeat(Node node){}
+    public void processHeartbeat(Node node) {
+        node.setLastHeartbeat(LocalDateTime.now());
+        node.setStatus("UP");
 
-    public List<Node> getAllNodes(){
+        nodeRepository.save(node);
+
+        NodeHistory history = new NodeHistory();
+        history.setNodeId(node.getId());
+        history.setCpuUsage(node.getCpuUsage());
+        history.setMemoryUsage(node.getMemoryUsage());
+        history.setTimestamp(LocalDateTime.now());
+
+        historyRepository.save(history);
+    }
+
+    public List<Node> getAllNodes() {
         return nodeRepository.findAll();
     }
 
-    public Node getNodeById(String id){
+    public Node getNodeById(String id) {
         return nodeRepository.findById(id).orElse(null);
     }
 
-    public List<NodeHistory> getNodeHistory(String id){
+    public List<NodeHistory> getNodeHistory(String id) {
         return historyRepository.findByNodeId(id);
     }
 }

@@ -19,7 +19,7 @@ public class NodeController {
 
     // Hearbeat endpoint
     @PostMapping("/heartbeat")
-    public String receiveHeartbeat(@RequestBody Node node, HttpServletRequest request){
+    public String receiveHeartbeat(@RequestBody Node node, HttpServletRequest request) {
         // get sender IP address
         String ipAddress = request.getRemoteAddr();
         node.setIpAddress(ipAddress);
@@ -31,20 +31,20 @@ public class NodeController {
     }
 
     // Get all nodes
-    @GetMapping("/node")
-    public List<Node> getAllNodes(){
+    @GetMapping("/nodes")
+    public List<Node> getAllNodes() {
         return nodeService.getAllNodes();
     }
 
     // Get node by ID
     @GetMapping("/nodes/{id}")
-    public Node getNodeById(@PathVariable String id){
+    public Node getNodeById(@PathVariable String id) {
         return nodeService.getNodeById(id);
     }
 
-    // Get node history 
+    // Get node history
     @GetMapping("/nodes/{id}/history")
-    public List<NodeHistory> getNodeHistory(@PathVariable String id){
+    public List<NodeHistory> getNodeHistory(@PathVariable String id) {
         return nodeService.getNodeHistory(id);
     }
 }
