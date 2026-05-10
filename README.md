@@ -20,9 +20,9 @@
 ```
 monitoring-system/monitoring-system/
 │
-├── server/
+├── ServerApplication/
 │   ├── src/main/java/com/monitoring/
-│   │   ├── MonitoringApplication.java
+│   │   ├── ServerApplication.java
 │   │   │
 │   │   ├── controller/
 │   │   │   └── NodeController.java
@@ -32,7 +32,7 @@ monitoring-system/monitoring-system/
 │   │   │
 │   │   ├── repository/
 │   │   │   └── NodeRepository.java
-│   │   │
+│   │   │   └── NodeHistoryRepository.java
 │   │   ├── model/
 │   │   │   ├── Node.java
 │   │   │   └── NodeHistory.java
@@ -52,3 +52,6 @@ monitoring-system/monitoring-system/
 └── dashboard/
     └── index.html
 ```
+
+## Web service for running server on the cloud
+https://node-health-checking-10.onrender.com
