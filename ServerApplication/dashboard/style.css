@@ -15,6 +15,24 @@ header {
     padding: 20px;
 }
 
+.connection-status {
+    padding: 12px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    background: #1e293b;
+    color: #cbd5e1;
+}
+
+.connection-status.connected {
+    background: #064e3b;
+    color: white;
+}
+
+.connection-status.disconnected {
+    background: #7f1d1d;
+    color: white;
+}
+
 .cards {
     display: flex;
     gap: 15px;
@@ -52,6 +70,10 @@ tr:hover {
     cursor: pointer;
 }
 
+tr.selected-row {
+    background: #1d4ed8;
+}
+
 .status-up { color: #22c55e; }
 .status-down { color: #ef4444; }
 
@@ -70,4 +92,10 @@ tr:hover {
     background: #1e293b;
     padding: 20px;
     border-radius: 10px;
+}
+
+@media (max-width: 900px) {
+    .cards {
+        flex-direction: column;
+    }
 }

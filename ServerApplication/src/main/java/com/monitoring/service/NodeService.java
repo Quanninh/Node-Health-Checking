@@ -5,14 +5,15 @@ import com.monitoring.model.NodeHistory;
 import com.monitoring.repository.NodeRepository;
 import com.monitoring.repository.NodeHistoryRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-
 public class NodeService {
+    private static final long NODE_TIMEOUT_SECONDS = 10;
 
     @Autowired
     private NodeRepository nodeRepository;
@@ -46,5 +47,20 @@ public class NodeService {
 
     public List<NodeHistory> getNodeHistory(String id) {
         return historyRepository.findByNodeId(id);
+    }
+
+    @Scheduled(fixedRate = 5000)
+    public void checkNodeStatus() {
+        LocalDateTime cutoffTime = LocalDateTime.now().minusSeconds(NODE_TIMEOUT_SECONDS);
+        List<Node> nodes = nodeRepository.findAll();
+
+        for (Node node : nodes) {
+            LocalDateTime lastHeartbeat = node.getLastHeartbeat();
+
+            if (lastHeartbeat != null && lastHeartbeat.isBefore(cutoffTime) && !"DOWN".equals(node.getStatus())) {
+                node.setStatus("DOWN");
+                nodeRepository.save(node);
+            }
+        }
     }
 }
