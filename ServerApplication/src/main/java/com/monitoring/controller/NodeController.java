@@ -1,30 +1,39 @@
 package com.monitoring.controller;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.monitoring.model.Node;
 import com.monitoring.model.NodeHistory;
 import com.monitoring.service.NodeService;
-import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api")
 @CrossOrigin(origins = "*")
 
 public class NodeController {
+
     @Autowired
     private NodeService nodeService;
 
     // Hearbeat endpoint
     @PostMapping("/heartbeat")
     public String receiveHeartbeat(@RequestBody Node node, HttpServletRequest request) {
-        // get sender IP address
+        // Get sender IP address
         String ipAddress = request.getRemoteAddr();
         node.setIpAddress(ipAddress);
 
-        // forward to service layer
+        // Forward to service layer
         nodeService.processHeartbeat(node);
 
         return "Heartbeat received from " + ipAddress;

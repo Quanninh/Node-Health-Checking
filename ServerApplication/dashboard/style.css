@@ -47,8 +47,12 @@ header {
     text-align: center;
 }
 
-.card.green { background: #064e3b; }
-.card.red { background: #7f1d1d; }
+.card.green {
+    background: #064e3b;
+}
+.card.red {
+    background: #7f1d1d;
+}
 
 table {
     width: 100%;
@@ -60,7 +64,8 @@ th {
     background: #1e293b;
 }
 
-td, th {
+td,
+th {
     padding: 10px;
     text-align: center;
 }
@@ -74,8 +79,12 @@ tr.selected-row {
     background: #1d4ed8;
 }
 
-.status-up { color: #22c55e; }
-.status-down { color: #ef4444; }
+.status-up {
+    color: #22c55e;
+}
+.status-down {
+    color: #ef4444;
+}
 
 .alert {
     padding: 15px;
