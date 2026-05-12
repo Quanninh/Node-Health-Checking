@@ -20,11 +20,10 @@ public class NodeAgent {
     // =========================
     // CONFIGURATION
     // =========================
-    private static final String SERVER_URL
-            = "https://node-health-checking-10.onrender.com/heartbeat";
-
+    // private static final String SERVER_URL =
+    // "https://node-health-checking-10.onrender.com/api/heartbeat";
+    private static final String SERVER_URL = "http://localhost:6789/api/heartbeat";
     private static final int HEARTBEAT_INTERVAL_SECONDS = 10;
-
     private static final int MAX_RETRIES = 3;
 
     // =========================
@@ -36,16 +35,14 @@ public class NodeAgent {
     // =========================
     // HTTP CLIENT
     // =========================
-    private static final HttpClient httpClient
-            = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(5))
-                    .build();
+    private static final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
 
     // =========================
     // MAIN
     // =========================
     public static void main(String[] args) {
-
         initializeNodeInfo();
 
         System.out.println("====================================");
@@ -62,7 +59,6 @@ public class NodeAgent {
     // INITIALIZATION
     // =========================
     private static void initializeNodeInfo() {
-
         try {
             hostname = InetAddress.getLocalHost().getHostName();
         } catch (Exception e) {
@@ -73,8 +69,7 @@ public class NodeAgent {
         if (argsProvided()) {
             nodeId = getArgumentNodeId();
         } else {
-            nodeId = hostname + "-"
-                    + UUID.randomUUID().toString().substring(0, 8);
+            nodeId = hostname + "-" + UUID.randomUUID().toString().substring(0, 8);
         }
     }
 
@@ -97,12 +92,9 @@ public class NodeAgent {
     // MONITORING LOOP
     // =========================
     private static void startMonitoringLoop() {
-
-        ScheduledExecutorService scheduler
-                = Executors.newScheduledThreadPool(1);
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
         scheduler.scheduleAtFixedRate(() -> {
-
             try {
 
                 double cpuUsage = getCpuUsage();
@@ -111,16 +103,13 @@ public class NodeAgent {
                 logMetrics(cpuUsage, memoryUsage);
 
                 sendHeartbeatWithRetry(cpuUsage, memoryUsage);
-
             } catch (Exception e) {
 
                 System.out.println(
                         "[" + LocalDateTime.now() + "] "
-                        + "Unexpected Error: "
-                        + e.getMessage()
-                );
+                                + "Unexpected Error: "
+                                + e.getMessage());
             }
-
         }, 0, HEARTBEAT_INTERVAL_SECONDS, TimeUnit.SECONDS);
     }
 
@@ -128,21 +117,14 @@ public class NodeAgent {
     // METRICS
     // =========================
     private static double getCpuUsage() {
-
-        OperatingSystemMXBean osBean
-                = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+        OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
 
         double cpuLoad = osBean.getCpuLoad();
 
-        if (cpuLoad < 0) {
-            return 0.0;
-        }
-
-        return cpuLoad * 100;
+        return cpuLoad < 0 ? 0 : cpuLoad * 100;
     }
 
     private static double getMemoryUsage() {
-
         Runtime runtime = Runtime.getRuntime();
 
         long totalMemory = runtime.totalMemory();
@@ -156,38 +138,18 @@ public class NodeAgent {
     // =========================
     // HEARTBEAT
     // =========================
-    private static void sendHeartbeatWithRetry(
-            double cpuUsage,
-            double memoryUsage
-    ) {
-
+    private static void sendHeartbeatWithRetry(double cpuUsage, double memoryUsage) {
         for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-
             try {
-
                 sendHeartbeat(cpuUsage, memoryUsage);
-
-                System.out.println(
-                        "[" + LocalDateTime.now() + "] "
-                        + "Heartbeat sent successfully."
-                );
-
+                System.out.println("[" + LocalDateTime.now() + "] Heartbeat sent successfully.");
                 return;
-
             } catch (Exception e) {
-
                 System.out.println(
-                        "[" + LocalDateTime.now() + "] "
-                        + "Heartbeat failed (Attempt "
-                        + attempt + "/" + MAX_RETRIES + ")"
-                );
+                        "[" + LocalDateTime.now() + "] Heartbeat failed (Attempt " + attempt + "/" + MAX_RETRIES + ")");
 
                 if (attempt == MAX_RETRIES) {
-
-                    System.out.println(
-                            "[" + LocalDateTime.now() + "] "
-                            + "Max retries reached."
-                    );
+                    System.out.println("[" + LocalDateTime.now() + "] Max retries reached.");
                 }
 
                 try {
@@ -198,11 +160,7 @@ public class NodeAgent {
         }
     }
 
-    private static void sendHeartbeat(
-            double cpuUsage,
-            double memoryUsage
-    ) throws IOException, InterruptedException {
-
+    private static void sendHeartbeat(double cpuUsage, double memoryUsage) throws IOException, InterruptedException {
         String json = createHeartbeatJson(cpuUsage, memoryUsage);
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -212,52 +170,34 @@ public class NodeAgent {
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
 
-        HttpResponse<String> response
-                = httpClient.send(
-                        request,
-                        HttpResponse.BodyHandlers.ofString()
-                );
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
-        System.out.println(
-                "[" + LocalDateTime.now() + "] "
-                + "Server Response: "
-                + response.statusCode()
-        );
+        System.out.println("[" + LocalDateTime.now() + "] Server Response: " + response.statusCode());
     }
 
     // =========================
     // JSON CREATION
     // =========================
-    private static String createHeartbeatJson(
-            double cpuUsage,
-            double memoryUsage
-    ) {
-
+    private static String createHeartbeatJson(double cpuUsage, double memoryUsage) {
         return String.format("""
                 {
-                    "nodeId": "%s",
-                    "hostname": "%s",
+                    "id": "%s",
                     "cpuUsage": %.2f,
-                    "memoryUsage": %.2f,
-                    "timestamp": "%s"
+                    "memoryUsage": %.2f
                 }
                 """,
                 nodeId,
-                hostname,
+                // hostname,
                 cpuUsage,
-                memoryUsage,
-                LocalDateTime.now()
+                memoryUsage
+        // LocalDateTime.now()
         );
     }
 
     // =========================
     // LOGGING
     // =========================
-    private static void logMetrics(
-            double cpuUsage,
-            double memoryUsage
-    ) {
-
+    private static void logMetrics(double cpuUsage, double memoryUsage) {
         System.out.println("------------------------------------");
         System.out.println("Time       : " + LocalDateTime.now());
         System.out.println("Node ID    : " + nodeId);
@@ -265,4 +205,5 @@ public class NodeAgent {
         System.out.printf("Memory Use : %.2f%%%n", memoryUsage);
         System.out.println("------------------------------------");
     }
+
 }

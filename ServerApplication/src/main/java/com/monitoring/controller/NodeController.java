@@ -20,7 +20,6 @@ import jakarta.servlet.http.HttpServletRequest;
 @RestController
 @RequestMapping("/api")
 @CrossOrigin(origins = "*")
-
 public class NodeController {
 
     @Autowired
@@ -29,31 +28,27 @@ public class NodeController {
     // Hearbeat endpoint
     @PostMapping("/heartbeat")
     public String receiveHeartbeat(@RequestBody Node node, HttpServletRequest request) {
-        // Get sender IP address
         String ipAddress = request.getRemoteAddr();
         node.setIpAddress(ipAddress);
 
-        // Forward to service layer
         nodeService.processHeartbeat(node);
 
         return "Heartbeat received from " + ipAddress;
     }
 
-    // Get all nodes
     @GetMapping("/nodes")
     public List<Node> getAllNodes() {
         return nodeService.getAllNodes();
     }
 
-    // Get node by ID
     @GetMapping("/nodes/{id}")
     public Node getNodeById(@PathVariable String id) {
         return nodeService.getNodeById(id);
     }
 
-    // Get node history
     @GetMapping("/nodes/{id}/history")
     public List<NodeHistory> getNodeHistory(@PathVariable String id) {
         return nodeService.getNodeHistory(id);
     }
+
 }

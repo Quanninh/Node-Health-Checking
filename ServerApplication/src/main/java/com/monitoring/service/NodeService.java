@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 
 import com.monitoring.model.Node;
 import com.monitoring.model.NodeHistory;
-import com.monitoring.repository.NodeHistoryRepository;
+import com.monitoring.repository.HistoryRepository;
 import com.monitoring.repository.NodeRepository;
 
 @Service
@@ -21,9 +21,8 @@ public class NodeService {
     private NodeRepository nodeRepository;
 
     @Autowired
-    private NodeHistoryRepository historyRepository;
+    private HistoryRepository historyRepository;
 
-    // Implement this method
     public void processHeartbeat(Node node) {
         node.setLastHeartbeat(LocalDateTime.now());
         node.setStatus("UP");
@@ -59,7 +58,7 @@ public class NodeService {
         for (Node node : nodes) {
             LocalDateTime lastHeartbeat = node.getLastHeartbeat();
 
-            if (lastHeartbeat != null && lastHeartbeat.isBefore(cutoffTime) && !"DOWN".equals(node.getStatus())) {
+            if (lastHeartbeat != null && lastHeartbeat.isBefore(cutoffTime) && !node.getStatus().equals("DOWN")) {
                 node.setStatus("DOWN");
                 nodeRepository.save(node);
             }

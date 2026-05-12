@@ -1,4 +1,5 @@
-const API = "https://node-health-checking-10.onrender.com/api/nodes";
+// const API = "https://node-health-checking-10.onrender.com/api/nodes";
+const API = "http://localhost:6789/api/nodes";
 
 let chart;
 let selectedNodeId = null;
@@ -58,18 +59,11 @@ function updateTable(nodes) {
             selectRow(row, node.id);
             loadHistory(node.id);
         };
+
         table.appendChild(row);
     });
 
     window.scrollTo(scrollX, scrollY);
-}
-
-function selectRow(row, nodeId) {
-    selectedNodeId = nodeId;
-    document.querySelectorAll("#nodeTable tr").forEach((tableRow) => {
-        tableRow.classList.remove("selected-row");
-    });
-    row.classList.add("selected-row");
 }
 
 function updateCards(nodes) {
@@ -91,6 +85,14 @@ function checkAlerts(nodes) {
     } else {
         alertBox.classList.add("hidden");
     }
+}
+
+function selectRow(row, nodeId) {
+    selectedNodeId = nodeId;
+    document.querySelectorAll("#nodeTable tr").forEach((tableRow) => {
+        tableRow.classList.remove("selected-row");
+    });
+    row.classList.add("selected-row");
 }
 
 async function loadHistory(nodeId) {

@@ -1,5 +1,7 @@
 # Node-Health-Checking
 
+Run Project: `mvn spring-boot:run`
+
 ## Workflow
 ```
 [Many Computers (Nodes)]
