@@ -1,4 +1,4 @@
-import com.sun.management.OperatingSystemMXBean;
+// import com.sun.management.OperatingSystemMXBean;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
@@ -20,8 +20,7 @@ public class NodeAgent {
     // CONFIGURATION
     // =========================
 
-    private static final String SERVER_URL =
-            "https://node-health-checking-10.onrender.com/heartbeat";
+    private static final String SERVER_URL = "https://node-health-checking-10.onrender.com/heartbeat";
 
     private static final int HEARTBEAT_INTERVAL_SECONDS = 10;
 
@@ -38,10 +37,9 @@ public class NodeAgent {
     // HTTP CLIENT
     // =========================
 
-    private static final HttpClient httpClient =
-            HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(5))
-                    .build();
+    private static final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
 
     // =========================
     // MAIN
@@ -103,8 +101,7 @@ public class NodeAgent {
 
     private static void startMonitoringLoop() {
 
-        ScheduledExecutorService scheduler =
-                Executors.newScheduledThreadPool(1);
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
         scheduler.scheduleAtFixedRate(() -> {
 
@@ -122,8 +119,7 @@ public class NodeAgent {
                 System.out.println(
                         "[" + LocalDateTime.now() + "] "
                                 + "Unexpected Error: "
-                                + e.getMessage()
-                );
+                                + e.getMessage());
             }
 
         }, 0, HEARTBEAT_INTERVAL_SECONDS, TimeUnit.SECONDS);
@@ -135,19 +131,16 @@ public class NodeAgent {
 
     private static double getCpuUsage() {
 
-    OperatingSystemMXBean osBean =
-            (OperatingSystemMXBean)
-                    ManagementFactory.getOperatingSystemMXBean();
+        OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
 
-    double cpuLoad = osBean.getCpuLoad();
+        double cpuLoad = osBean.getCpuLoad();
 
-    if (cpuLoad < 0) {
-        return 0.0;
+        if (cpuLoad < 0) {
+            return 0.0;
+        }
+
+        return cpuLoad * 100;
     }
-
-    return cpuLoad * 100;
-    }
-
 
     private static double getMemoryUsage() {
 
@@ -167,8 +160,7 @@ public class NodeAgent {
 
     private static void sendHeartbeatWithRetry(
             double cpuUsage,
-            double memoryUsage
-    ) {
+            double memoryUsage) {
 
         for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
 
@@ -178,8 +170,7 @@ public class NodeAgent {
 
                 System.out.println(
                         "[" + LocalDateTime.now() + "] "
-                                + "Heartbeat sent successfully."
-                );
+                                + "Heartbeat sent successfully.");
 
                 return;
 
@@ -188,15 +179,13 @@ public class NodeAgent {
                 System.out.println(
                         "[" + LocalDateTime.now() + "] "
                                 + "Heartbeat failed (Attempt "
-                                + attempt + "/" + MAX_RETRIES + ")"
-                );
+                                + attempt + "/" + MAX_RETRIES + ")");
 
                 if (attempt == MAX_RETRIES) {
 
                     System.out.println(
                             "[" + LocalDateTime.now() + "] "
-                                    + "Max retries reached."
-                    );
+                                    + "Max retries reached.");
                 }
 
                 try {
@@ -209,8 +198,7 @@ public class NodeAgent {
 
     private static void sendHeartbeat(
             double cpuUsage,
-            double memoryUsage
-    ) throws IOException, InterruptedException {
+            double memoryUsage) throws IOException, InterruptedException {
 
         String json = createHeartbeatJson(cpuUsage, memoryUsage);
 
@@ -221,17 +209,14 @@ public class NodeAgent {
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
 
-        HttpResponse<String> response =
-                httpClient.send(
-                        request,
-                        HttpResponse.BodyHandlers.ofString()
-                );
+        HttpResponse<String> response = httpClient.send(
+                request,
+                HttpResponse.BodyHandlers.ofString());
 
         System.out.println(
                 "[" + LocalDateTime.now() + "] "
                         + "Server Response: "
-                        + response.statusCode()
-        );
+                        + response.statusCode());
     }
 
     // =========================
@@ -240,8 +225,7 @@ public class NodeAgent {
 
     private static String createHeartbeatJson(
             double cpuUsage,
-            double memoryUsage
-    ) {
+            double memoryUsage) {
 
         return String.format("""
                 {
@@ -256,8 +240,7 @@ public class NodeAgent {
                 hostname,
                 cpuUsage,
                 memoryUsage,
-                LocalDateTime.now()
-        );
+                LocalDateTime.now());
     }
 
     // =========================
@@ -266,8 +249,7 @@ public class NodeAgent {
 
     private static void logMetrics(
             double cpuUsage,
-            double memoryUsage
-    ) {
+            double memoryUsage) {
 
         System.out.println("------------------------------------");
         System.out.println("Time       : " + LocalDateTime.now());
