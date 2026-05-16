@@ -1,5 +1,3 @@
-import com.sun.management.OperatingSystemMXBean;
-
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
@@ -22,8 +20,9 @@ public class NodeAgent {
     // CONFIGURATION
     // =========================
 
-    private static final String SERVER_URL =
-            "https://node-health-checking-10.onrender.com/heartbeat";
+    // private static final String SERVER_URL =
+    //         "https://node-health-checking-10.onrender.com/heartbeat";
+    private static final String SERVER_URL = "http://localhost:6789/api/heartbeat";
 
     private static final int HEARTBEAT_INTERVAL_SECONDS = 10;
     private static final int MAX_RETRIES = 3;
@@ -43,53 +42,72 @@ public class NodeAgent {
                     .connectTimeout(Duration.ofSeconds(5))
                     .build();
 
-    // =========================
-    // MAIN
-    // =========================
+    // // =========================
+    // // MAIN
+    // // =========================
+    // public static void main(String[] args) {
+    //     initializeNodeInfo();
+
+    //     System.out.println("====================================");
+    //     System.out.println("Node Agent Started");
+    //     System.out.println("Node ID  : " + nodeId);
+    //     System.out.println("Hostname : " + hostname);
+    //     System.out.println("Server   : " + SERVER_URL);
+    //     System.out.println("====================================");
+
+    //     startMonitoringLoop();
+    // }
+
+    // // =========================
+    // // INITIALIZATION
+    // // =========================
+    // private static void initializeNodeInfo() {
+    //     try {
+    //         hostname = InetAddress.getLocalHost().getHostName();
+    //     } catch (Exception e) {
+    //         hostname = "unknown-host";
+    //     }
+
+    //     // If user provides node ID from command line
+    //     if (argsProvided()) {
+    //         nodeId = getArgumentNodeId();
+    //     } else {
+    //         nodeId = hostname + "-" + UUID.randomUUID().toString().substring(0, 8);
+    //     }
+    // }
+
+    // private static boolean argsProvided() {
+    //     return savedArgs != null && savedArgs.length > 0;
+    // }
+
+    // private static String getArgumentNodeId() {
+    //     return savedArgs[0];
+    // }
+
+    // // Save args globally
+    // private static String[] savedArgs;
+
+    // static {
+    //     savedArgs = new String[0];
+    // }
+
     public static void main(String[] args) {
-        initializeNodeInfo();
-
-        System.out.println("====================================");
-        System.out.println("Node Agent Started");
-        System.out.println("Node ID  : " + nodeId);
-        System.out.println("Hostname : " + hostname);
-        System.out.println("Server   : " + SERVER_URL);
-        System.out.println("====================================");
-
+        initializeNodeInfo(args);
         startMonitoringLoop();
     }
 
-    // =========================
-    // INITIALIZATION
-    // =========================
-    private static void initializeNodeInfo() {
+    private static void initializeNodeInfo(String[] args) {
         try {
             hostname = InetAddress.getLocalHost().getHostName();
         } catch (Exception e) {
             hostname = "unknown-host";
         }
 
-        // If user provides node ID from command line
-        if (argsProvided()) {
-            nodeId = getArgumentNodeId();
+        if (args.length > 0) {
+            nodeId = args[0];
         } else {
             nodeId = hostname + "-" + UUID.randomUUID().toString().substring(0, 8);
         }
-    }
-
-    private static boolean argsProvided() {
-        return savedArgs != null && savedArgs.length > 0;
-    }
-
-    private static String getArgumentNodeId() {
-        return savedArgs[0];
-    }
-
-    // Save args globally
-    private static String[] savedArgs;
-
-    static {
-        savedArgs = new String[0];
     }
 
     // =========================
