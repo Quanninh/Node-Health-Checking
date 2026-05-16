@@ -5,3 +5,17 @@
 target/
 
 *.class
+
+# Environment variables (NEVER commit these!)
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+
+# Logs
+*.log
