@@ -1,27 +1,28 @@
 package com.monitoring.service;
 
-import com.monitoring.model.Node;
-import com.monitoring.model.NodeHistory;
-import com.monitoring.repository.NodeRepository;
-import com.monitoring.repository.NodeHistoryRepository;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import com.monitoring.model.Node;
+import com.monitoring.model.NodeHistory;
+import com.monitoring.repository.HistoryRepository;
+import com.monitoring.repository.NodeRepository;
 
 @Service
 public class NodeService {
+
     private static final long NODE_TIMEOUT_SECONDS = 10;
 
     @Autowired
     private NodeRepository nodeRepository;
 
     @Autowired
-    private NodeHistoryRepository historyRepository;
+    private HistoryRepository historyRepository;
 
-    // Implement this method
     public void processHeartbeat(Node node) {
         node.setLastHeartbeat(LocalDateTime.now());
         node.setStatus("UP");
@@ -57,7 +58,7 @@ public class NodeService {
         for (Node node : nodes) {
             LocalDateTime lastHeartbeat = node.getLastHeartbeat();
 
-            if (lastHeartbeat != null && lastHeartbeat.isBefore(cutoffTime) && !"DOWN".equals(node.getStatus())) {
+            if (lastHeartbeat != null && lastHeartbeat.isBefore(cutoffTime) && !node.getStatus().equals("DOWN")) {
                 node.setStatus("DOWN");
                 nodeRepository.save(node);
             }

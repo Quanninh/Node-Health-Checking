@@ -1,4 +1,5 @@
-const API = "https://node-health-checking-10.onrender.com/api/nodes";
+// const API = "https://node-health-checking-10.onrender.com/api/nodes";
+const API = "http://localhost:6789/api/nodes";
 
 let chart;
 let selectedNodeId = null;
@@ -23,7 +24,10 @@ async function fetchNodes() {
             loadHistory(selectedNodeId);
         }
     } catch (error) {
-        updateConnectionStatus("Cannot connect to server. Start Spring Boot first.", false);
+        updateConnectionStatus(
+            "Cannot connect to server. Start Spring Boot first.",
+            false,
+        );
         console.error(error);
     }
 }
@@ -34,7 +38,7 @@ function updateTable(nodes) {
     const scrollY = window.scrollY;
     table.innerHTML = "";
 
-    nodes.forEach(node => {
+    nodes.forEach((node) => {
         const row = document.createElement("tr");
 
         row.innerHTML = `
@@ -55,22 +59,15 @@ function updateTable(nodes) {
             selectRow(row, node.id);
             loadHistory(node.id);
         };
+
         table.appendChild(row);
     });
 
     window.scrollTo(scrollX, scrollY);
 }
 
-function selectRow(row, nodeId) {
-    selectedNodeId = nodeId;
-    document.querySelectorAll("#nodeTable tr").forEach(tableRow => {
-        tableRow.classList.remove("selected-row");
-    });
-    row.classList.add("selected-row");
-}
-
 function updateCards(nodes) {
-    const up = nodes.filter(n => n.status === "UP").length;
+    const up = nodes.filter((n) => n.status === "UP").length;
     const down = nodes.length - up;
 
     document.getElementById("totalNodes").innerText = nodes.length;
@@ -80,7 +77,7 @@ function updateCards(nodes) {
 
 function checkAlerts(nodes) {
     const alertBox = document.getElementById("alertBox");
-    const downNodes = nodes.filter(n => n.status === "DOWN");
+    const downNodes = nodes.filter((n) => n.status === "DOWN");
 
     if (downNodes.length > 0) {
         alertBox.classList.remove("hidden");
@@ -88,6 +85,14 @@ function checkAlerts(nodes) {
     } else {
         alertBox.classList.add("hidden");
     }
+}
+
+function selectRow(row, nodeId) {
+    selectedNodeId = nodeId;
+    document.querySelectorAll("#nodeTable tr").forEach((tableRow) => {
+        tableRow.classList.remove("selected-row");
+    });
+    row.classList.add("selected-row");
 }
 
 async function loadHistory(nodeId) {
@@ -109,8 +114,10 @@ async function loadHistory(nodeId) {
         }
 
         const data = await res.json();
-        const labels = data.map(d => new Date(d.timestamp).toLocaleTimeString());
-        const cpu = data.map(d => d.cpuUsage);
+        const labels = data.map((d) =>
+            new Date(d.timestamp).toLocaleTimeString(),
+        );
+        const cpu = data.map((d) => d.cpuUsage);
 
         drawChart(labels, cpu);
     } catch (error) {
@@ -134,16 +141,18 @@ function drawChart(labels, data) {
         type: "line",
         data: {
             labels: labels,
-            datasets: [{
-                label: "CPU %",
-                data: data,
-                borderColor: "#22c55e",
-                fill: false
-            }]
+            datasets: [
+                {
+                    label: "CPU %",
+                    data: data,
+                    borderColor: "#22c55e",
+                    fill: false,
+                },
+            ],
         },
         options: {
-            responsive: true
-        }
+            responsive: true,
+        },
     });
 }
 

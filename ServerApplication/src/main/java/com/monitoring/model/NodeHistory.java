@@ -1,14 +1,15 @@
 package com.monitoring.model;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 
-import java.time.LocalDateTime;
-
 @Entity
 public class NodeHistory {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -20,39 +21,40 @@ public class NodeHistory {
 
     private LocalDateTime timestamp;
 
-    public Long getId(){
+    public Long getId() {
         return id;
     }
 
-    public String getNodeId(){
+    public String getNodeId() {
         return nodeId;
     }
 
-    public void setNodeId(String nodeId){
+    public void setNodeId(String nodeId) {
         this.nodeId = nodeId;
     }
 
-    public double getCpuUsage(){
+    public double getCpuUsage() {
         return cpuUsage;
     }
 
-    public void setCpuUsage(double cpuUsage){
+    public void setCpuUsage(double cpuUsage) {
         this.cpuUsage = cpuUsage;
     }
 
-    public double getMemoryUsage(){
+    public double getMemoryUsage() {
         return memoryUsage;
     }
 
-    public void setMemoryUsage(double memoryUsage){
+    public void setMemoryUsage(double memoryUsage) {
         this.memoryUsage = memoryUsage;
     }
 
-    public LocalDateTime getTimestamp(){
+    public LocalDateTime getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(LocalDateTime timestamp){
+    public void setTimestamp(LocalDateTime timestamp) {
         this.timestamp = timestamp;
     }
+
 }
