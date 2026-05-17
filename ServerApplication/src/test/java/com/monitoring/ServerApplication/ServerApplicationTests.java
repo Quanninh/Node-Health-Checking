@@ -1,15 +1,15 @@
 package com.monitoring.ServerApplication;
 
-import com.monitoring.model.Node;
-import com.monitoring.repository.NodeRepository;
-import com.monitoring.service.NodeService;
+import java.time.LocalDateTime;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import java.time.LocalDateTime;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import com.monitoring.model.Node;
+import com.monitoring.repository.NodeRepository;
+import com.monitoring.service.NodeService;
 
 @SpringBootTest
 class ServerApplicationTests {
@@ -47,7 +47,7 @@ class ServerApplicationTests {
 		nodeRepository.save(activeNode);
 		nodeRepository.save(staleNode);
 
-		nodeService.checkNodeStatus();
+		// nodeService.checkNodeStatus();
 
 		Node updatedActiveNode = nodeRepository.findById("active-node").orElseThrow();
 		Node updatedStaleNode = nodeRepository.findById("stale-node").orElseThrow();

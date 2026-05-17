@@ -130,7 +130,73 @@ You should see tables similar to:
 ```text
 node
 node_history
+failure_report
 ```
+
+# UPDATED: simulate nodes to communicate with each other
+# NodeAgent Cluster Setup Guide
+
+This guide explains how to spin up a local 3-node decentralized cluster using the `NodeAgent`. The nodes communicate with each other peer-to-peer (P2P) for health monitoring while reporting state changes back to a centralized dashboard server.
+
+---
+
+## CLI Configuration Flags
+
+When launching a `NodeAgent`, the following parameters are used to configure its identity, networking, and peer discovery:
+
+| Flag | Description |
+| :--- | :--- |
+| `--node-id` | A unique identifier for the node (e.g., `A`, `B`, `C`). |
+| `--bind-host` | The local network interface/IP address the node listens on. |
+| `--advertise-host` | The IP address that this node tells its peers to use when reaching back to it. |
+| `--p2p-port` | The port dedicated to P2P node-to-node communication (Gossip/SWIM). |
+| `--dashboard-url` | The API endpoint of the centralized server used for demo, testing, and state visualization. |
+| `--peers` | A comma-separated list of known bootstrap peers formatted as `ID@IP:PORT`. |
+
+---
+
+## Local Deployment Steps
+
+To simulate the decentralized network on your local machine, open three separate terminal windows and run the following commands sequentially.
+
+### Step 1: Start Node A
+Node A will listen on port `9001` and attempt to connect with Node B and Node C.
+```bash
+java NodeAgent \
+  --node-id A \
+  --bind-host 127.0.0.1 \
+  --advertise-host 127.0.0.1 \
+  --p2p-port 9001 \
+  --dashboard-url http://localhost:6789/api \
+  --peers B@127.0.0.1:9002,C@127.0.0.1:9003
+```
+
+### Step 2: Start Node B
+Node B will listen on port `9002` and attempt to connect with Node A and Node C.
+```bash
+java NodeAgent \
+  --node-id B \
+  --bind-host 127.0.0.1 \
+  --advertise-host 127.0.0.1 \
+  --p2p-port 9002 \
+  --dashboard-url http://localhost:6789/api \
+  --peers A@127.0.0.1:9001,C@127.0.0.1:9003
+```
+
+### Step 3: Start Node C
+Node C will listen on port 9003 and attempt to connect with Node A and Node B.
+```bash
+java NodeAgent \
+  --node-id C \
+  --bind-host 127.0.0.1 \
+  --advertise-host 127.0.0.1 \
+  --p2p-port 9003 \
+  --dashboard-url http://localhost:6789/api \
+  --peers A@127.0.0.1:9001,B@127.0.0.1:9002
+```
+
+### Step 4: Observe failure_report table
+If nothing is observed, consider Ctrl-C for one node and wait for a short period of time before running it again.
 
 ---
 

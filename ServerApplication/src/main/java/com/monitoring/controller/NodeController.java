@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.monitoring.model.FailureReport;
 import com.monitoring.model.Node;
 import com.monitoring.model.NodeHistory;
 import com.monitoring.service.NodeService;
@@ -49,6 +50,17 @@ public class NodeController {
     @GetMapping("/nodes/{id}/history")
     public List<NodeHistory> getNodeHistory(@PathVariable String id) {
         return nodeService.getNodeHistory(id);
+    }
+
+    @PostMapping("/failure-report")
+    public String receiveFailureReport(@RequestBody FailureReport report) {
+        nodeService.processFailureReport(report);
+        return "Failure report received: " + report.getMessage();
+    }
+
+    @GetMapping("/failure-reports")
+    public List<FailureReport> getFailureReports() {
+        return nodeService.getFailureReports();
     }
 
 }

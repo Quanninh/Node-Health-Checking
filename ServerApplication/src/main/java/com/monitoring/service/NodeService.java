@@ -4,11 +4,12 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import com.monitoring.model.FailureReport;
 import com.monitoring.model.Node;
 import com.monitoring.model.NodeHistory;
+import com.monitoring.repository.FailureReportRepository;
 import com.monitoring.repository.HistoryRepository;
 import com.monitoring.repository.NodeRepository;
 
@@ -22,6 +23,9 @@ public class NodeService {
 
     @Autowired
     private HistoryRepository historyRepository;
+
+    @Autowired
+    private FailureReportRepository failureReportRepository;
 
     public void processHeartbeat(Node node) {
         node.setLastHeartbeat(LocalDateTime.now());
@@ -50,22 +54,60 @@ public class NodeService {
         return historyRepository.findByNodeId(id);
     }
 
-    @Scheduled(fixedRate = 5000)
-    public void checkNodeStatus() {
-        try {
-            LocalDateTime cutoffTime = LocalDateTime.now().minusSeconds(NODE_TIMEOUT_SECONDS);
-            List<Node> nodes = nodeRepository.findAll();
+    // @Scheduled(fixedRate = 5000)
+    // public void checkNodeStatus() {
+    //     try {
+    //         LocalDateTime cutoffTime = LocalDateTime.now().minusSeconds(NODE_TIMEOUT_SECONDS);
+    //         List<Node> nodes = nodeRepository.findAll();
 
-            for (Node node : nodes) {
-                LocalDateTime lastHeartbeat = node.getLastHeartbeat();
+    //         for (Node node : nodes) {
+    //             LocalDateTime lastHeartbeat = node.getLastHeartbeat();
 
-                if (lastHeartbeat != null && lastHeartbeat.isBefore(cutoffTime) && !node.getStatus().equals("DOWN")) {
-                    node.setStatus("DOWN");
-                    nodeRepository.save(node);
-                }
-            }
-        } catch (Exception e) {
-            System.out.println("[" + LocalDateTime.now() + "] Scheduler skipped: " + e.getMessage());
+    //             if (lastHeartbeat != null && lastHeartbeat.isBefore(cutoffTime) && !node.getStatus().equals("DOWN")) {
+    //                 node.setStatus("DOWN");
+    //                 nodeRepository.save(node);
+    //             }
+    //         }
+    //     } catch (Exception e) {
+    //         System.out.println("[" + LocalDateTime.now() + "] Scheduler skipped: " + e.getMessage());
+    //     }
+    // }
+
+    public void processFailureReport(FailureReport report) {
+        if (report.getTimestamp() == null) {
+            report.setTimestamp(LocalDateTime.now());
         }
+
+        if (report.getMessage() == null || report.getMessage().isBlank()) {
+            report.setMessage(
+                    "Node " + report.getReporterNodeId()
+                            + " finds out Node " + report.getFailedNodeId()
+                            + " has failed"
+            );
+        }
+
+        failureReportRepository.save(report);
+
+        Node failedNode = nodeRepository
+                .findById(report.getFailedNodeId())
+                .orElseGet(() -> {
+                    Node node = new Node();
+                    node.setId(report.getFailedNodeId());
+                    return node;
+                });
+
+        failedNode.setStatus("FAILED");
+        failedNode.setLastHeartbeat(LocalDateTime.now());
+
+        nodeRepository.save(failedNode);
+
+        System.out.println(
+                "[" + LocalDateTime.now() + "] "
+                        + report.getMessage()
+        );
+    }
+
+    public List<FailureReport> getFailureReports() {
+        return failureReportRepository.findAll();
     }
 }
