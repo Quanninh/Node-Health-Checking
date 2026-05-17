@@ -21,7 +21,7 @@ public class NodeAgent {
     // =========================
 
     // private static final String SERVER_URL =
-    //         "https://node-health-checking-10.onrender.com/heartbeat";
+    // "https://node-health-checking-10.onrender.com/heartbeat";
     private static final String SERVER_URL = "http://localhost:6789/api/heartbeat";
 
     private static final int HEARTBEAT_INTERVAL_SECONDS = 10;
@@ -37,58 +37,57 @@ public class NodeAgent {
     // HTTP CLIENT
     // =========================
 
-    private static final HttpClient httpClient =
-            HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofSeconds(5))
-                    .build();
+    private static final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .build();
 
     // // =========================
     // // MAIN
     // // =========================
     // public static void main(String[] args) {
-    //     initializeNodeInfo();
+    // initializeNodeInfo();
 
-    //     System.out.println("====================================");
-    //     System.out.println("Node Agent Started");
-    //     System.out.println("Node ID  : " + nodeId);
-    //     System.out.println("Hostname : " + hostname);
-    //     System.out.println("Server   : " + SERVER_URL);
-    //     System.out.println("====================================");
+    // System.out.println("====================================");
+    // System.out.println("Node Agent Started");
+    // System.out.println("Node ID : " + nodeId);
+    // System.out.println("Hostname : " + hostname);
+    // System.out.println("Server : " + SERVER_URL);
+    // System.out.println("====================================");
 
-    //     startMonitoringLoop();
+    // startMonitoringLoop();
     // }
 
     // // =========================
     // // INITIALIZATION
     // // =========================
     // private static void initializeNodeInfo() {
-    //     try {
-    //         hostname = InetAddress.getLocalHost().getHostName();
-    //     } catch (Exception e) {
-    //         hostname = "unknown-host";
-    //     }
+    // try {
+    // hostname = InetAddress.getLocalHost().getHostName();
+    // } catch (Exception e) {
+    // hostname = "unknown-host";
+    // }
 
-    //     // If user provides node ID from command line
-    //     if (argsProvided()) {
-    //         nodeId = getArgumentNodeId();
-    //     } else {
-    //         nodeId = hostname + "-" + UUID.randomUUID().toString().substring(0, 8);
-    //     }
+    // // If user provides node ID from command line
+    // if (argsProvided()) {
+    // nodeId = getArgumentNodeId();
+    // } else {
+    // nodeId = hostname + "-" + UUID.randomUUID().toString().substring(0, 8);
+    // }
     // }
 
     // private static boolean argsProvided() {
-    //     return savedArgs != null && savedArgs.length > 0;
+    // return savedArgs != null && savedArgs.length > 0;
     // }
 
     // private static String getArgumentNodeId() {
-    //     return savedArgs[0];
+    // return savedArgs[0];
     // }
 
     // // Save args globally
     // private static String[] savedArgs;
 
     // static {
-    //     savedArgs = new String[0];
+    // savedArgs = new String[0];
     // }
 
     public static void main(String[] args) {
@@ -115,8 +114,7 @@ public class NodeAgent {
     // =========================
     private static void startMonitoringLoop() {
 
-        ScheduledExecutorService scheduler =
-                Executors.newScheduledThreadPool(1);
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
         scheduler.scheduleAtFixedRate(() -> {
             try {
@@ -142,17 +140,15 @@ public class NodeAgent {
     // =========================
     private static double getCpuUsage() {
 
-    OperatingSystemMXBean osBean =
-            (OperatingSystemMXBean)
-                    ManagementFactory.getOperatingSystemMXBean();
+        OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
 
         double cpuLoad = osBean.getCpuLoad();
 
-    if (cpuLoad < 0) {
-        return 0.0;
-    }
+        if (cpuLoad < 0) {
+            return 0.0;
+        }
 
-    return cpuLoad * 100;
+        return cpuLoad * 100;
     }
 
     private static double getMemoryUsage() {
@@ -172,8 +168,7 @@ public class NodeAgent {
 
     private static void sendHeartbeatWithRetry(
             double cpuUsage,
-            double memoryUsage
-    ) {
+            double memoryUsage) {
 
         for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
             try {
@@ -181,23 +176,20 @@ public class NodeAgent {
 
                 System.out.println(
                         "[" + LocalDateTime.now() + "] "
-                                + "Heartbeat sent successfully."
-                );
+                                + "Heartbeat sent successfully.");
 
                 return;
             } catch (Exception e) {
                 System.out.println(
                         "[" + LocalDateTime.now() + "] "
                                 + "Heartbeat failed (Attempt "
-                                + attempt + "/" + MAX_RETRIES + ")"
-                );
+                                + attempt + "/" + MAX_RETRIES + ")");
 
                 if (attempt == MAX_RETRIES) {
 
                     System.out.println(
                             "[" + LocalDateTime.now() + "] "
-                                    + "Max retries reached."
-                    );
+                                    + "Max retries reached.");
                 }
 
                 try {
@@ -210,8 +202,7 @@ public class NodeAgent {
 
     private static void sendHeartbeat(
             double cpuUsage,
-            double memoryUsage
-    ) throws IOException, InterruptedException {
+            double memoryUsage) throws IOException, InterruptedException {
 
         String json = createHeartbeatJson(cpuUsage, memoryUsage);
 
@@ -222,17 +213,14 @@ public class NodeAgent {
                 .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
 
-        HttpResponse<String> response =
-                httpClient.send(
-                        request,
-                        HttpResponse.BodyHandlers.ofString()
-                );
+        HttpResponse<String> response = httpClient.send(
+                request,
+                HttpResponse.BodyHandlers.ofString());
 
         System.out.println(
                 "[" + LocalDateTime.now() + "] "
                         + "Server Response: "
-                        + response.statusCode()
-        );
+                        + response.statusCode());
     }
 
     // =========================
@@ -241,8 +229,7 @@ public class NodeAgent {
 
     private static String createHeartbeatJson(
             double cpuUsage,
-            double memoryUsage
-    ) {
+            double memoryUsage) {
 
         return String.format("""
                 {
@@ -255,8 +242,7 @@ public class NodeAgent {
                 // hostname,
                 cpuUsage,
                 memoryUsage,
-                LocalDateTime.now()
-        );
+                LocalDateTime.now());
     }
 
     // =========================
@@ -265,8 +251,7 @@ public class NodeAgent {
 
     private static void logMetrics(
             double cpuUsage,
-            double memoryUsage
-    ) {
+            double memoryUsage) {
 
         System.out.println("------------------------------------");
         System.out.println("Time       : " + LocalDateTime.now());
