@@ -1,4 +1,5 @@
 package com.example.agent.node;
+
 import java.net.URI;
 
 record PeerAddress(String nodeId, String host, int port) {
@@ -8,8 +9,7 @@ record PeerAddress(String nodeId, String host, int port) {
 
         if (idAndAddress.length != 2) {
             throw new IllegalArgumentException(
-                    "Invalid peer format. Expected nodeId@host:port but got: " + value
-            );
+                    "Invalid peer format. Expected nodeId@host:port but got: " + value);
         }
 
         String nodeId = idAndAddress[0];
@@ -18,8 +18,7 @@ record PeerAddress(String nodeId, String host, int port) {
 
         if (hostAndPort.length != 2) {
             throw new IllegalArgumentException(
-                    "Invalid peer address. Expected host:port but got: " + idAndAddress[1]
-            );
+                    "Invalid peer address. Expected host:port but got: " + idAndAddress[1]);
         }
 
         String host = hostAndPort[0];
@@ -30,6 +29,10 @@ record PeerAddress(String nodeId, String host, int port) {
 
     URI pingUri() {
         return URI.create("http://" + host + ":" + port + "/ping");
+    }
+
+    URI pingReqUri() {
+        return URI.create("http://" + host + ":" + port + "/ping-req");
     }
 
     @Override
