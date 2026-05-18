@@ -162,7 +162,7 @@ To simulate the decentralized network on your local machine, open three separate
 ### Step 1: Start Node A
 Node A will listen on port `9001` and attempt to connect with Node B and Node C.
 ```bash
-java NodeAgent \
+java -cp target/classes com.example.agent.node.NodeAgent \
   --node-id A \
   --bind-host 127.0.0.1 \
   --advertise-host 127.0.0.1 \
@@ -174,7 +174,7 @@ java NodeAgent \
 ### Step 2: Start Node B
 Node B will listen on port `9002` and attempt to connect with Node A and Node C.
 ```bash
-java NodeAgent \
+java -cp target/classes com.example.agent.node.NodeAgent \
   --node-id B \
   --bind-host 127.0.0.1 \
   --advertise-host 127.0.0.1 \
@@ -186,7 +186,7 @@ java NodeAgent \
 ### Step 3: Start Node C
 Node C will listen on port 9003 and attempt to connect with Node A and Node B.
 ```bash
-java NodeAgent \
+java -cp target/classes com.example.agent.node.NodeAgent \
   --node-id C \
   --bind-host 127.0.0.1 \
   --advertise-host 127.0.0.1 \
