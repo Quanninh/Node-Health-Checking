@@ -172,7 +172,7 @@ java -cp target/classes com.example.agent.node.NodeAgent \
   --phi-suspected-threshold 3.0 \
   --phi-unreachable-threshold 5.0 \
   --p2p-port 9001 \
-  --dashboard-url http://localhost:6789/api \
+  --dashboard-url http://localhost:6789/api
 ```
 
 ### Step 2: Start Node B
@@ -188,7 +188,7 @@ java -cp target/classes com.example.agent.node.NodeAgent \
   --phi-suspected-threshold 3.0 \
   --phi-unreachable-threshold 5.0 \
   --p2p-port 9002 \
-  --dashboard-url http://localhost:6789/api \
+  --dashboard-url http://localhost:6789/api
 ```
 
 ### Step 3: Start Node C
@@ -204,7 +204,7 @@ java -cp target/classes com.example.agent.node.NodeAgent \
   --phi-suspected-threshold 3.0 \
   --phi-unreachable-threshold 5.0 \
   --p2p-port 9003 \
-  --dashboard-url http://localhost:6789/api \
+  --dashboard-url http://localhost:6789/api
 ```
 
 ### Step 4: Observe failure_report table
