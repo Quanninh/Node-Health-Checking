@@ -5,12 +5,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class PeerState {
-    private final PeerAddress peerAddress;
+public class NodeState {
+    private final NodeAddress peerAddress;
     private final List<Double> slidingWindowSeconds;
     // volatile -> make sure that the variable is updated latest (in context of
     // thread)
-    private volatile PeerStatus status;
+    private volatile NodeStatus status;
     private volatile long lastAckTimeMillis;
     private volatile LocalDateTime lastAckTime;
     private volatile LocalDateTime lastSuspicionTime;
@@ -18,17 +18,17 @@ public class PeerState {
     private volatile double phi;
     private volatile int incarnationNumber;
 
-    PeerState(PeerAddress peerAddress) {
+    NodeState(NodeAddress peerAddress) {
         this.peerAddress = peerAddress;
         this.slidingWindowSeconds = Collections.synchronizedList(new ArrayList<>());
-        this.status = PeerStatus.UNKNOWN;
+        this.status = NodeStatus.UNKNOWN;
         this.lastAckTimeMillis = -1L;
         this.phi = 0.0;
         this.incarnationNumber = 0;
     }
 
     synchronized void markAlive(PhiAccrualFailureDetector phiDetector) {
-        if (status == PeerStatus.UNREACHABLE) {
+        if (status == NodeStatus.UNREACHABLE) {
             System.out.println(
                     "[" + LocalDateTime.now() + "] "
                             + "ACK received from " + peerAddress.nodeId()
@@ -44,7 +44,7 @@ public class PeerState {
             phiDetector.updateSlidingWindow(slidingWindowSeconds, intervalSeconds);
         }
 
-        this.status = PeerStatus.ALIVE;
+        this.status = NodeStatus.ALIVE;
         this.lastAckTimeMillis = now;
         this.lastAckTime = LocalDateTime.now();
         this.phi = 0.0;
@@ -53,36 +53,36 @@ public class PeerState {
     // synchronized means that if it called, it lock the object ( in this we lock
     // the object "this")
     synchronized void markSuspected(double phi) {
-        if (status == PeerStatus.UNREACHABLE) {
+        if (status == NodeStatus.UNREACHABLE) {
             return;
         }
 
-        this.status = PeerStatus.SUSPECTED;
+        this.status = NodeStatus.SUSPECTED;
         this.lastSuspicionTime = LocalDateTime.now();
         this.phi = phi;
     }
 
     synchronized void markWarning(double phi) {
-        if (status == PeerStatus.UNREACHABLE) {
+        if (status == NodeStatus.UNREACHABLE) {
             return;
         }
 
-        this.status = PeerStatus.WARNING;
+        this.status = NodeStatus.WARNING;
         this.phi = phi;
     }
 
     synchronized void markUnreachable(double phi) {
-        this.status = PeerStatus.UNREACHABLE;
+        this.status = NodeStatus.UNREACHABLE;
         this.lastUnreachableTime = LocalDateTime.now();
         this.phi = phi;
         this.incarnationNumber++;
     }
 
-    PeerAddress address() {
+    NodeAddress address() {
         return peerAddress;
     }
 
-    PeerStatus status() {
+    NodeStatus status() {
         return status;
     }
 

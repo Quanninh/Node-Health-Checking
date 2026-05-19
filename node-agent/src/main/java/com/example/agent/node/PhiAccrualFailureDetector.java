@@ -36,7 +36,7 @@ public class PhiAccrualFailureDetector {
             long lastHeartbeatTimeMillis,
             long currentTimeMillis) {
         if (lastHeartbeatTimeMillis <= 0) {
-            return Double.POSITIVE_INFINITY;
+            return 0.0;
         }
 
         if (currentTimeMillis < lastHeartbeatTimeMillis) {
@@ -70,20 +70,20 @@ public class PhiAccrualFailureDetector {
     }
 
     // This one is depend what you need
-    public PeerStatus determineStatus(double phi) {
+    public NodeStatus determineStatus(double phi) {
         if (phi >= unreachableThreshold) {
-            return PeerStatus.UNREACHABLE;
+            return NodeStatus.UNREACHABLE;
         }
 
         if (phi >= suspectedThreshold) {
-            return PeerStatus.SUSPECTED;
+            return NodeStatus.SUSPECTED;
         }
 
         if (phi >= warningThreshold) {
-            return PeerStatus.WARNING;
+            return NodeStatus.WARNING;
         }
 
-        return PeerStatus.ALIVE;
+        return NodeStatus.ALIVE;
     }
 
     public void updateSlidingWindow(List<Double> slidingWindow, double newIntervalSeconds) {

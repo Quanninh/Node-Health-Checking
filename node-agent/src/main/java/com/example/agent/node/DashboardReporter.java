@@ -53,7 +53,7 @@ class DashboardReporter {
                                 });
         }
 
-        CompletableFuture<Void> reportFailure(PeerAddress failedPeer, double phi) {
+        CompletableFuture<Void> reportFailure(NodeAddress failedPeer, double phi) {
                 String message = "Node " + localNodeId
                                 + " classifies Node " + failedPeer.nodeId()
                                 + " as UNREACHABLE by phi threshold. phi=" + String.format("%.4f", phi)

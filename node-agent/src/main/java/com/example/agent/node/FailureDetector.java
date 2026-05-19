@@ -11,29 +11,26 @@ import java.util.concurrent.TimeUnit;
 class FailureDetector {
 
     private final String localNodeId;
-    private final PeerDirectory peerDirectory;
-    private final PeerClient peerClient;
+    private final NeighborDirectory neighborDirectory;
+    private final NodeClient nodeClient;
     private final DashboardReporter dashboardReporter;
     private final PhiAccrualFailureDetector phiDetector;
-    private final int gossipIntervalSeconds;
-    private final int kHelpers;
+    private final int probeIntervalSeconds;
     private final ScheduledExecutorService scheduler;
 
     FailureDetector(
             String localNodeId,
-            PeerDirectory peerDirectory,
-            PeerClient peerClient,
+            NeighborDirectory neighborDirectory,
+            NodeClient nodeClient,
             DashboardReporter dashboardReporter,
             PhiAccrualFailureDetector phiDetector,
-            int gossipIntervalSeconds,
-            int kHelpers) {
+            int probeIntervalSeconds) {
         this.localNodeId = localNodeId;
-        this.peerDirectory = peerDirectory;
-        this.peerClient = peerClient;
+        this.neighborDirectory = neighborDirectory;
+        this.nodeClient = nodeClient;
         this.dashboardReporter = dashboardReporter;
         this.phiDetector = phiDetector;
-        this.gossipIntervalSeconds = gossipIntervalSeconds;
-        this.kHelpers = kHelpers;
+        this.probeIntervalSeconds = probeIntervalSeconds;
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
     }
 
@@ -41,7 +38,7 @@ class FailureDetector {
         scheduler.scheduleAtFixedRate(
                 this::runOneProbeSafely,
                 0,
-                gossipIntervalSeconds,
+                probeIntervalSeconds,
                 TimeUnit.SECONDS);
     }
 
@@ -57,49 +54,49 @@ class FailureDetector {
     }
 
     private void runOneProbe() {
-        Optional<PeerAddress> selectedPeer = peerDirectory.nextPeer();
+        Optional<NodeAddress> selectedTarget = neighborDirectory.nextTargetNode();
 
-        if (selectedPeer.isEmpty()) {
+        if (selectedTarget.isEmpty()) {
             System.out.println(
                     "[" + LocalDateTime.now() + "] "
-                            + "No reachable peers configured. Nothing to ping.");
+                            + "No reachable neighbor nodes configured. Nothing to ping.");
             return;
         }
 
-        PeerAddress peer = selectedPeer.get();
+        NodeAddress targetNode = selectedTarget.get();
 
         System.out.println(
                 "[" + LocalDateTime.now() + "] "
                         + "Node " + localNodeId
-                        + " directly pings Node " + peer.nodeId()
-                        + " at " + peer.host() + ":" + peer.port());
+                        + " directly pings targetNode " + targetNode.nodeId()
+                        + " at " + targetNode.host() + ":" + targetNode.port());
 
-        peerClient.ping(peer).thenAccept(ackReceived -> {
+        nodeClient.ping(targetNode).thenAccept(ackReceived -> {
             if (ackReceived) {
-                handleAckReceived(peer, "direct ping");
-                printLocalPeerStates();
+                handleAckReceived(targetNode, "direct ping");
+                printLocalNodeStates();
                 return;
             }
 
-            handleDirectPingFailure(peer);
+            handleDirectPingFailure(targetNode);
         });
     }
 
-    private void handleDirectPingFailure(PeerAddress target) {
-        List<PeerAddress> helpers = peerDirectory.selectKHelpers(localNodeId, target, kHelpers);
+    private void handleDirectPingFailure(NodeAddress targetNode) {
+        List<NodeAddress> helperNodes = neighborDirectory.selectHelperNodes(targetNode);
 
         System.out.println(
                 "[" + LocalDateTime.now() + "] "
-                        + "Direct ping failed for Node " + target.nodeId()
-                        + ". Selected K helpers: " + helpers);
+                        + "Direct ping failed for targetNode " + targetNode.nodeId()
+                        + ". helperNodes selected from neighborList: " + helperNodes);
 
-        if (helpers.isEmpty()) {
-            handleNoAckAfterDirectAndIndirect(target);
+        if (helperNodes.isEmpty()) {
+            handleNoAckAfterDirectAndIndirect(targetNode);
             return;
         }
 
-        List<CompletableFuture<Boolean>> helperChecks = helpers.stream()
-                .map(helper -> peerClient.pingReq(helper, target))
+        List<CompletableFuture<Boolean>> helperChecks = helperNodes.stream()
+                .map(helperNode -> nodeClient.pingReq(helperNode, targetNode))
                 .toList();
 
         CompletableFuture
@@ -109,99 +106,99 @@ class FailureDetector {
                             .anyMatch(CompletableFuture::join);
 
                     if (anyHelperReceivedAck) {
-                        handleAckReceived(target, "indirect ping-req");
+                        handleAckReceived(targetNode, "indirect ping-req by helperNodes");
                     } else {
-                        handleNoAckAfterDirectAndIndirect(target);
+                        handleNoAckAfterDirectAndIndirect(targetNode);
                     }
 
-                    printLocalPeerStates();
+                    printLocalNodeStates();
                 });
     }
 
-    private void handleAckReceived(PeerAddress peer, String source) {
-        PeerStatus previousStatus = peerDirectory.getStatus(peer.nodeId());
+    private void handleAckReceived(NodeAddress targetNode, String source) {
+        NodeStatus previousStatus = neighborDirectory.getStatus(targetNode.nodeId());
 
-        if (previousStatus == PeerStatus.UNREACHABLE) {
+        if (previousStatus == NodeStatus.UNREACHABLE) {
             System.out.println(
                     "[" + LocalDateTime.now() + "] "
-                            + "ACK received from Node " + peer.nodeId()
+                            + "ACK received from Node " + targetNode.nodeId()
                             + " through " + source
                             + ", but local state is UNREACHABLE. "
                             + "This node must send JOIN and re-enter as a new node instance.");
             return;
         }
 
-        peerDirectory.markAlive(peer.nodeId(), phiDetector);
+        neighborDirectory.markAlive(targetNode.nodeId(), phiDetector);
 
         System.out.println(
                 "[" + LocalDateTime.now() + "] "
                         + "ACK received from Node "
-                        + peer.nodeId()
+                        + targetNode.nodeId()
                         + " through " + source
                         + ". Status becomes ALIVE.");
     }
 
-    private void handleNoAckAfterDirectAndIndirect(PeerAddress target) {
-        Optional<PeerState> optionalState = peerDirectory.getState(target.nodeId());
+    private void handleNoAckAfterDirectAndIndirect(NodeAddress targetNode) {
+        Optional<NodeState> optionalState = neighborDirectory.getState(targetNode.nodeId());
 
         if (optionalState.isEmpty()) {
             return;
         }
 
-        PeerState state = optionalState.get();
+        NodeState state = optionalState.get();
 
         double phi = phiDetector.calculatePhi(
                 state.slidingWindowSeconds(),
                 state.lastAckTimeMillis(),
                 System.currentTimeMillis());
 
-        PeerStatus phiStatus = phiDetector.determineStatus(phi);
+        NodeStatus phiStatus = phiDetector.determineStatus(phi);
 
-        if (phiStatus == PeerStatus.UNREACHABLE) {
-            handleUnreachablePeer(target, phi);
+        if (phiStatus == NodeStatus.UNREACHABLE) {
+            handleUnreachableNode(targetNode, phi);
             return;
         }
 
-        if (phiStatus == PeerStatus.WARNING) {
-            peerDirectory.markWarning(target.nodeId(), phi);
+        if (phiStatus == NodeStatus.WARNING) {
+            neighborDirectory.markWarning(targetNode.nodeId(), phi);
         } else {
-            peerDirectory.markSuspected(target.nodeId(), phi);
+            neighborDirectory.markSuspected(targetNode.nodeId(), phi);
         }
 
         System.out.println(
                 "[" + LocalDateTime.now() + "] "
-                        + "Node " + target.nodeId()
+                        + "targetNode " + targetNode.nodeId()
                         + " has no direct/indirect ACK. phi="
                         + String.format("%.4f", phi)
-                        + ", status=" + peerDirectory.getStatus(target.nodeId())
+                        + ", status=" + neighborDirectory.getStatus(targetNode.nodeId())
                         + ". It is not declared unreachable yet.");
     }
 
-    private void handleUnreachablePeer(PeerAddress target, double phi) {
-        PeerStatus previousStatus = peerDirectory.getStatus(target.nodeId());
+    private void handleUnreachableNode(NodeAddress targetNode, double phi) {
+        NodeStatus previousStatus = neighborDirectory.getStatus(targetNode.nodeId());
 
-        peerDirectory.markUnreachable(target.nodeId(), phi);
+        neighborDirectory.markUnreachable(targetNode.nodeId(), phi);
 
         System.out.println(
                 "[" + LocalDateTime.now() + "] "
                         + "Node " + localNodeId
-                        + " marks Node " + target.nodeId()
+                        + " marks targetNode " + targetNode.nodeId()
                         + " as UNREACHABLE. phi="
                         + String.format("%.4f", phi)
                         + ". It must rejoin as a new node if it comes back.");
 
-        if (previousStatus != PeerStatus.UNREACHABLE) {
-            dashboardReporter.reportFailure(target, phi);
+        if (previousStatus != NodeStatus.UNREACHABLE) {
+            dashboardReporter.reportFailure(targetNode, phi);
         }
     }
 
-    private void printLocalPeerStates() {
-        System.out.println("----- Local Peer States at Node " + localNodeId + " -----");
+    private void printLocalNodeStates() {
+        System.out.println("----- Local Neighbor Node States at Node " + localNodeId + " -----");
 
-        for (PeerState state : peerDirectory.states()) {
+        for (NodeState state : neighborDirectory.states()) {
             System.out.println(state);
         }
 
-        System.out.println("---------------------------------------------------------");
+        System.out.println("---------------------------------------------------------------");
     }
 }

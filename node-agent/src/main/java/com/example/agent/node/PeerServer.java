@@ -18,10 +18,10 @@ class PeerServer {
     private final String nodeId;
     private final String bindHost;
     private final int port;
-    private final PeerClient peerClient;
+    private final NodeClient peerClient;
     private final HttpServer server;
 
-    PeerServer(String nodeId, String bindHost, int port, PeerClient peerClient) throws IOException {
+    PeerServer(String nodeId, String bindHost, int port, NodeClient peerClient) throws IOException {
         this.nodeId = nodeId;
         this.bindHost = bindHost;
         this.port = port;
@@ -71,7 +71,7 @@ class PeerServer {
         String targetHost = extractJsonValue(requestBody, "targetHost");
         int targetPort = Integer.parseInt(extractJsonValue(requestBody, "targetPort"));
 
-        PeerAddress target = new PeerAddress(targetNodeId, targetHost, targetPort);
+        NodeAddress target = new NodeAddress(targetNodeId, targetHost, targetPort);
 
         boolean ackReceived = peerClient.ping(target).join();
 

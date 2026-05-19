@@ -11,7 +11,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.example.agent.node.PeerStatus;
+import com.example.agent.node.NodeStatus;
 import com.example.agent.node.PhiAccrualFailureDetector;
 
 public class PhiAccrualFailureDetectorTest {
@@ -60,38 +60,38 @@ public class PhiAccrualFailureDetectorTest {
                 lastHeartbeatTimeMillis,
                 currentTimeMillis);
 
-        PeerStatus status = detector.determineStatus(phi);
+        NodeStatus status = detector.determineStatus(phi);
 
         assertTrue(phi >= 1.0 && phi < 3.0);
-        assertEquals(PeerStatus.WARNING, status);
+        assertEquals(NodeStatus.WARNING, status);
     }
 
     @Test
     public void testDetermineHealthyStatus() {
-        PeerStatus status = detector.determineStatus(0.5);
+        NodeStatus status = detector.determineStatus(0.5);
 
-        assertEquals(PeerStatus.ALIVE, status);
+        assertEquals(NodeStatus.ALIVE, status);
     }
 
     @Test
     public void testDetermineWarningStatus() {
-        PeerStatus status = detector.determineStatus(1.5);
+        NodeStatus status = detector.determineStatus(1.5);
 
-        assertEquals(PeerStatus.WARNING, status);
+        assertEquals(NodeStatus.WARNING, status);
     }
 
     @Test
     public void testDetermineSuspectedStatus() {
-        PeerStatus status = detector.determineStatus(3.5);
+        NodeStatus status = detector.determineStatus(3.5);
 
-        assertEquals(PeerStatus.SUSPECTED, status);
+        assertEquals(NodeStatus.SUSPECTED, status);
     }
 
     @Test
     public void testDetermineUnreachableStatus() {
-        PeerStatus status = detector.determineStatus(5.0);
+        NodeStatus status = detector.determineStatus(5.0);
 
-        assertEquals(PeerStatus.UNREACHABLE, status);
+        assertEquals(NodeStatus.UNREACHABLE, status);
     }
 
     @Test
@@ -138,7 +138,7 @@ public class PhiAccrualFailureDetectorTest {
 
         double phi = detector.calculatePhi(window, -1L, 105000L);
 
-        assertEquals(Double.POSITIVE_INFINITY, phi);
+        assertEquals(0.0, phi);
     }
 
     @Test

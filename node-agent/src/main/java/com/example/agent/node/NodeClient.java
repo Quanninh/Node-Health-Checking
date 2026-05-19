@@ -8,13 +8,13 @@ import java.time.LocalDateTime;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-class PeerClient {
+class NodeClient {
 
         private final String localNodeId;
         private final int ackTimeoutSeconds;
         private final HttpClient httpClient;
 
-        PeerClient(String localNodeId, int ackTimeoutSeconds) {
+        NodeClient(String localNodeId, int ackTimeoutSeconds) {
                 this.localNodeId = localNodeId;
                 this.ackTimeoutSeconds = ackTimeoutSeconds;
                 this.httpClient = HttpClient.newBuilder()
@@ -22,7 +22,7 @@ class PeerClient {
                                 .build();
         }
 
-        CompletableFuture<Boolean> ping(PeerAddress peer) {
+        CompletableFuture<Boolean> ping(NodeAddress peer) {
                 String json = """
                                 {
                                   "type": "PING",
@@ -46,7 +46,7 @@ class PeerClient {
                                 .exceptionally(error -> false);
         }
 
-        CompletableFuture<Boolean> pingReq(PeerAddress helper, PeerAddress target) {
+        CompletableFuture<Boolean> pingReq(NodeAddress helper, NodeAddress target) {
                 String json = """
                                 {
                                   "type": "PING_REQ",

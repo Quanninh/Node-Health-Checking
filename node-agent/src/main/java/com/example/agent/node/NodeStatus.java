@@ -1,6 +1,6 @@
 package com.example.agent.node;
 
-public enum PeerStatus {
+public enum NodeStatus {
     ALIVE,
     WARNING,
     SUSPECTED,

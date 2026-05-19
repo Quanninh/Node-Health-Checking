@@ -2,9 +2,9 @@ package com.example.agent.node;
 
 import java.net.URI;
 
-record PeerAddress(String nodeId, String host, int port) {
+record NodeAddress(String nodeId, String host, int port) {
 
-    static PeerAddress from(String value) {
+    static NodeAddress from(String value) {
         String[] idAndAddress = value.split("@");
 
         if (idAndAddress.length != 2) {
@@ -24,7 +24,7 @@ record PeerAddress(String nodeId, String host, int port) {
         String host = hostAndPort[0];
         int port = Integer.parseInt(hostAndPort[1]);
 
-        return new PeerAddress(nodeId, host, port);
+        return new NodeAddress(nodeId, host, port);
     }
 
     URI pingUri() {
