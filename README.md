@@ -164,11 +164,15 @@ Node A will listen on port `9001` and attempt to connect with Node B and Node C.
 ```bash
 java -cp target/classes com.example.agent.node.NodeAgent \
   --node-id A \
-  --bind-host 127.0.0.1 \
-  --advertise-host 127.0.0.1 \
+  --neighbors B@127.0.0.1:9002,C@127.0.0.1:9003 \
+  --probe-interval-seconds 3 \
+  --ack-timeout-seconds 1 \
+  --phi-window-size 5 \
+  --phi-warning-threshold 1.0 \
+  --phi-suspected-threshold 3.0 \
+  --phi-unreachable-threshold 5.0 \
   --p2p-port 9001 \
   --dashboard-url http://localhost:6789/api \
-  --peers B@127.0.0.1:9002,C@127.0.0.1:9003
 ```
 
 ### Step 2: Start Node B
@@ -176,11 +180,15 @@ Node B will listen on port `9002` and attempt to connect with Node A and Node C.
 ```bash
 java -cp target/classes com.example.agent.node.NodeAgent \
   --node-id B \
-  --bind-host 127.0.0.1 \
-  --advertise-host 127.0.0.1 \
+  --neighbors A@127.0.0.1:9001,C@127.0.0.1:9003 \
+  --probe-interval-seconds 3 \
+  --ack-timeout-seconds 1 \
+  --phi-window-size 5 \
+  --phi-warning-threshold 1.0 \ 
+  --phi-suspected-threshold 3.0 \
+  --phi-unreachable-threshold 5.0 \
   --p2p-port 9002 \
   --dashboard-url http://localhost:6789/api \
-  --peers A@127.0.0.1:9001,C@127.0.0.1:9003
 ```
 
 ### Step 3: Start Node C
@@ -188,11 +196,15 @@ Node C will listen on port 9003 and attempt to connect with Node A and Node B.
 ```bash
 java -cp target/classes com.example.agent.node.NodeAgent \
   --node-id C \
-  --bind-host 127.0.0.1 \
-  --advertise-host 127.0.0.1 \
+  --neighbors A@127.0.0.1:9001,B@127.0.0.1:9002 \
+  --probe-interval-seconds 3 \
+  --ack-timeout-seconds 1 \
+  --phi-window-size 5 \
+  --phi-warning-threshold 1.0 \ 
+  --phi-suspected-threshold 3.0 \
+  --phi-unreachable-threshold 5.0 \
   --p2p-port 9003 \
   --dashboard-url http://localhost:6789/api \
-  --peers A@127.0.0.1:9001,B@127.0.0.1:9002
 ```
 
 ### Step 4: Observe failure_report table
