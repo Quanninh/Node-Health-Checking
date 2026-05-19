@@ -5,6 +5,12 @@ public final class Constant {
         // Can not initialize
     }
 
+    public static final int DEFAULT_MAX_NEIGHBORS = 2;
+    public static final int DEFAULT_JOIN_TIMEOUT_SECONDS = 3;
+    public static final double DEFAULT_JOIN_MIN_PROBABILITY = 0.35;
+    public static final double DEFAULT_JOIN_MAX_PROBABILITY = 0.75;
+    public static final int UNREACHABLE_CLEANUP_INTERVAL_SECONDS = 5;
+
     public static final int DEFAULT_GOSSIP_INTERVAL_SECONDS = 5;
     public static final int DEFAULT_ACK_TIMEOUT_SECONDS = 10;
     public static final int DEFAULT_K_HELPERS = 3;

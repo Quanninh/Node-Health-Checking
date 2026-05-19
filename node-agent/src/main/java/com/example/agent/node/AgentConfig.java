@@ -12,7 +12,11 @@ public record AgentConfig(String nodeId,
                 String advertiseHost,
                 int p2pPort,
                 String dashboardUrl,
-                List<NodeAddress> neighborList,
+                List<NodeAddress> bootstrapPeers,
+                int maxNeighbors,
+                int joinTimeoutSeconds,
+                double joinMinProbability,
+                double joinMaxProbability,
                 int gossipIntervalSeconds,
                 int ackTimeoutSeconds,
                 int phiWindowSize,
@@ -37,6 +41,22 @@ public record AgentConfig(String nodeId,
                 String dashboardUrl = values.getOrDefault(
                                 "--dashboard-url",
                                 "http://localhost:6789/api");
+
+                int maxNeighbors = Integer.parseInt(values.getOrDefault(
+                                "--max-neighbors",
+                                String.valueOf(DEFAULT_MAX_NEIGHBORS)));
+
+                int joinTimeoutSeconds = Integer.parseInt(values.getOrDefault(
+                                "--join-timeout-seconds",
+                                String.valueOf(DEFAULT_JOIN_TIMEOUT_SECONDS)));
+
+                double joinMinProbability = Double.parseDouble(values.getOrDefault(
+                                "--join-min-probability",
+                                String.valueOf(DEFAULT_JOIN_MIN_PROBABILITY)));
+
+                double joinMaxProbability = Double.parseDouble(values.getOrDefault(
+                                "--join-max-probability",
+                                String.valueOf(DEFAULT_JOIN_MAX_PROBABILITY)));
 
                 int gossipIntervalSeconds = Integer.parseInt(values.getOrDefault(
                                 "--probe-interval-seconds",
@@ -71,7 +91,11 @@ public record AgentConfig(String nodeId,
                                 "--phi-min-probability",
                                 String.valueOf(DEFAULT_MIN_PROBABILITY)));
 
-                List<NodeAddress> neighborList = parseNeighborList(values.getOrDefault("--neighbors", ""));
+                String rawBootstrapPeers = values.getOrDefault(
+                                "--bootstrap-peers",
+                                values.getOrDefault("--neighbors", ""));
+
+                List<NodeAddress> bootstrapPeers = parseNodeAddressList(rawBootstrapPeers);
 
                 return new AgentConfig(
                                 nodeId,
@@ -79,7 +103,11 @@ public record AgentConfig(String nodeId,
                                 advertiseHost,
                                 p2pPort,
                                 dashboardUrl,
-                                neighborList,
+                                bootstrapPeers,
+                                maxNeighbors,
+                                joinTimeoutSeconds,
+                                joinMinProbability,
+                                joinMaxProbability,
                                 gossipIntervalSeconds,
                                 ackTimeoutSeconds,
                                 phiWindowSize,
@@ -109,14 +137,14 @@ public record AgentConfig(String nodeId,
                 return values;
         }
 
-        private static List<NodeAddress> parseNeighborList(String rawNeighbors) {
-                List<NodeAddress> neighborList = new ArrayList<>();
+        private static List<NodeAddress> parseNodeAddressList(String rawAddresses) {
+                List<NodeAddress> addresses = new ArrayList<>();
 
-                if (rawNeighbors == null || rawNeighbors.isBlank()) {
-                        return neighborList;
+                if (rawAddresses == null || rawAddresses.isBlank()) {
+                        return addresses;
                 }
 
-                String[] nodeTokens = rawNeighbors.split(",");
+                String[] nodeTokens = rawAddresses.split(",");
 
                 for (String token : nodeTokens) {
                         String trimmed = token.trim();
@@ -125,9 +153,9 @@ public record AgentConfig(String nodeId,
                                 continue;
                         }
 
-                        neighborList.add(NodeAddress.from(trimmed));
+                        addresses.add(NodeAddress.from(trimmed));
                 }
 
-                return neighborList;
+                return addresses;
         }
 }
