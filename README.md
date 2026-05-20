@@ -223,7 +223,19 @@ java -cp target/classes com.example.agent.node.NodeAgent \
   --bootstrap-peers node-a@127.0.0.1:9001,node-b@127.0.0.1:9002
 ```
 
-### Step 4: Observe failure_report table
+### Step 4: Start Node D
+Node D will listen on port 9004 and attempt to connect with Node A and Node B.
+```bash
+java -cp target/classes com.example.agent.node.NodeAgent \
+  --node-id node-d \
+  --bind-host 127.0.0.1 \
+  --advertise-host 127.0.0.1 \
+  --p2p-port 9004 \
+  --max-neighbors 2 \
+  --bootstrap-peers node-a@127.0.0.1:9001,node-b@127.0.0.1:9002
+```
+
+### Step 5: Observe failure_report table
 If nothing is observed, consider Ctrl-C for one node and wait for a short period of time before running it again.
 
 ---
