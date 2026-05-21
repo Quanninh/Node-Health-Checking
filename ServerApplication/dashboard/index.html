@@ -3,60 +3,83 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Node Monitoring Dashboard</title>
-
+    <title>Decentralized Node Failure Dashboard</title>
     <link rel="stylesheet" href="style.css">
-
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
     <header>
-        Node Monitoring Dashboard
+        <div>
+            <h1>Decentralized Node Failure Dashboard</h1>
+            <p>
+                Read-only observer dashboard.
+                It shows failure events reported or received by each node.
+            </p>
+        </div>
+
+        <button id="refreshButton">Refresh Now</button>
     </header>
 
     <div class="container">
 
-        <!-- ALERT -->
+        <div id="connectionStatus" class="connection-status">
+            Connecting to node agents...
+        </div>
+
         <div id="alertBox" class="alert hidden"></div>
-        <div id="connectionStatus" class="connection-status">Connecting to server...</div>
 
-        <!-- CARDS -->
-        <div class="cards">
+        <section class="cards">
             <div class="card">
-                <h2 id="totalNodes">0</h2>
-                <p>Total Nodes</p>
+                <h2 id="totalEvents">0</h2>
+                <p>Event Copies Observed</p>
             </div>
-            <div class="card green">
-                <h2 id="upNodes">0</h2>
-                <p>UP</p>
-            </div>
+
             <div class="card red">
-                <h2 id="downNodes">0</h2>
-                <p>DOWN</p>
+                <h2 id="failedNodes">0</h2>
+                <p>Unique Failed Nodes</p>
             </div>
-        </div>
 
-        <!-- TABLE -->
-        <table>
-            <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>IP</th>
-                    <th>CPU</th>
-                    <th>Memory</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody id="nodeTable"></tbody>
-        </table>
+            <div class="card orange">
+                <h2 id="reportingNodes">0</h2>
+                <p>Reporting Nodes</p>
+            </div>
 
-        <!-- CHART -->
-        <div class="chart-container">
-            <h3 id="chartTitle">Select a node to view CPU history</h3>
-            <canvas id="cpuChart"></canvas>
-        </div>
+            <div class="card green">
+                <h2 id="reachableNodes">0</h2>
+                <p>Reachable Endpoints</p>
+            </div>
+
+            <div class="card blue">
+                <h2 id="uniqueEvents">0</h2>
+                <p>Unique Failure Events</p>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Failure Event Log</h2>
+                <p>
+                    Same event appearing under multiple "Seen From" nodes means the failure event propagated.
+                </p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Failed Node</th>
+                        <th>Reported By</th>
+                        <th>Seen From</th>
+                        <th>Status</th>
+                        <th>Phi</th>
+                        <th>Threshold</th>
+                        <th>Timestamp</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+
+                <tbody id="failureTable"></tbody>
+            </table>
+        </section>
 
     </div>
 

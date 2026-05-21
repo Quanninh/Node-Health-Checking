@@ -181,6 +181,25 @@ class NodeClient {
                                 .exceptionally(error -> false);
         }
 
+        CompletableFuture<Boolean> sendFailureEvent(NodeAddress peer, FailureEvent event) {
+                HttpRequest request = HttpRequest.newBuilder()
+                                .uri(peer.failureEventUri())
+                                .timeout(Duration.ofSeconds(ackTimeoutSeconds))
+                                .header("Content-Type", "application/json")
+                                .POST(HttpRequest.BodyPublishers.ofString(event.toJson()))
+                                .build();
+
+                // Send one failure event to one peer.
+                // Returning false on error keeps gossip/broadcast best-effort:
+                // one unreachable neighbor should not stop the whole node.
+                return httpClient
+                                .sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                                .orTimeout(ackTimeoutSeconds, TimeUnit.SECONDS)
+                                .thenApply(response -> response.statusCode() >= 200 && response.statusCode() < 300)
+                                .exceptionally(error -> false);
+        }
+
+
         private JoinAck parseJoinAck(String json) {
                 boolean accepted = P2pJson.booleanValue(json, "accepted");
                 String responderNodeId = P2pJson.stringValue(json, "responderNodeId");

@@ -20,13 +20,18 @@ class FailureDetector {
     private final int probeIntervalSeconds;
     private final ScheduledExecutorService scheduler;
 
+    private final FailureEventLog failureEventLog;
+    private final double unreachableThreshold;
+
     FailureDetector(
             String localNodeId,
             NeighborDirectory neighborDirectory,
             NodeClient nodeClient,
             DashboardReporter dashboardReporter,
             PhiAccrualFailureDetector phiDetector,
-            int probeIntervalSeconds) {
+            int probeIntervalSeconds,
+            FailureEventLog failureEventLog,
+            double unreachableThreshold) {
         this.localNodeId = localNodeId;
         this.neighborDirectory = neighborDirectory;
         this.nodeClient = nodeClient;
@@ -34,6 +39,8 @@ class FailureDetector {
         this.phiDetector = phiDetector;
         this.probeIntervalSeconds = probeIntervalSeconds;
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
+        this.failureEventLog = failureEventLog;
+        this.unreachableThreshold = unreachableThreshold;
     }
 
     void start() {
@@ -196,6 +203,27 @@ class FailureDetector {
                         + ". It must rejoin as a new node if it comes back.");
 
         if (previousStatus != NodeStatus.UNREACHABLE) {
+            // Store the failure locally before any cleanup removes the neighbor.
+            // The dashboard will later read this from the node directly.
+            FailureEvent event = FailureEvent.unreachable(
+                    localNodeId,
+                    targetNode,
+                    phi,
+                    unreachableThreshold
+            );
+
+            boolean added = failureEventLog.add(event);
+
+            if (added) {
+                // Phase 2:
+                // After storing the event locally, spread it to this node's current neighbors.
+                // This is the first decentralized replacement for the old central report path.
+                broadcastFailureEvent(event.decreaseTtl());
+            }
+
+            // Temporary backward compatibility:
+            // Keep the old central dashboard report for now.
+            // Later, this will be removed once the peer-to-peer event flow is stable.
             dashboardReporter.reportFailure(targetNode, phi);
         }
     }
@@ -209,4 +237,39 @@ class FailureDetector {
 
         System.out.println("---------------------------------------------------------------");
     }
+
+    private void broadcastFailureEvent(FailureEvent event) {
+        // Best-effort local broadcast:
+        // send the failure event to all current neighbors.
+        // This is decentralized because we send directly node-to-node,
+        // not through a central dashboard/server.
+        for (NodeAddress neighbor : neighborDirectory.addresses()) {
+            // Do not send the failure event to the node that is already declared unreachable.
+            if (neighbor.nodeId().equals(event.failedNodeId())) {
+                continue;
+            }
+
+            nodeClient.sendFailureEvent(neighbor, event)
+                    .thenAccept(sent -> {
+                        if (sent) {
+                            System.out.println(
+                                    "[" + LocalDateTime.now() + "] "
+                                            + "Forwarded FAILURE_EVENT "
+                                            + event.eventId()
+                                            + " from Node " + localNodeId
+                                            + " to Node " + neighbor.nodeId()
+                            );
+                        } else {
+                            System.out.println(
+                                    "[" + LocalDateTime.now() + "] "
+                                            + "Could not forward FAILURE_EVENT "
+                                            + event.eventId()
+                                            + " from Node " + localNodeId
+                                            + " to Node " + neighbor.nodeId()
+                            );
+                        }
+                    });
+        }
+    }
+
 }

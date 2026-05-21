@@ -47,6 +47,10 @@ record NodeAddress(String nodeId, String host, int port) {
         return URI.create("http://" + host + ":" + port + "/neighbor-remove");
     }
 
+    URI failureEventUri() {
+        return URI.create("http://" + host + ":" + port + "/failure-event");
+    }
+
     @Override
     public String toString() {
         return nodeId + "@" + host + ":" + port;

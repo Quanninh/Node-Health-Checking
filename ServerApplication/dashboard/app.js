@@ -1,168 +1,259 @@
-// const API = "https://node-health-checking-10.onrender.com/api/nodes";
-const API = "http://localhost:6789/api/nodes";
+/*
+ * Decentralized dashboard observer.
+ *
+ * This dashboard does NOT decide whether a node is dead.
+ * It only asks each node-agent what failure events it has seen.
+ */
 
-let chart;
-let selectedNodeId = null;
-let isLoadingHistory = false;
+const NODE_ENDPOINTS = [
+    {
+        nodeId: "node-a",
+        baseUrl: "http://localhost:9001",
+    },
+    {
+        nodeId: "node-b",
+        baseUrl: "http://localhost:9002",
+    },
+    {
+        nodeId: "node-c",
+        baseUrl: "http://localhost:9003",
+    },
+    {
+        nodeId: "node-d",
+        baseUrl: "http://localhost:9004",
+    },
+];
 
-async function fetchNodes() {
-    try {
-        const res = await fetch(API);
+const REFRESH_INTERVAL_MS = 2000;
 
-        if (!res.ok) {
-            throw new Error(`Server returned ${res.status}`);
+async function fetchAllFailureEvents() {
+    const allRows = [];
+    const reachableNodes = [];
+    const unreachableNodes = [];
+
+    for (const endpoint of NODE_ENDPOINTS) {
+        try {
+            const events = await fetchFailureEventsFromNode(endpoint);
+
+            reachableNodes.push(endpoint.nodeId);
+
+            for (const event of events) {
+                allRows.push({
+                    ...event,
+
+                    /*
+                     * "seenFromNode" means:
+                     * We fetched this event from this node's local event log.
+                     *
+                     * Example:
+                     * reporterNodeId = node-a
+                     * failedNodeId   = node-d
+                     * seenFromNode   = node-b
+                     *
+                     * Meaning:
+                     * node-a reported node-d unreachable,
+                     * and node-b has received/stored that event.
+                     */
+                    seenFromNode: endpoint.nodeId,
+                });
+            }
+        } catch (error) {
+            unreachableNodes.push(endpoint.nodeId);
+            console.warn(`Endpoint offline: ${endpoint.nodeId} at ${endpoint.baseUrl}`);
+            //console.warn(`Could not fetch from ${endpoint.nodeId}:`, error);
+        }
+    }
+
+    allRows.sort((a, b) => {
+        const left = new Date(a.timestamp || 0).getTime();
+        const right = new Date(b.timestamp || 0).getTime();
+        return right - left;
+    });
+
+    updateDashboard(allRows, reachableNodes, unreachableNodes);
+}
+
+async function fetchFailureEventsFromNode(endpoint) {
+    const response = await fetch(`${endpoint.baseUrl}/failure-events`);
+
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (!Array.isArray(data)) {
+        return [];
+    }
+
+    return data;
+}
+
+function updateDashboard(rows, reachableNodes, unreachableNodes) {
+    updateConnectionStatus(reachableNodes, unreachableNodes);
+    updateCards(rows, reachableNodes);
+    updateAlert(rows, unreachableNodes);
+    updateFailureTable(rows);
+}
+
+function updateConnectionStatus(reachableNodes, unreachableNodes) {
+    const status = document.getElementById("connectionStatus");
+
+    status.className = "connection-status";
+
+    if (unreachableNodes.length === 0) {
+        status.classList.add("connected");
+        status.innerText = `All node endpoints reachable: ${reachableNodes.join(", ")}`;
+        return;
+    }
+
+    if (reachableNodes.length === 0) {
+        status.classList.add("disconnected");
+        status.innerText = `No node endpoints reachable. Start node-agent instances first.`;
+        return;
+    }
+
+    status.classList.add("partial");
+    status.innerText =
+        `Reachable: ${reachableNodes.join(", ")} | ` +
+        `Unreachable endpoints: ${unreachableNodes.join(", ")}`;
+}
+
+function updateCards(rows, reachableNodes) {
+    const failedNodeIds = new Set();
+    const reporterNodeIds = new Set();
+    const uniqueEventIds = new Set();
+
+    for (const row of rows) {
+        if (row.failedNodeId) {
+            failedNodeIds.add(row.failedNodeId);
         }
 
-        const nodes = await res.json();
-
-        updateConnectionStatus("Connected to server", true);
-        updateTable(nodes);
-        updateCards(nodes);
-        checkAlerts(nodes);
-
-        if (selectedNodeId) {
-            loadHistory(selectedNodeId);
+        if (row.reporterNodeId) {
+            reporterNodeIds.add(row.reporterNodeId);
         }
-    } catch (error) {
-        updateConnectionStatus(
-            "Cannot connect to server. Start Spring Boot first.",
-            false,
-        );
-        console.error(error);
+
+        if (row.eventId) {
+            uniqueEventIds.add(row.eventId);
+        }
+    }
+
+    document.getElementById("totalEvents").innerText = rows.length;
+    document.getElementById("failedNodes").innerText = failedNodeIds.size;
+    document.getElementById("reportingNodes").innerText = reporterNodeIds.size;
+    document.getElementById("reachableNodes").innerText = reachableNodes.length;
+
+    const uniqueEventsElement = document.getElementById("uniqueEvents");
+    if (uniqueEventsElement) {
+        uniqueEventsElement.innerText = uniqueEventIds.size;
     }
 }
 
-function updateTable(nodes) {
-    const table = document.getElementById("nodeTable");
-    const scrollX = window.scrollX;
-    const scrollY = window.scrollY;
+function updateAlert(rows, unreachableNodes) {
+    const alertBox = document.getElementById("alertBox");
+
+    if (rows.length === 0) {
+        alertBox.classList.add("hidden");
+        alertBox.innerText = "";
+        return;
+    }
+
+    const failedNodeIds = [...new Set(rows.map((row) => row.failedNodeId))];
+
+    alertBox.classList.remove("hidden");
+    alertBox.innerText =
+        `Failure event(s) detected for: ${failedNodeIds.join(", ")}. ` +
+        `Unreachable endpoints: ${unreachableNodes.join(", ") || "none"}.`;
+}
+
+function updateFailureTable(rows) {
+    const table = document.getElementById("failureTable");
     table.innerHTML = "";
 
-    nodes.forEach((node) => {
+    if (rows.length === 0) {
         const row = document.createElement("tr");
 
         row.innerHTML = `
-            <td>${node.id}</td>
-            <td>${node.ipAddress || "-"}</td>
-            <td>${Number(node.cpuUsage).toFixed(1)}%</td>
-            <td>${Number(node.memoryUsage).toFixed(1)}%</td>
-            <td class="${node.status === "UP" ? "status-up" : "status-down"}">
-                ${node.status}
+            <td colspan="8" class="empty-table">
+                No failure events observed yet.
             </td>
         `;
 
-        if (node.id === selectedNodeId) {
-            row.classList.add("selected-row");
-        }
+        table.appendChild(row);
+        return;
+    }
 
-        row.onclick = () => {
-            selectRow(row, node.id);
-            loadHistory(node.id);
-        };
+    for (const event of rows) {
+        const row = document.createElement("tr");
+
+        row.title = event.eventId || "";
+
+        row.innerHTML = `
+            <td>${safeText(event.failedNodeId)}</td>
+            <td>${safeText(event.reporterNodeId)}</td>
+            <td>${safeText(event.seenFromNode)}</td>
+            <td class="${statusClass(event.status)}">${safeText(event.status)}</td>
+            <td>${formatNumber(event.phi)}</td>
+            <td>${formatNumber(event.threshold)}</td>
+            <td>${formatTimestamp(event.timestamp)}</td>
+            <td class="message-cell">${safeText(event.message)}</td>
+        `;
 
         table.appendChild(row);
-    });
-
-    window.scrollTo(scrollX, scrollY);
-}
-
-function updateCards(nodes) {
-    const up = nodes.filter((n) => n.status === "UP").length;
-    const down = nodes.length - up;
-
-    document.getElementById("totalNodes").innerText = nodes.length;
-    document.getElementById("upNodes").innerText = up;
-    document.getElementById("downNodes").innerText = down;
-}
-
-function checkAlerts(nodes) {
-    const alertBox = document.getElementById("alertBox");
-    const downNodes = nodes.filter((n) => n.status === "DOWN");
-
-    if (downNodes.length > 0) {
-        alertBox.classList.remove("hidden");
-        alertBox.innerText = `${downNodes.length} node(s) DOWN!`;
-    } else {
-        alertBox.classList.add("hidden");
     }
 }
 
-function selectRow(row, nodeId) {
-    selectedNodeId = nodeId;
-    document.querySelectorAll("#nodeTable tr").forEach((tableRow) => {
-        tableRow.classList.remove("selected-row");
-    });
-    row.classList.add("selected-row");
-}
+function statusClass(status) {
+    const normalized = String(status || "").toUpperCase();
 
-async function loadHistory(nodeId) {
-    if (isLoadingHistory) {
-        return;
+    if (normalized === "UNREACHABLE" || normalized === "FAILED" || normalized === "DOWN") {
+        return "status-down";
     }
 
-    selectedNodeId = nodeId;
-    isLoadingHistory = true;
-
-    document.getElementById("chartTitle").innerText =
-        "CPU History for " + nodeId;
-
-    try {
-        const res = await fetch(`${API}/${nodeId}/history`);
-
-        if (!res.ok) {
-            throw new Error(`Server returned ${res.status}`);
-        }
-
-        const data = await res.json();
-        const labels = data.map((d) =>
-            new Date(d.timestamp).toLocaleTimeString(),
-        );
-        const cpu = data.map((d) => d.cpuUsage);
-
-        drawChart(labels, cpu);
-    } catch (error) {
-        console.error(error);
-    } finally {
-        isLoadingHistory = false;
-    }
-}
-
-function drawChart(labels, data) {
-    const ctx = document.getElementById("cpuChart").getContext("2d");
-
-    if (chart) {
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = data;
-        chart.update("none");
-        return;
+    if (normalized === "WARNING" || normalized === "SUSPECTED") {
+        return "status-warning";
     }
 
-    chart = new Chart(ctx, {
-        type: "line",
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: "CPU %",
-                    data: data,
-                    borderColor: "#22c55e",
-                    fill: false,
-                },
-            ],
-        },
-        options: {
-            responsive: true,
-        },
-    });
+    if (normalized === "ALIVE" || normalized === "UP") {
+        return "status-up";
+    }
+
+    return "status-unknown";
 }
 
-function updateConnectionStatus(message, isConnected) {
-    const status = document.getElementById("connectionStatus");
-    status.innerText = message;
-    status.className = isConnected
-        ? "connection-status connected"
-        : "connection-status disconnected";
+function formatNumber(value) {
+    const number = Number(value);
+
+    if (Number.isNaN(number)) {
+        return "-";
+    }
+
+    return number.toFixed(4);
 }
 
-setInterval(fetchNodes, 2000);
-fetchNodes();
+function formatTimestamp(value) {
+    if (!value) {
+        return "-";
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return value;
+    }
+
+    return date.toLocaleString();
+}
+
+function safeText(value) {
+    if (value === null || value === undefined || value === "") {
+        return "-";
+    }
+
+    return String(value);
+}
+
+document.getElementById("refreshButton").addEventListener("click", fetchAllFailureEvents);
+
+setInterval(fetchAllFailureEvents, REFRESH_INTERVAL_MS);
+fetchAllFailureEvents();

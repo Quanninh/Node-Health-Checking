@@ -6,6 +6,11 @@ import java.util.List;
 public class NodeAgent {
 
         public static void main(String[] args) throws IOException {
+                // Shared local failure log used by both:
+                // 1. FailureDetector to write local failure events
+                // 2. PeerServer to expose those events to dashboard/observers
+                FailureEventLog failureEventLog = new FailureEventLog();
+                
                 AgentConfig config = AgentConfig.fromArgs(args);
 
                 NodeAddress localAddress = new NodeAddress(
@@ -37,7 +42,8 @@ public class NodeAgent {
                                 config.p2pPort(),
                                 localAddress,
                                 peerClient,
-                                neighborDirectory);
+                                neighborDirectory,
+                                failureEventLog);
 
                 FailureDetector failureDetector = new FailureDetector(
                                 config.nodeId(),
@@ -45,7 +51,9 @@ public class NodeAgent {
                                 peerClient,
                                 dashboardReporter,
                                 phiDetector,
-                                config.gossipIntervalSeconds());
+                                config.gossipIntervalSeconds(),
+                                failureEventLog,
+                                config.unreachableThreshold());
 
                 JoinCoordinator joinCoordinator = new JoinCoordinator(
                                 localAddress,
