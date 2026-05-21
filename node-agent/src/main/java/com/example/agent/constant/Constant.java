@@ -1,9 +1,6 @@
 package com.example.agent.constant;
 
 public final class Constant {
-    private Constant() {
-        // Can not initialize
-    }
 
     public static final int DEFAULT_MAX_NEIGHBORS = 2;
     public static final int DEFAULT_JOIN_TIMEOUT_SECONDS = 3;
@@ -21,4 +18,5 @@ public final class Constant {
     public static final double DEFAULT_UNREACHABLE_THRESHOLD = 5.0;
     public static final double DEFAULT_MIN_STD_DEVIATION = 0.1;
     public static final double DEFAULT_MIN_PROBABILITY = 1e-12;
+
 }

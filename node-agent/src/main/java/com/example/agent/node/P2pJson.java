@@ -6,6 +6,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 final class P2pJson {
+    
     private P2pJson() {
     }
 
