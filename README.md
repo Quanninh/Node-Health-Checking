@@ -198,6 +198,19 @@ java -cp target/classes com.example.agent.node.NodeAgent \
   --p2p-port 9001 \
   --max-neighbors 2
 ```
+For Window
+```bash
+java -cp target/classes com.example.agent.node.NodeAgent `
+  --node-id node-a `
+  --bind-host 127.0.0.1 `
+  --advertise-host 127.0.0.1 `
+  --p2p-port 9001 `
+  --max-neighbors 2 `
+  --phi-window-size 5 `
+  --phi-warning-threshold 1.0 `
+  --phi-suspected-threshold 3.0 `
+  --phi-unreachable-threshold 5.0
+```
 
 ### Step 2: Start Node B
 Node B will listen on port `9002` and attempt to connect with Node A and Node C.
@@ -209,6 +222,20 @@ java -cp target/classes com.example.agent.node.NodeAgent \
   --p2p-port 9002 \
   --max-neighbors 2 \
   --bootstrap-peers node-a@127.0.0.1:9001
+```
+For Window
+```bash
+java -cp target/classes com.example.agent.node.NodeAgent `
+  --node-id node-b `
+  --bind-host 127.0.0.1 `
+  --advertise-host 127.0.0.1 `
+  --p2p-port 9002 `
+  --max-neighbors 2 `
+  --bootstrap-peers node-a@127.0.0.1:9001 `
+  --phi-window-size 5 `
+  --phi-warning-threshold 1.0 `
+  --phi-suspected-threshold 3.0 `
+  --phi-unreachable-threshold 5.0
 ```
 
 ### Step 3: Start Node C
@@ -222,6 +249,20 @@ java -cp target/classes com.example.agent.node.NodeAgent \
   --max-neighbors 2 \
   --bootstrap-peers node-a@127.0.0.1:9001,node-b@127.0.0.1:9002
 ```
+For Window
+```bash
+java -cp target/classes com.example.agent.node.NodeAgent `
+  --node-id node-c `
+  --bind-host 127.0.0.1 `
+  --advertise-host 127.0.0.1 `
+  --p2p-port 9003 `
+  --max-neighbors 2 `
+  --bootstrap-peers node-a@127.0.0.1:9001,node-b@127.0.0.1:9002 `
+  --phi-window-size 5 `
+  --phi-warning-threshold 1.0 `
+  --phi-suspected-threshold 3.0 `
+  --phi-unreachable-threshold 5.0
+```
 
 ### Step 4: Start Node D
 Node D will listen on port 9004 and attempt to connect with Node A and Node B.
@@ -233,6 +274,20 @@ java -cp target/classes com.example.agent.node.NodeAgent \
   --p2p-port 9004 \
   --max-neighbors 2 \
   --bootstrap-peers node-a@127.0.0.1:9001,node-b@127.0.0.1:9002
+```
+For Window
+```bash
+java -cp target/classes com.example.agent.node.NodeAgent `
+  --node-id node-d `
+  --bind-host 127.0.0.1 `
+  --advertise-host 127.0.0.1 `
+  --p2p-port 9004 `
+  --max-neighbors 2 `
+  --bootstrap-peers node-a@127.0.0.1:9001,node-b@127.0.0.1:9002 `
+  --phi-window-size 5 `
+  --phi-warning-threshold 1.0 `
+  --phi-suspected-threshold 3.0 `
+  --phi-unreachable-threshold 5.0
 ```
 
 ### Step 5: Observe failure_report table
