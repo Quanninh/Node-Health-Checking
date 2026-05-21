@@ -13,7 +13,7 @@ public class NodeAgent {
                                 config.nodeId(),
                                 config.dashboardUrl());
 
-                PhiAccrualFailureDetector phiDetector = new PhiAccrualFailureDetector(
+                PhiAccrualFailure phiDetector = new PhiAccrualFailure(
                                 config.phiWindowSize(),
                                 config.warningThreshold(),
                                 config.suspectedThreshold(),
@@ -21,25 +21,34 @@ public class NodeAgent {
                                 config.minStdDeviation(),
                                 config.minProbability());
 
-                NodeClient peerClient = new NodeClient(
+                NodeClient nodeClient = new NodeClient(
                                 config.nodeId(),
                                 config.ackTimeoutSeconds());
 
-                PeerServer peerServer = new PeerServer(
+                NodeServer nodeServer = new NodeServer(
                                 config.nodeId(),
                                 config.bindHost(),
                                 config.p2pPort(),
-                                peerClient);
+                                nodeClient);
+
+                GossipService gossipService = new GossipService(
+                                config.nodeId(),
+                                neighborDirectory,
+                                nodeClient,
+                                config.gossipTtl());
+
+                nodeServer.setGossipService(gossipService);
 
                 FailureDetector failureDetector = new FailureDetector(
                                 config.nodeId(),
                                 neighborDirectory,
-                                peerClient,
+                                nodeClient,
                                 dashboardReporter,
                                 phiDetector,
-                                config.gossipIntervalSeconds());
+                                gossipService,
+                                config.probeIntervalSeconds());
 
-                peerServer.start();
+                nodeServer.start();
 
                 dashboardReporter.reportSelfAlive(config.advertiseHost(), config.p2pPort());
 
@@ -57,8 +66,9 @@ public class NodeAgent {
                 System.out.println("Dashboard URL        : " + config.dashboardUrl());
                 System.out.println("Neighbor list        : " + config.neighborList());
                 System.out.println("K known nodes        : " + config.neighborList().size());
-                System.out.println("Probe interval       : " + config.gossipIntervalSeconds() + " seconds");
+                System.out.println("Probe interval       : " + config.probeIntervalSeconds() + " seconds");
                 System.out.println("ACK timeout          : " + config.ackTimeoutSeconds() + " seconds");
+                System.out.println("Gossip TTL           : " + config.gossipTtl());
                 System.out.println("Phi window size      : " + config.phiWindowSize());
                 System.out.println("Phi thresholds       : WARNING=" + config.warningThreshold()
                                 + ", SUSPECTED=" + config.suspectedThreshold()

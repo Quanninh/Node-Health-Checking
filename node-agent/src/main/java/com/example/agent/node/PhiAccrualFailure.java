@@ -2,7 +2,7 @@ package com.example.agent.node;
 
 import java.util.List;
 
-public class PhiAccrualFailureDetector {
+public class PhiAccrualFailure {
     private final int windowSize;
 
     private final double warningThreshold;
@@ -12,7 +12,7 @@ public class PhiAccrualFailureDetector {
     private final double minStdDeviation;
     private final double minProbability;
 
-    public PhiAccrualFailureDetector(
+    public PhiAccrualFailure(
             int windowSize,
             double warningThreshold,
             double suspectedThreshold,

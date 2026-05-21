@@ -15,4 +15,5 @@ public final class Constant {
     public static final double DEFAULT_UNREACHABLE_THRESHOLD = 5.0;
     public static final double DEFAULT_MIN_STD_DEVIATION = 0.1;
     public static final double DEFAULT_MIN_PROBABILITY = 1e-12;
+    public static final int DEFAULT_GOSSIP_TTL = 4;
 }

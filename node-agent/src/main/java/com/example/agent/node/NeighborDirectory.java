@@ -10,6 +10,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class NeighborDirectory {
+
     private final List<NodeAddress> neighborList;
     private final Map<String, NodeState> nodeStates;
     private int nextIndex = 0;
@@ -24,11 +25,8 @@ public class NeighborDirectory {
     }
 
     synchronized Optional<NodeAddress> nextTargetNode() {
-        List<NodeAddress> reachableNeighbors = neighborList.stream()
-                .filter(node -> getStatus(node.nodeId()) != NodeStatus.UNREACHABLE)
-                .toList();
 
-        if (reachableNeighbors.isEmpty()) {
+        if (neighborList.isEmpty()) {
             return Optional.empty();
         }
 
@@ -76,7 +74,7 @@ public class NeighborDirectory {
         return helperNodes;
     }
 
-    void markAlive(String nodeId, PhiAccrualFailureDetector phiDetector) {
+    void markAlive(String nodeId, PhiAccrualFailure phiDetector) {
         NodeState state = nodeStates.get(nodeId);
 
         if (state != null) {
@@ -120,6 +118,50 @@ public class NeighborDirectory {
 
     Optional<NodeState> getState(String nodeId) {
         return Optional.ofNullable(nodeStates.get(nodeId));
+    }
+
+    List<NodeAddress> neighborList() {
+        return new ArrayList<>(neighborList);
+    }
+
+    Optional<NodeAddress> getAddress(String nodeId) {
+        return neighborList.stream()
+                .filter(node -> node.nodeId().equals(nodeId))
+                .findFirst();
+    }
+
+    int incarnationNumber(String nodeId) {
+        NodeState state = nodeStates.get(nodeId);
+
+        if (state == null) {
+            return 0;
+        }
+
+        return state.incarnationNumber();
+    }
+
+    void applyGossipStatus(String subjectNodeId, GossipMessageType messageType, int incarnationNumber) {
+        NodeState state = nodeStates.get(subjectNodeId);
+
+        if (state == null) {
+            System.out.println(
+                    "[" + LocalDateTime.now() + "] "
+                            + "Gossip subjectNodeId " + subjectNodeId
+                            + " is not in this node's neighborList. Message is recorded but not added.");
+            return;
+        }
+
+        switch (messageType) {
+            case SUSPECT -> state.markSuspectedFromGossip(incarnationNumber);
+            case UNREACHABLE -> state.markUnreachableFromGossip(incarnationNumber);
+            case ALIVE -> state.markAliveFromGossip(incarnationNumber);
+            case LEAVE -> state.markLeftFromGossip(incarnationNumber);
+            case JOIN -> {
+                if (incarnationNumber > state.incarnationNumber()) {
+                    state.markAliveFromGossip(incarnationNumber);
+                }
+            }
+        }
     }
 
     List<NodeState> states() {

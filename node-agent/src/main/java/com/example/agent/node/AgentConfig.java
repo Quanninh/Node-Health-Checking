@@ -7,14 +7,16 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import static com.example.agent.constant.Constant.*;
 
-public record AgentConfig(String nodeId,
+public record AgentConfig(
+                String nodeId,
                 String bindHost,
                 String advertiseHost,
                 int p2pPort,
                 String dashboardUrl,
                 List<NodeAddress> neighborList,
-                int gossipIntervalSeconds,
+                int probeIntervalSeconds,
                 int ackTimeoutSeconds,
+                int gossipTtl,
                 int phiWindowSize,
                 double warningThreshold,
                 double suspectedThreshold,
@@ -38,7 +40,7 @@ public record AgentConfig(String nodeId,
                                 "--dashboard-url",
                                 "http://localhost:6789/api");
 
-                int gossipIntervalSeconds = Integer.parseInt(values.getOrDefault(
+                int probeIntervalSeconds = Integer.parseInt(values.getOrDefault(
                                 "--probe-interval-seconds",
                                 values.getOrDefault("--gossip-interval-seconds",
                                                 String.valueOf(DEFAULT_GOSSIP_INTERVAL_SECONDS))));
@@ -46,6 +48,10 @@ public record AgentConfig(String nodeId,
                 int ackTimeoutSeconds = Integer.parseInt(values.getOrDefault(
                                 "--ack-timeout-seconds",
                                 String.valueOf(DEFAULT_ACK_TIMEOUT_SECONDS)));
+
+                int gossipTtl = Integer.parseInt(values.getOrDefault(
+                                "--gossip-ttl",
+                                String.valueOf(DEFAULT_GOSSIP_TTL)));
 
                 int phiWindowSize = Integer.parseInt(values.getOrDefault(
                                 "--phi-window-size",
@@ -80,8 +86,9 @@ public record AgentConfig(String nodeId,
                                 p2pPort,
                                 dashboardUrl,
                                 neighborList,
-                                gossipIntervalSeconds,
+                                probeIntervalSeconds,
                                 ackTimeoutSeconds,
+                                gossipTtl,
                                 phiWindowSize,
                                 warningThreshold,
                                 suspectedThreshold,

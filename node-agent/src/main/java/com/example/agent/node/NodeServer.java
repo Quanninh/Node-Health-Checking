@@ -13,24 +13,29 @@ import java.util.regex.Pattern;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
-class PeerServer {
-
+class NodeServer {
     private final String nodeId;
     private final String bindHost;
     private final int port;
-    private final NodeClient peerClient;
+    private final NodeClient nodeClient;
     private final HttpServer server;
+    private volatile GossipService gossipService;
 
-    PeerServer(String nodeId, String bindHost, int port, NodeClient peerClient) throws IOException {
+    NodeServer(String nodeId, String bindHost, int port, NodeClient nodeClient) throws IOException {
         this.nodeId = nodeId;
         this.bindHost = bindHost;
         this.port = port;
-        this.peerClient = peerClient;
+        this.nodeClient = nodeClient;
 
         this.server = HttpServer.create(new InetSocketAddress(bindHost, port), 0);
         this.server.createContext("/ping", this::handlePing);
         this.server.createContext("/ping-req", this::handlePingReq);
+        this.server.createContext("/gossip", this::handleGossip);
         this.server.setExecutor(Executors.newFixedThreadPool(4));
+    }
+
+    void setGossipService(GossipService gossipService) {
+        this.gossipService = gossipService;
     }
 
     void start() {
@@ -38,7 +43,7 @@ class PeerServer {
 
         System.out.println(
                 "[" + LocalDateTime.now() + "] "
-                        + "P2P server listening on "
+                        + "Node server listening on "
                         + bindHost + ":" + port);
     }
 
@@ -71,9 +76,9 @@ class PeerServer {
         String targetHost = extractJsonValue(requestBody, "targetHost");
         int targetPort = Integer.parseInt(extractJsonValue(requestBody, "targetPort"));
 
-        NodeAddress target = new NodeAddress(targetNodeId, targetHost, targetPort);
+        NodeAddress targetNode = new NodeAddress(targetNodeId, targetHost, targetPort);
 
-        boolean ackReceived = peerClient.ping(target).join();
+        boolean ackReceived = nodeClient.ping(targetNode).join();
 
         String responseJson = """
                 {
@@ -90,6 +95,27 @@ class PeerServer {
                 LocalDateTime.now());
 
         sendResponse(exchange, 200, responseJson);
+    }
+
+    private void handleGossip(HttpExchange exchange) throws IOException {
+        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+            sendResponse(exchange, 405, "Method Not Allowed");
+            return;
+        }
+
+        if (gossipService == null) {
+            sendResponse(exchange, 503, "{\"error\":\"GossipService not ready\"}");
+            return;
+        }
+
+        String requestBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+
+        GossipMessage message = GossipMessage.fromJson(requestBody);
+        String senderNodeId = extractJsonValue(requestBody, "senderNodeId");
+
+        gossipService.receiveGossip(message, senderNodeId);
+
+        sendResponse(exchange, 200, "{\"status\":\"gossip received\"}");
     }
 
     private String extractJsonValue(String json, String fieldName) {

@@ -53,9 +53,9 @@ class DashboardReporter {
                                 });
         }
 
-        CompletableFuture<Void> reportFailure(NodeAddress failedPeer, double phi) {
+        CompletableFuture<Void> reportFailure(NodeAddress failedNode, double phi) {
                 String message = "Node " + localNodeId
-                                + " classifies Node " + failedPeer.nodeId()
+                                + " classifies Node " + failedNode.nodeId()
                                 + " as UNREACHABLE by phi threshold. phi=" + String.format("%.4f", phi)
                                 + ". If this node comes back, it must rejoin as a new node.";
 
@@ -70,7 +70,7 @@ class DashboardReporter {
                                 }
                                 """.formatted(
                                 localNodeId,
-                                failedPeer.nodeId(),
+                                failedNode.nodeId(),
                                 message,
                                 phi,
                                 LocalDateTime.now());

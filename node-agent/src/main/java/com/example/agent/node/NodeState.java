@@ -6,10 +6,9 @@ import java.util.Collections;
 import java.util.List;
 
 public class NodeState {
-    private final NodeAddress peerAddress;
+
+    private final NodeAddress nodeAddress;
     private final List<Double> slidingWindowSeconds;
-    // volatile -> make sure that the variable is updated latest (in context of
-    // thread)
     private volatile NodeStatus status;
     private volatile long lastAckTimeMillis;
     private volatile LocalDateTime lastAckTime;
@@ -18,8 +17,8 @@ public class NodeState {
     private volatile double phi;
     private volatile int incarnationNumber;
 
-    NodeState(NodeAddress peerAddress) {
-        this.peerAddress = peerAddress;
+    NodeState(NodeAddress nodeAddress) {
+        this.nodeAddress = nodeAddress;
         this.slidingWindowSeconds = Collections.synchronizedList(new ArrayList<>());
         this.status = NodeStatus.UNKNOWN;
         this.lastAckTimeMillis = -1L;
@@ -27,11 +26,11 @@ public class NodeState {
         this.incarnationNumber = 0;
     }
 
-    synchronized void markAlive(PhiAccrualFailureDetector phiDetector) {
+    synchronized void markAlive(PhiAccrualFailure phiDetector) {
         if (status == NodeStatus.UNREACHABLE) {
             System.out.println(
                     "[" + LocalDateTime.now() + "] "
-                            + "ACK received from " + peerAddress.nodeId()
+                            + "ACK received from " + nodeAddress.nodeId()
                             + ", but it is already UNREACHABLE locally. "
                             + "It must rejoin as a new node instance.");
             return;
@@ -48,10 +47,30 @@ public class NodeState {
         this.lastAckTimeMillis = now;
         this.lastAckTime = LocalDateTime.now();
         this.phi = 0.0;
+        this.incarnationNumber++;
     }
 
-    // synchronized means that if it called, it lock the object ( in this we lock
-    // the object "this")
+    synchronized void markAliveFromGossip(int messageIncarnationNumber) {
+        if (messageIncarnationNumber <= this.incarnationNumber) {
+            return;
+        }
+
+        if (status == NodeStatus.UNREACHABLE) {
+            System.out.println(
+                    "[" + LocalDateTime.now() + "] "
+                            + "ALIVE gossip for " + nodeAddress.nodeId()
+                            + " is newer, but local state is UNREACHABLE. "
+                            + "Treat this as requiring JOIN/rejoin, not simple recovery.");
+            return;
+        }
+
+        this.status = NodeStatus.ALIVE;
+        this.phi = 0.0;
+        this.lastAckTime = LocalDateTime.now();
+        this.lastAckTimeMillis = System.currentTimeMillis();
+        this.incarnationNumber = messageIncarnationNumber;
+    }
+
     synchronized void markSuspected(double phi) {
         if (status == NodeStatus.UNREACHABLE) {
             return;
@@ -78,8 +97,36 @@ public class NodeState {
         this.incarnationNumber++;
     }
 
+    synchronized void markUnreachableFromGossip(int messageIncarnationNumber) {
+        if (messageIncarnationNumber < this.incarnationNumber) {
+            return;
+        }
+
+        this.status = NodeStatus.UNREACHABLE;
+        this.lastUnreachableTime = LocalDateTime.now();
+        this.phi = Double.POSITIVE_INFINITY;
+        this.incarnationNumber = Math.max(this.incarnationNumber, messageIncarnationNumber);
+    }
+
+    synchronized void markSuspectedFromGossip(int messageIncarnationNumber) {
+        if (status == NodeStatus.UNREACHABLE || messageIncarnationNumber < this.incarnationNumber) {
+            return;
+        }
+
+        this.status = NodeStatus.SUSPECTED;
+        this.lastSuspicionTime = LocalDateTime.now();
+        this.incarnationNumber = Math.max(this.incarnationNumber, messageIncarnationNumber);
+    }
+
+    synchronized void markLeftFromGossip(int incomingIncarnationNumber) {
+        if (incomingIncarnationNumber >= this.incarnationNumber) {
+            this.status = NodeStatus.UNREACHABLE;
+            this.incarnationNumber = incomingIncarnationNumber;
+        }
+    }
+
     NodeAddress address() {
-        return peerAddress;
+        return nodeAddress;
     }
 
     NodeStatus status() {
@@ -98,10 +145,14 @@ public class NodeState {
         return phi;
     }
 
+    int incarnationNumber() {
+        return incarnationNumber;
+    }
+
     @Override
     public String toString() {
-        return "PeerState{" +
-                "peerAddress=" + peerAddress +
+        return "NodeState{" +
+                "nodeAddress=" + nodeAddress +
                 ", status=" + status +
                 ", phi=" + String.format("%.4f", phi) +
                 ", slidingWindowSeconds=" + slidingWindowSeconds +

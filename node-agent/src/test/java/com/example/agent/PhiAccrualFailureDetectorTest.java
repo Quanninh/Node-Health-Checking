@@ -12,14 +12,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.example.agent.node.NodeStatus;
-import com.example.agent.node.PhiAccrualFailureDetector;
+import com.example.agent.node.PhiAccrualFailure;
 
 public class PhiAccrualFailureDetectorTest {
-    private PhiAccrualFailureDetector detector;
+    private PhiAccrualFailure detector;
 
     @BeforeEach
     public void setUp() {
-        detector = new PhiAccrualFailureDetector(
+        detector = new PhiAccrualFailure(
                 5, // windowSize
                 1.0, // warningThreshold
                 3.0, // suspectedThreshold
