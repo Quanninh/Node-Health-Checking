@@ -206,6 +206,7 @@ java -cp target/classes com.example.agent.node.NodeAgent `
   --advertise-host 127.0.0.1 `
   --p2p-port 9001 `
   --max-neighbors 2 `
+  --neighbors node-b@127.0.0.1:9002,node-c@127.0.0.1:9003 `
   --phi-window-size 5 `
   --phi-warning-threshold 1.0 `
   --phi-suspected-threshold 3.0 `
@@ -231,6 +232,7 @@ java -cp target/classes com.example.agent.node.NodeAgent `
   --advertise-host 127.0.0.1 `
   --p2p-port 9002 `
   --max-neighbors 2 `
+  --neighbors node-a@127.0.0.1:9001,node-d@127.0.0.1:9004 `
   --bootstrap-peers node-a@127.0.0.1:9001 `
   --phi-window-size 5 `
   --phi-warning-threshold 1.0 `
@@ -257,6 +259,7 @@ java -cp target/classes com.example.agent.node.NodeAgent `
   --advertise-host 127.0.0.1 `
   --p2p-port 9003 `
   --max-neighbors 2 `
+  --neighbors node-a@127.0.0.1:9001,node-d@127.0.0.1:9004 `
   --bootstrap-peers node-a@127.0.0.1:9001,node-b@127.0.0.1:9002 `
   --phi-window-size 5 `
   --phi-warning-threshold 1.0 `
@@ -283,6 +286,7 @@ java -cp target/classes com.example.agent.node.NodeAgent `
   --advertise-host 127.0.0.1 `
   --p2p-port 9004 `
   --max-neighbors 2 `
+  --neighbors node-b@127.0.0.1:9002,node-c@127.0.0.1:9003 `
   --bootstrap-peers node-a@127.0.0.1:9001,node-b@127.0.0.1:9002 `
   --phi-window-size 5 `
   --phi-warning-threshold 1.0 `
