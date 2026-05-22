@@ -13,17 +13,19 @@ public class GossipService {
 
     private final String localNodeId;
     private final NeighborDirectory neighborDirectory;
+    private final ConnectionManager connectionManager;
     private final NodeClient nodeClient;
     private final int defaultTtl;
     private final Set<String> seenMessages;
 
     public GossipService(String localNodeId, NeighborDirectory neighborDirectory, NodeClient nodeClient,
-            int defaultTtl) {
+            int defaultTtl, ConnectionManager connectionManager) {
         this.localNodeId = localNodeId;
         this.neighborDirectory = neighborDirectory;
         this.nodeClient = nodeClient;
         this.defaultTtl = defaultTtl;
         this.seenMessages = ConcurrentHashMap.newKeySet();
+        this.connectionManager = connectionManager;
     }
 
     /**
@@ -197,7 +199,7 @@ public class GossipService {
                 + ", subjectNodeId=" + message.subjectNodeId()
                 + ", ttl=" + message.ttl());
 
-        for (NodeAddress neighborNode : neighborDirectory.neighborList()) {
+        for (NodeAddress neighborNode : connectionManager.addresses()) {
             if (neighborNode.nodeId().equals(senderNodeId) || neighborNode.nodeId().equals(localNodeId)) {
                 continue;
             }

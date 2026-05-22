@@ -1,7 +1,5 @@
 package com.monitoring.agent.node;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -50,7 +48,12 @@ public record AgentConfig(
         String advertiseHost,
         int p2pPort,
         String dashboardUrl,
-        List<NodeAddress> neighborList,
+        String multicastGroup,
+        int multicastPort,
+        String multicastInterfaceName,
+        int discoveryRetryCount,
+        int discoveryRetryIntervalMillis,
+        int discoveryCollectionWindowMillis,
         int probeIntervalSeconds,
         int ackTimeoutSeconds,
         int gossipTtl,
@@ -82,7 +85,29 @@ public record AgentConfig(
         String dashboardUrl = values.getOrDefault(
                 "--dashboard-url",
                 "http://localhost:6789/api");
+String multicastGroup = values.getOrDefault(
+                "--multicast-group",
+                "239.10.20.30");
 
+        int multicastPort = Integer.parseInt(values.getOrDefault(
+                "--multicast-port",
+                "50505"));
+
+        String multicastInterfaceName = values.getOrDefault(
+                "--multicast-interface",
+                "");
+
+        int discoveryRetryCount = Integer.parseInt(values.getOrDefault(
+                "--discovery-retry-count",
+                "3"));
+
+        int discoveryRetryIntervalMillis = Integer.parseInt(values.getOrDefault(
+                "--discovery-retry-interval-ms",
+                "400"));
+
+        int discoveryCollectionWindowMillis = Integer.parseInt(values.getOrDefault(
+                "--discovery-collection-window-ms",
+                "3000"));
         int probeIntervalSeconds = Integer.parseInt(values.getOrDefault(
                 "--probe-interval-seconds",
                 values.getOrDefault("--gossip-interval-seconds",
@@ -120,15 +145,18 @@ public record AgentConfig(
                 "--phi-min-probability",
                 String.valueOf(DEFAULT_MIN_PROBABILITY)));
 
-        List<NodeAddress> neighborList = parseNeighborList(values.getOrDefault("--neighbors", ""));
-
         return new AgentConfig(
                 nodeId,
                 bindHost,
                 advertiseHost,
                 p2pPort,
                 dashboardUrl,
-                neighborList,
+                multicastGroup,
+                multicastPort,
+                multicastInterfaceName,
+                discoveryRetryCount,
+                discoveryRetryIntervalMillis,
+                discoveryCollectionWindowMillis,
                 probeIntervalSeconds,
                 ackTimeoutSeconds,
                 gossipTtl,
@@ -165,25 +193,25 @@ public record AgentConfig(
         return values;
     }
 
-    private static List<NodeAddress> parseNeighborList(String rawNeighbors) {
-        List<NodeAddress> neighborList = new ArrayList<>();
+//     private static List<NodeAddress> parseNeighborList(String rawNeighbors) {
+//         List<NodeAddress> neighborList = new ArrayList<>();
 
-        if (rawNeighbors == null || rawNeighbors.isBlank()) {
-            return neighborList;
-        }
+//         if (rawNeighbors == null || rawNeighbors.isBlank()) {
+//             return neighborList;
+//         }
 
-        String[] nodeTokens = rawNeighbors.split(",");
+//         String[] nodeTokens = rawNeighbors.split(",");
 
-        for (String token : nodeTokens) {
-            String trimmed = token.trim();
+//         for (String token : nodeTokens) {
+//             String trimmed = token.trim();
 
-            if (trimmed.isBlank()) {
-                continue;
-            }
+//             if (trimmed.isBlank()) {
+//                 continue;
+//             }
 
-            neighborList.add(NodeAddress.fromString(trimmed));
-        }
+//             neighborList.add(NodeAddress.fromString(trimmed));
+//         }
 
-        return neighborList;
-    }
+//         return neighborList;
+//     }
 }

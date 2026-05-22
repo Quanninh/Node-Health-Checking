@@ -1,8 +1,10 @@
-// package com.monitoring.agent.node;
+package com.monitoring.agent.node;
 
-// private record JoinAck(
-// boolean accepted,
-// NodeAddress responder,
-// NodeAddress suggestedPeer,
-// String reason) {
-// }
+import java.util.List;
+
+public record JoinAck(        
+    String txId,
+        NodeAddress responder,
+        long neighborVersion,
+        List<NodeAddress> responderNeighbors) {
+}

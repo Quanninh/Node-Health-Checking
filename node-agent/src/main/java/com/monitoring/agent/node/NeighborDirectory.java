@@ -1,11 +1,14 @@
 package com.monitoring.agent.node;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.monitoring.agent.constant.Constant;
@@ -15,26 +18,20 @@ import com.monitoring.agent.constant.Constant;
  */
 public class NeighborDirectory {
 
-    /** List of neighbors. */
-    private final List<NodeAddress> neighborList;
-
+    private final ConnectionManager connectionManager;
     /**
      * Mapping of node id and its state.
      * 
      * @see NodeState
      */
-    private final Map<String, NodeState> nodeStates;
+    private final Map<String, NodeState> nodeStates = new ConcurrentHashMap<>();
 
     /** Index for iterating through neighbors (for failure detection). */
     private int nextIndex = 0;
 
-    public NeighborDirectory(List<NodeAddress> neighborList) {
-        this.neighborList = new ArrayList<>(neighborList);
-        this.nodeStates = new ConcurrentHashMap<>();
-
-        for (NodeAddress node : neighborList) {
-            nodeStates.put(node.nodeId(), new NodeState(node));
-        }
+    public NeighborDirectory(ConnectionManager connectionManager) {
+        this.connectionManager = connectionManager;
+        syncStatesWithConnections();
     }
 
     /**
@@ -44,28 +41,20 @@ public class NeighborDirectory {
      * @return the next node, empty if node has no active neighbors
      */
     public synchronized Optional<NodeAddress> nextTargetNode() {
-        if (nextIndex >= neighborList.size()) {
-            Collections.shuffle(neighborList);
+        List<NodeAddress> neighbors = reachableNeighbors();
+        if (neighbors.isEmpty()) {
+            return Optional.empty();
+        }
+
+        if (nextIndex >= neighbors.size()) {
+            Collections.shuffle(neighbors);
             nextIndex = 0;
-
-            System.out.println("\n[" + Constant.NOW() + "] " + Constant.BLUE
-                    + "Completed one full neighbor cycle. Shuffled neighborList: "
-                    + neighborList + Constant.RESET);
+            log("Completed one full neighbor cycle. Shuffled reachable neighbors: " + neighbors);
         }
 
-        int attempts = 0;
-        while (attempts < neighborList.size()) {
-            NodeAddress selectedNode = neighborList.get(nextIndex);
-            nextIndex = (nextIndex + 1) % neighborList.size();
-            attempts++;
-
-            // Check if the neighbor is reachable
-            if (getStatus(selectedNode.nodeId()) != NodeStatus.UNREACHABLE) {
-                return Optional.of(selectedNode);
-            }
-        }
-
-        return Optional.empty();
+        NodeAddress selected = neighbors.get(nextIndex);
+        nextIndex = (nextIndex + 1) % neighbors.size();
+        return Optional.of(selected);
     }
 
     /**
@@ -76,13 +65,46 @@ public class NeighborDirectory {
      * @return the list of helper nodes
      */
     public List<NodeAddress> selectHelperNodes(NodeAddress targetNode) {
-        List<NodeAddress> helperNodes = new ArrayList<>(neighborList.stream()
+        List<NodeAddress> helperNodes = new ArrayList<>(connectionManager.addresses().stream()
                 .filter(node -> (getStatus(node.nodeId()) != NodeStatus.UNREACHABLE)
                         && (!node.nodeId().equals(targetNode.nodeId())))
                 .toList());
         Collections.shuffle(helperNodes);
 
         return helperNodes;
+    }
+
+synchronized void removeUnreachableNeighbors() {
+        List<String> unreachableNodeIds = nodeStates.values().stream()
+                .filter(state -> state.getStatus() == NodeStatus.UNREACHABLE)
+                .map(state -> state.getNodeAddress().nodeId())
+                .toList();
+
+        for (String nodeId : unreachableNodeIds) {
+            connectionManager.remove(nodeId, "failure detector marked node unreachable");
+            nodeStates.remove(nodeId);
+        }
+
+        if (nextIndex > connectionManager.size()) {
+            nextIndex = 0;
+        }
+    }
+
+    synchronized boolean contains(String nodeId) {
+        return connectionManager.contains(nodeId);
+    }
+
+    synchronized int size() {
+        return connectionManager.size();
+    }
+
+    synchronized int maxNeighbors() {
+        return connectionManager.maxNeighbors();
+    }
+
+    synchronized List<NodeAddress> addresses() {
+        syncStatesWithConnections();
+        return connectionManager.addresses();
     }
 
     /**
@@ -93,6 +115,7 @@ public class NeighborDirectory {
      * @see PhiAccrualFailure
      */
     public void markAlive(String nodeId, PhiAccrualFailure phiDetector) {
+        syncStatesWithConnections();
         NodeState state = nodeStates.get(nodeId);
 
         if (state != null) {
@@ -108,6 +131,7 @@ public class NeighborDirectory {
      * @see PhiAccrualFailure
      */
     public void markWarning(String nodeId, double phi) {
+        syncStatesWithConnections();
         NodeState state = nodeStates.get(nodeId);
 
         if (state != null) {
@@ -123,6 +147,7 @@ public class NeighborDirectory {
      * @see PhiAccrualFailure
      */
     public void markSuspected(String nodeId, double phi) {
+        syncStatesWithConnections();
         NodeState state = nodeStates.get(nodeId);
 
         if (state != null) {
@@ -138,6 +163,7 @@ public class NeighborDirectory {
      * @see PhiAccrualFailure
      */
     public void markUnreachable(String nodeId, double phi) {
+        syncStatesWithConnections();
         NodeState state = nodeStates.get(nodeId);
 
         if (state != null) {
@@ -154,6 +180,7 @@ public class NeighborDirectory {
      * @see NodeState
      */
     public NodeStatus getStatus(String nodeId) {
+        syncStatesWithConnections();
         NodeState state = nodeStates.get(nodeId);
 
         if (state == null) {
@@ -171,11 +198,8 @@ public class NeighborDirectory {
      * @see NodeState
      */
     public Optional<NodeState> getState(String nodeId) {
+        syncStatesWithConnections();
         return Optional.ofNullable(nodeStates.get(nodeId));
-    }
-
-    public List<NodeAddress> neighborList() {
-        return new ArrayList<>(neighborList);
     }
 
     /**
@@ -186,9 +210,38 @@ public class NeighborDirectory {
      * @see NodeAddress
      */
     public Optional<NodeAddress> getAddress(String targetNodeId) {
-        return neighborList.stream()
+        syncStatesWithConnections();
+        return connectionManager.addresses().stream()
                 .filter(node -> node.nodeId().equals(targetNodeId))
                 .findFirst();
+    }
+
+    private List<NodeAddress> reachableNeighbors() {
+        syncStatesWithConnections();
+        return connectionManager.addresses().stream()
+                .filter(node -> getStatusWithoutSync(node.nodeId()) != NodeStatus.UNREACHABLE)
+                .toList();
+    }
+
+    private NodeStatus getStatusWithoutSync(String nodeId) {
+        NodeState state = nodeStates.get(nodeId);
+        return state == null ? NodeStatus.UNKNOWN : state.getStatus();
+    }
+
+    private void syncStatesWithConnections() {
+        List<NodeAddress> currentNeighbors = connectionManager.addresses();
+        Set<String> currentIds = new HashSet<>();
+
+        for (NodeAddress address : currentNeighbors) {
+            currentIds.add(address.nodeId());
+            nodeStates.putIfAbsent(address.nodeId(), new NodeState(address));
+        }
+
+        nodeStates.keySet().removeIf(nodeId -> !currentIds.contains(nodeId));
+    }
+
+    private static void log(String message) {
+        System.out.println("[" + LocalDateTime.now() + "] " + message);
     }
 
     // TODO: Javadoc
@@ -244,6 +297,7 @@ public class NeighborDirectory {
      * @see NodeState
      */
     public List<NodeState> states() {
+        syncStatesWithConnections();
         List<NodeState> states = new ArrayList<>(nodeStates.values());
         states.sort(Comparator.comparing(state -> state.getNodeAddress().nodeId()));
         return states;
