@@ -1,4 +1,4 @@
-package com.monitoring.agent.node;
+package com.monitoring.agent.node.connection;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -9,7 +9,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
-final class ConnectionManager {
+import com.monitoring.agent.node.NodeAddress;
+
+public final class ConnectionManager {
 
     private final NodeAddress localAddress;
     private final int maxNeighbors;
@@ -18,9 +20,17 @@ final class ConnectionManager {
     private final Map<String, NodeAddress> neighborsById = new LinkedHashMap<>();
     private final Set<String> processedTransactions = ConcurrentHashMap.newKeySet();
 
+    /** The version of the snapshot. Highest = latest. */
     private long version = 0;
 
-    ConnectionManager(NodeAddress localAddress, int maxNeighbors) {
+    /**
+     * Constructor for Connection Manager
+     * 
+     * @param localAddress the local address of the node
+     * @param maxNeighbors the maximum number of neighbors, must be a positive even
+     *                     number
+     */
+    public ConnectionManager(NodeAddress localAddress, int maxNeighbors) {
         if (maxNeighbors <= 0 || maxNeighbors % 2 != 0) {
             throw new IllegalArgumentException("maxNeighbors must be a positive even number.");
         }
@@ -29,7 +39,13 @@ final class ConnectionManager {
         this.maxNeighbors = maxNeighbors;
     }
 
-    Snapshot snapshot() {
+    /**
+     * Takes a snapshot of the current neighbors list.
+     * 
+     * @return a snapshot
+     * @see Snapshot
+     */
+    public Snapshot takeSnapshot() {
         lock.lock();
         try {
             return new Snapshot(version, List.copyOf(neighborsById.values()));
@@ -38,7 +54,13 @@ final class ConnectionManager {
         }
     }
 
-    boolean contains(String nodeId) {
+    /**
+     * Checks if a node is one of this node's neighbor.
+     * 
+     * @param nodeId the node
+     * @return whether the node is a neighbor
+     */
+    public boolean containsNode(String nodeId) {
         lock.lock();
         try {
             return neighborsById.containsKey(nodeId);
@@ -47,7 +69,16 @@ final class ConnectionManager {
         }
     }
 
-    boolean addIfSpace(NodeAddress peer, String reason) {
+    /**
+     * Adds a new neighbor to the list if there is still space. Return {@code false}
+     * if the node is null, itself, already a neighbor, or if the node can't accept
+     * new neighbors.
+     * 
+     * @param peer   the requesting node
+     * @param reason reason for becoming a neighbor
+     * @return successful or not
+     */
+    public boolean addIfSpace(NodeAddress peer, String reason) {
         lock.lock();
         try {
             if (peer == null || peer.nodeId().equals(localAddress.nodeId())) {
@@ -65,15 +96,21 @@ final class ConnectionManager {
             neighborsById.put(peer.nodeId(), peer);
             version++;
 
-            log("Added neighbor " + peer + " because " + reason
-                    + ". neighbors=" + neighborsById.values());
+            log("Added neighbor " + peer + " because " + reason + ". neighbors=" + neighborsById.values());
             return true;
         } finally {
             lock.unlock();
         }
     }
 
-    boolean remove(String nodeId, String reason) {
+    /**
+     * Removes a node from the neighbor list.
+     * 
+     * @param nodeId node to be removed
+     * @param reason reason for removal
+     * @return status
+     */
+    public boolean remove(String nodeId, String reason) {
         lock.lock();
         try {
             NodeAddress removed = neighborsById.remove(nodeId);
@@ -90,11 +127,15 @@ final class ConnectionManager {
         }
     }
 
-    CommitResult applyDirectTargetCommit(
-            String txId,
-            NodeAddress joiningNode,
-            String evictedNodeId
-    ) {
+    // TODO: What is txID?
+    /**
+     * 
+     * @param txId
+     * @param joiningNode
+     * @param evictedNodeId
+     * @return
+     */
+    public CommitResult applyDirectTargetCommit(String txId, NodeAddress joiningNode, String evictedNodeId) {
         lock.lock();
         try {
             if (!processedTransactions.add("DIRECT:" + txId)) {
@@ -134,11 +175,7 @@ final class ConnectionManager {
         }
     }
 
-    CommitResult applyEvictedNodeCommit(
-            String txId,
-            NodeAddress joiningNode,
-            String oldDirectTargetId
-    ) {
+    public CommitResult applyEvictedNodeCommit(String txId, NodeAddress joiningNode, String oldDirectTargetId) {
         lock.lock();
         try {
             if (!processedTransactions.add("VICTIM:" + txId + ":" + oldDirectTargetId)) {
@@ -177,7 +214,12 @@ final class ConnectionManager {
         }
     }
 
-    int size() {
+    /**
+     * Gets the size of the neighbors list.
+     * 
+     * @return the size
+     */
+    public int size() {
         lock.lock();
         try {
             return neighborsById.size();
@@ -186,11 +228,21 @@ final class ConnectionManager {
         }
     }
 
-    int maxNeighbors() {
+    /**
+     * Gets the number of max neighbors for this node.
+     * 
+     * @return the max neighbors
+     */
+    public int getMaxNeighbors() {
         return maxNeighbors;
     }
 
-    List<NodeAddress> addresses() {
+    /**
+     * Gets the list of addresses of neighbors.
+     * 
+     * @return list of addresses
+     */
+    public List<NodeAddress> addresses() {
         lock.lock();
         try {
             return new ArrayList<>(neighborsById.values());
@@ -203,9 +255,4 @@ final class ConnectionManager {
         System.out.println("[" + LocalDateTime.now() + "] " + message);
     }
 
-    record Snapshot(long version, List<NodeAddress> neighbors) {
-    }
-
-    record CommitResult(boolean accepted, String reason) {
-    }
 }

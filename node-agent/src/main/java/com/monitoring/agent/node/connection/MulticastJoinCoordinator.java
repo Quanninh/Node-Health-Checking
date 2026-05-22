@@ -1,11 +1,16 @@
-package com.monitoring.agent.node;
+package com.monitoring.agent.node.connection;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-final class MulticastJoinCoordinator {
+import com.monitoring.agent.node.JoinAck;
+import com.monitoring.agent.node.JoinPlan;
+import com.monitoring.agent.node.JoinPlanner;
+import com.monitoring.agent.node.NodeAddress;
+
+public final class MulticastJoinCoordinator {
 
     private final NodeAddress localAddress;
     private final int maxNeighbors;
@@ -14,13 +19,12 @@ final class MulticastJoinCoordinator {
     private final MembershipControlService membershipControlService;
     private final JoinPlanner joinPlanner;
 
-    MulticastJoinCoordinator(
+    public MulticastJoinCoordinator(
             NodeAddress localAddress,
             int maxNeighbors,
             ConnectionManager connectionManager,
             MulticastDiscoveryService discoveryService,
-            MembershipControlService membershipControlService
-    ) {
+            MembershipControlService membershipControlService) {
         this.localAddress = localAddress;
         this.maxNeighbors = maxNeighbors;
         this.connectionManager = connectionManager;
@@ -29,7 +33,7 @@ final class MulticastJoinCoordinator {
         this.joinPlanner = new JoinPlanner(localAddress, maxNeighbors);
     }
 
-    void joinNetwork() {
+    public void joinNetwork() {
         try {
             List<JoinAck> acks = discoveryService.discoverPeers();
 
@@ -38,7 +42,7 @@ final class MulticastJoinCoordinator {
                 return;
             }
 
-            JoinPlanner.JoinPlan plan = joinPlanner.createPlan(acks);
+            JoinPlan plan = joinPlanner.createPlan(acks);
 
             if (plan.directTargets().isEmpty()) {
                 log("No valid join plan. Node remains alone temporarily.");
@@ -56,7 +60,7 @@ final class MulticastJoinCoordinator {
         }
     }
 
-    private void joinSmallNetwork(JoinPlanner.JoinPlan plan) {
+    private void joinSmallNetwork(JoinPlan plan) {
         for (NodeAddress peer : plan.directTargets()) {
             connectionManager.addIfSpace(peer, "small-network multicast join");
         }
@@ -66,7 +70,7 @@ final class MulticastJoinCoordinator {
     }
 
     // NOTE: remember to handle node failures
-    private void joinScaledNetwork(JoinPlanner.JoinPlan plan) {
+    private void joinScaledNetwork(JoinPlan plan) {
         String txId = UUID.randomUUID().toString();
 
         for (Map.Entry<NodeAddress, NodeAddress> entry : plan.evictionByDirectTarget().entrySet()) {
@@ -77,8 +81,7 @@ final class MulticastJoinCoordinator {
                     directTarget,
                     localAddress,
                     victim,
-                    txId + ":direct:" + directTarget.nodeId()
-            );
+                    txId + ":direct:" + directTarget.nodeId());
 
             if (!directCommitted) {
                 log("Direct target commit failed for " + directTarget);
@@ -89,8 +92,7 @@ final class MulticastJoinCoordinator {
                     victim,
                     localAddress,
                     directTarget,
-                    txId + ":victim:" + victim.nodeId()
-            );
+                    txId + ":victim:" + victim.nodeId());
 
             if (!victimCommitted) {
                 log("Victim commit failed for " + victim

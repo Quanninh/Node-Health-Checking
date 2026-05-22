@@ -1,4 +1,4 @@
-package com.monitoring.agent.node;
+package com.monitoring.agent.node.connection;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -21,7 +21,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-final class MulticastDiscoveryService implements AutoCloseable {
+import com.monitoring.agent.node.DiscoveryConfig;
+import com.monitoring.agent.node.JoinAck;
+import com.monitoring.agent.node.NodeAddress;
+
+public final class MulticastDiscoveryService implements AutoCloseable {
 
     private final NodeAddress localAddress;
     private final DiscoveryConfig config;
@@ -33,25 +37,23 @@ final class MulticastDiscoveryService implements AutoCloseable {
     private volatile boolean running;
     private MulticastSocket multicastSocket;
 
-    MulticastDiscoveryService(
+    public MulticastDiscoveryService(
             NodeAddress localAddress,
             DiscoveryConfig config,
-            ConnectionManager connectionManager
-    ) {
+            ConnectionManager connectionManager) {
         this.localAddress = localAddress;
         this.config = config;
         this.connectionManager = connectionManager;
     }
 
-    void startResponder() throws IOException {
+    public void startResponder() throws IOException {
         multicastSocket = new MulticastSocket(null);
         multicastSocket.setReuseAddress(true);
         multicastSocket.bind(new InetSocketAddress(config.multicastPort()));
         multicastSocket.setNetworkInterface(config.networkInterface());
         multicastSocket.setTimeToLive(1);
 
-        InetSocketAddress groupAddress =
-                new InetSocketAddress(config.multicastGroup(), config.multicastPort());
+        InetSocketAddress groupAddress = new InetSocketAddress(config.multicastGroup(), config.multicastPort());
 
         multicastSocket.joinGroup(groupAddress, config.networkInterface());
 
@@ -86,8 +88,7 @@ final class MulticastDiscoveryService implements AutoCloseable {
     private List<JoinAck> collectReplies(
             DatagramSocket replySocket,
             String txId,
-            Duration window
-    ) {
+            Duration window) {
         long deadline = System.nanoTime() + window.toNanos();
         Map<String, JoinAck> repliesByNodeId = new LinkedHashMap<>();
 
@@ -102,8 +103,7 @@ final class MulticastDiscoveryService implements AutoCloseable {
                         packet.getData(),
                         packet.getOffset(),
                         packet.getLength(),
-                        StandardCharsets.UTF_8
-                );
+                        StandardCharsets.UTF_8);
 
                 DiscoveryMessage message = DiscoveryMessage.decode(raw);
 
@@ -129,8 +129,7 @@ final class MulticastDiscoveryService implements AutoCloseable {
                         message.txId(),
                         message.sender(),
                         message.neighborVersion(),
-                        message.neighbors()
-                );
+                        message.neighbors());
 
                 repliesByNodeId.putIfAbsent(ack.responder().nodeId(), ack);
 
@@ -149,8 +148,7 @@ final class MulticastDiscoveryService implements AutoCloseable {
     private void sendJoinRequest(
             String txId,
             long sequence,
-            int replyPort
-    ) throws IOException {
+            int replyPort) throws IOException {
         DiscoveryMessage message = new DiscoveryMessage(
                 "JOIN_REQUEST",
                 txId,
@@ -160,8 +158,7 @@ final class MulticastDiscoveryService implements AutoCloseable {
                 0,
                 List.of(),
                 null,
-                null
-        );
+                null);
 
         byte[] bytes = message.encode().getBytes(StandardCharsets.UTF_8);
 
@@ -169,8 +166,7 @@ final class MulticastDiscoveryService implements AutoCloseable {
                 bytes,
                 bytes.length,
                 config.multicastGroup(),
-                config.multicastPort()
-        );
+                config.multicastPort());
 
         multicastSocket.send(packet);
 
@@ -189,8 +185,7 @@ final class MulticastDiscoveryService implements AutoCloseable {
                         packet.getData(),
                         packet.getOffset(),
                         packet.getLength(),
-                        StandardCharsets.UTF_8
-                );
+                        StandardCharsets.UTF_8);
 
                 DiscoveryMessage message = DiscoveryMessage.decode(raw);
 
@@ -209,13 +204,12 @@ final class MulticastDiscoveryService implements AutoCloseable {
 
     private void handleJoinRequest(
             InetAddress senderAddress,
-            DiscoveryMessage request
-    ) throws IOException {
+            DiscoveryMessage request) throws IOException {
         if (request.sender().nodeId().equals(localAddress.nodeId())) {
             return;
         }
 
-        ConnectionManager.Snapshot snapshot = connectionManager.snapshot();
+        Snapshot snapshot = connectionManager.takeSnapshot();
 
         DiscoveryMessage ack = new DiscoveryMessage(
                 "JOIN_ACK",
@@ -226,8 +220,7 @@ final class MulticastDiscoveryService implements AutoCloseable {
                 snapshot.version(),
                 snapshot.neighbors(),
                 null,
-                null
-        );
+                null);
 
         byte[] bytes = ack.encode().getBytes(StandardCharsets.UTF_8);
 
@@ -235,8 +228,7 @@ final class MulticastDiscoveryService implements AutoCloseable {
                 bytes,
                 bytes.length,
                 senderAddress,
-                request.replyPort()
-        );
+                request.replyPort());
 
         try (DatagramSocket socket = new DatagramSocket()) {
             socket.send(packet);

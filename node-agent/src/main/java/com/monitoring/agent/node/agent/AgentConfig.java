@@ -1,4 +1,4 @@
-package com.monitoring.agent.node;
+package com.monitoring.agent.node.agent;
 
 import java.util.Map;
 import java.util.UUID;
@@ -17,30 +17,46 @@ import static com.monitoring.agent.constant.Constant.DEFAULT_WARNING_THRESHOLD;
 /**
  * Configuration settings for an agent.
  *
- * @param nodeId               unique ID of the node
- * @param bindHost             local network interface/IP address the node
- *                             listens on
- * @param advertiseHost        IP address that this node tells its peers to
- *                             use when reaching back to it (self-advertisement
- *                             address)
- * @param p2pPort              port dedicated to P2P node-to-node
- *                             communication (Gossip/SWIM)
- * @param dashboardUrl         API endpoint of the centralized server used
- *                             for demo, testing, and state visualization
- * @param neighborList         comma-separated list of known bootstrap peers
- *                             formatted as ID@IP:PORT
- * @param probeIntervalSeconds interval (in seconds) between gossip/probe
- *                             messages
- * @param ackTimeoutSeconds    timeout (in seconds) for ACK responses from peer
- *                             nodes
- * @param gossipTtl            gossip time to live (max hops)
- * @param phiWindowSize        size of sliding window for phi accrual failure
- *                             detection
- * @param warningThreshold     phi threshold for warning state
- * @param suspectedThreshold   phi threshold for suspected failure state
- * @param unreachableThreshold phi threshold for unreachable/failed state
- * @param minStdDeviation      minimum standard deviation for phi calculations
- * @param minProbability       minimum probability for phi calculations
+ * @param nodeId                          unique ID of the node
+ * @param bindHost                        local network interface/IP address the
+ *                                        node
+ *                                        listens on
+ * @param advertiseHost                   IP address that this node tells its
+ *                                        peers to
+ *                                        use when reaching back to it
+ *                                        (self-advertisement
+ *                                        address)
+ * @param p2pPort                         port dedicated to P2P node-to-node
+ *                                        communication (Gossip/SWIM)
+ * @param dashboardUrl                    API endpoint of the centralized server
+ *                                        used
+ *                                        for demo, testing, and state
+ *                                        visualization
+ * @param multicastGroup
+ * @param multicastPort
+ * @param multicastInterfaceName
+ * @param discoveryRetryCount
+ * @param discoveryRetryIntervalMillis
+ * @param discoveryCollectionWindowMillis
+ * @param probeIntervalSeconds            interval (in seconds) between
+ *                                        gossip/probe
+ *                                        messages
+ * @param ackTimeoutSeconds               timeout (in seconds) for ACK responses
+ *                                        from peer
+ *                                        nodes
+ * @param gossipTtl                       gossip time to live (max hops)
+ * @param phiWindowSize                   size of sliding window for phi accrual
+ *                                        failure
+ *                                        detection
+ * @param warningThreshold                phi threshold for warning state
+ * @param suspectedThreshold              phi threshold for suspected failure
+ *                                        state
+ * @param unreachableThreshold            phi threshold for unreachable/failed
+ *                                        state
+ * @param minStdDeviation                 minimum standard deviation for phi
+ *                                        calculations
+ * @param minProbability                  minimum probability for phi
+ *                                        calculations
  */
 public record AgentConfig(
         String nodeId,
@@ -78,6 +94,7 @@ public record AgentConfig(
                 "node-" + UUID.randomUUID().toString().substring(0, 8));
 
         String bindHost = values.getOrDefault("--bind-host", "127.0.0.1");
+
         String advertiseHost = values.getOrDefault("--advertise-host", bindHost);
 
         int p2pPort = Integer.parseInt(values.getOrDefault("--p2p-port", "9001"));
@@ -85,7 +102,8 @@ public record AgentConfig(
         String dashboardUrl = values.getOrDefault(
                 "--dashboard-url",
                 "http://localhost:6789/api");
-String multicastGroup = values.getOrDefault(
+
+        String multicastGroup = values.getOrDefault(
                 "--multicast-group",
                 "239.10.20.30");
 
@@ -193,25 +211,25 @@ String multicastGroup = values.getOrDefault(
         return values;
     }
 
-//     private static List<NodeAddress> parseNeighborList(String rawNeighbors) {
-//         List<NodeAddress> neighborList = new ArrayList<>();
+    // private static List<NodeAddress> parseNeighborList(String rawNeighbors) {
+    // List<NodeAddress> neighborList = new ArrayList<>();
 
-//         if (rawNeighbors == null || rawNeighbors.isBlank()) {
-//             return neighborList;
-//         }
+    // if (rawNeighbors == null || rawNeighbors.isBlank()) {
+    // return neighborList;
+    // }
 
-//         String[] nodeTokens = rawNeighbors.split(",");
+    // String[] nodeTokens = rawNeighbors.split(",");
 
-//         for (String token : nodeTokens) {
-//             String trimmed = token.trim();
+    // for (String token : nodeTokens) {
+    // String trimmed = token.trim();
 
-//             if (trimmed.isBlank()) {
-//                 continue;
-//             }
+    // if (trimmed.isBlank()) {
+    // continue;
+    // }
 
-//             neighborList.add(NodeAddress.fromString(trimmed));
-//         }
+    // neighborList.add(NodeAddress.fromString(trimmed));
+    // }
 
-//         return neighborList;
-//     }
+    // return neighborList;
+    // }
 }

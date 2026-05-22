@@ -1,4 +1,4 @@
-package com.monitoring.agent.node;
+package com.monitoring.agent.node.connection;
 
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -9,7 +9,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-record DiscoveryMessage(
+import com.monitoring.agent.node.NodeAddress;
+
+public record DiscoveryMessage(
         String type,
         String txId,
         long sequence,
@@ -18,9 +20,9 @@ record DiscoveryMessage(
         long neighborVersion,
         List<NodeAddress> neighbors,
         String directTargetId,
-        String evictedNodeId
-) {
-    String encode() {
+        String evictedNodeId) {
+
+    public String encode() {
         Map<String, String> values = new LinkedHashMap<>();
 
         values.put("type", type);
@@ -68,8 +70,7 @@ record DiscoveryMessage(
         NodeAddress sender = new NodeAddress(
                 required(values, "nodeId"),
                 required(values, "host"),
-                Integer.parseInt(required(values, "port"))
-        );
+                Integer.parseInt(required(values, "port")));
 
         return new DiscoveryMessage(
                 required(values, "type"),
@@ -80,8 +81,7 @@ record DiscoveryMessage(
                 Long.parseLong(values.getOrDefault("neighborVersion", "0")),
                 decodeNeighbors(values.getOrDefault("neighbors", "")),
                 emptyToNull(values.get("directTargetId")),
-                emptyToNull(values.get("evictedNodeId"))
-        );
+                emptyToNull(values.get("evictedNodeId")));
     }
 
     private static String encodeNeighbors(List<NodeAddress> neighbors) {

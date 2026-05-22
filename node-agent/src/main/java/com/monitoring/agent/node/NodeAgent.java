@@ -5,6 +5,12 @@ import java.net.NetworkInterface;
 import java.time.Duration;
 
 import com.monitoring.agent.constant.Constant;
+import com.monitoring.agent.node.agent.AgentConfig;
+import com.monitoring.agent.node.connection.ConnectionManager;
+import com.monitoring.agent.node.connection.MembershipControlService;
+import com.monitoring.agent.node.connection.MulticastDiscoveryService;
+import com.monitoring.agent.node.connection.MulticastJoinCoordinator;
+import com.monitoring.agent.node.connection.NeighborDirectory;
 
 /**
  * A single agent. It is capable of checking its neighbors' status.
@@ -26,17 +32,17 @@ public class NodeAgent {
      * Constructor for NodeAgent from command line arguments.
      * 
      * @param args command line arguments
- * @throws Exception 
+     * @throws Exception
      */
     public NodeAgent(String[] args) throws Exception {
         config = AgentConfig.fromArgs(args);
 
-         localAddress = new NodeAddress(
+        localAddress = new NodeAddress(
                 config.nodeId(),
                 config.advertiseHost(),
                 config.p2pPort());
 
-         connectionManager = new ConnectionManager(
+        connectionManager = new ConnectionManager(
                 localAddress,
                 Constant.DEFAULT_MAX_NEIGHBORS);
 
@@ -78,7 +84,7 @@ public class NodeAgent {
                 config.probeIntervalSeconds(),
                 config.unreachableThreshold());
 
-                NetworkInterface multicastInterface = resolveMulticastInterface();
+        NetworkInterface multicastInterface = resolveMulticastInterface();
 
         DiscoveryConfig discoveryConfig = new DiscoveryConfig(
                 InetAddress.getByName(config.multicastGroup()),
@@ -123,7 +129,7 @@ public class NodeAgent {
         printStartupInfo();
     }
 
-    private  NetworkInterface resolveMulticastInterface() throws Exception {
+    private NetworkInterface resolveMulticastInterface() throws Exception {
         if (!config.multicastInterfaceName().isBlank()) {
             NetworkInterface networkInterface = NetworkInterface.getByName(config.multicastInterfaceName());
 
@@ -161,8 +167,8 @@ public class NodeAgent {
         System.out.println("Multicast Port             : " + config.multicastPort());
         System.out.println("Multicast Interface        : "
                 + (config.multicastInterfaceName().isBlank()
-                ? "auto"
-                : config.multicastInterfaceName()));
+                        ? "auto"
+                        : config.multicastInterfaceName()));
 
         System.out.println("Current neighbors          : " + neighborDirectory.addresses());
         System.out.println("Current neighbor count     : " + neighborDirectory.size());

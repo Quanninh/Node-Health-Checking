@@ -5,6 +5,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.monitoring.agent.constant.Constant;
+import com.monitoring.agent.node.connection.ConnectionManager;
+import com.monitoring.agent.node.connection.NeighborDirectory;
 
 /**
  * Gossips or receives gossips about the status of a target node.

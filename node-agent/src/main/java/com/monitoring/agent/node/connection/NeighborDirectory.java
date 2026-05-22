@@ -1,4 +1,4 @@
-package com.monitoring.agent.node;
+package com.monitoring.agent.node.connection;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -12,6 +12,11 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.monitoring.agent.constant.Constant;
+import com.monitoring.agent.node.GossipMessageType;
+import com.monitoring.agent.node.NodeAddress;
+import com.monitoring.agent.node.NodeState;
+import com.monitoring.agent.node.NodeStatus;
+import com.monitoring.agent.node.PhiAccrualFailure;
 
 /**
  * A directory to keep track of all neighbors of a given node and their states.
@@ -74,7 +79,7 @@ public class NeighborDirectory {
         return helperNodes;
     }
 
-synchronized void removeUnreachableNeighbors() {
+    synchronized void removeUnreachableNeighbors() {
         List<String> unreachableNodeIds = nodeStates.values().stream()
                 .filter(state -> state.getStatus() == NodeStatus.UNREACHABLE)
                 .map(state -> state.getNodeAddress().nodeId())
@@ -91,18 +96,18 @@ synchronized void removeUnreachableNeighbors() {
     }
 
     synchronized boolean contains(String nodeId) {
-        return connectionManager.contains(nodeId);
+        return connectionManager.containsNode(nodeId);
     }
 
-    synchronized int size() {
+    public synchronized int size() {
         return connectionManager.size();
     }
 
     synchronized int maxNeighbors() {
-        return connectionManager.maxNeighbors();
+        return connectionManager.getMaxNeighbors();
     }
 
-    synchronized List<NodeAddress> addresses() {
+    public synchronized List<NodeAddress> addresses() {
         syncStatesWithConnections();
         return connectionManager.addresses();
     }

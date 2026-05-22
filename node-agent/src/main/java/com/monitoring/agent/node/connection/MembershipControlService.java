@@ -1,4 +1,4 @@
-package com.monitoring.agent.node;
+package com.monitoring.agent.node.connection;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -11,7 +11,9 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-final class MembershipControlService implements AutoCloseable {
+import com.monitoring.agent.node.NodeAddress;
+
+public final class MembershipControlService implements AutoCloseable {
 
     private final NodeAddress localAddress;
     private final ConnectionManager connectionManager;
@@ -23,19 +25,18 @@ final class MembershipControlService implements AutoCloseable {
     private volatile boolean running;
     private DatagramSocket serverSocket;
 
-    MembershipControlService(
+    public MembershipControlService(
             NodeAddress localAddress,
             ConnectionManager connectionManager,
             int controlPort,
-            int bufferSize
-    ) {
+            int bufferSize) {
         this.localAddress = localAddress;
         this.connectionManager = connectionManager;
         this.controlPort = controlPort;
         this.bufferSize = bufferSize;
     }
 
-    void start() throws SocketException {
+    public void start() throws SocketException {
         serverSocket = new DatagramSocket(controlPort);
         running = true;
         serverExecutor.submit(this::serverLoop);
@@ -47,8 +48,7 @@ final class MembershipControlService implements AutoCloseable {
             NodeAddress directTarget,
             NodeAddress joiningNode,
             NodeAddress evictedNode,
-            String txId
-    ) {
+            String txId) {
         DiscoveryMessage command = new DiscoveryMessage(
                 "COMMIT_DIRECT",
                 txId,
@@ -58,8 +58,7 @@ final class MembershipControlService implements AutoCloseable {
                 0,
                 List.of(),
                 directTarget.nodeId(),
-                evictedNode == null ? null : evictedNode.nodeId()
-        );
+                evictedNode == null ? null : evictedNode.nodeId());
 
         return sendReliableCommand(directTarget, command);
     }
@@ -68,8 +67,7 @@ final class MembershipControlService implements AutoCloseable {
             NodeAddress victim,
             NodeAddress joiningNode,
             NodeAddress oldDirectTarget,
-            String txId
-    ) {
+            String txId) {
         DiscoveryMessage command = new DiscoveryMessage(
                 "COMMIT_VICTIM",
                 txId,
@@ -79,16 +77,14 @@ final class MembershipControlService implements AutoCloseable {
                 0,
                 List.of(),
                 oldDirectTarget.nodeId(),
-                victim.nodeId()
-        );
+                victim.nodeId());
 
         return sendReliableCommand(victim, command);
     }
 
     private boolean sendReliableCommand(
             NodeAddress target,
-            DiscoveryMessage command
-    ) {
+            DiscoveryMessage command) {
         for (int attempt = 1; attempt <= 3; attempt++) {
             try (DatagramSocket socket = new DatagramSocket()) {
                 socket.setSoTimeout(700);
@@ -99,8 +95,7 @@ final class MembershipControlService implements AutoCloseable {
                         bytes,
                         bytes.length,
                         InetAddress.getByName(target.host()),
-                        target.port()
-                );
+                        target.port());
 
                 socket.send(packet);
 
@@ -113,8 +108,7 @@ final class MembershipControlService implements AutoCloseable {
                         responsePacket.getData(),
                         responsePacket.getOffset(),
                         responsePacket.getLength(),
-                        StandardCharsets.UTF_8
-                );
+                        StandardCharsets.UTF_8);
 
                 DiscoveryMessage response = DiscoveryMessage.decode(raw);
 
@@ -144,25 +138,22 @@ final class MembershipControlService implements AutoCloseable {
                         packet.getData(),
                         packet.getOffset(),
                         packet.getLength(),
-                        StandardCharsets.UTF_8
-                );
+                        StandardCharsets.UTF_8);
 
                 DiscoveryMessage message = DiscoveryMessage.decode(raw);
 
-                ConnectionManager.CommitResult result;
+                CommitResult result;
 
                 if ("COMMIT_DIRECT".equals(message.type())) {
                     result = connectionManager.applyDirectTargetCommit(
                             message.txId(),
                             message.sender(),
-                            message.evictedNodeId()
-                    );
+                            message.evictedNodeId());
                 } else if ("COMMIT_VICTIM".equals(message.type())) {
                     result = connectionManager.applyEvictedNodeCommit(
                             message.txId(),
                             message.sender(),
-                            message.directTargetId()
-                    );
+                            message.directTargetId());
                 } else {
                     continue;
                 }
@@ -182,8 +173,7 @@ final class MembershipControlService implements AutoCloseable {
             InetAddress address,
             int port,
             String txId,
-            boolean accepted
-    ) throws IOException {
+            boolean accepted) throws IOException {
         DiscoveryMessage ack = new DiscoveryMessage(
                 "COMMIT_ACK",
                 txId,
@@ -193,8 +183,7 @@ final class MembershipControlService implements AutoCloseable {
                 0,
                 List.of(),
                 accepted ? "accepted" : "rejected",
-                null
-        );
+                null);
 
         byte[] bytes = ack.encode().getBytes(StandardCharsets.UTF_8);
 
@@ -202,8 +191,7 @@ final class MembershipControlService implements AutoCloseable {
                 bytes,
                 bytes.length,
                 address,
-                port
-        );
+                port);
 
         serverSocket.send(packet);
     }

@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.monitoring.model.FailureReport;
@@ -55,7 +56,7 @@ public class NodeService {
     }
 
     // TODO: This code was commented by someone
-    //@Scheduled(fixedRate = 5000)
+    @Scheduled(fixedRate = 5000)
     public void checkNodeStatus() {
         try {
             LocalDateTime cutoffTime = LocalDateTime.now().minusSeconds(NODE_TIMEOUT_SECONDS);

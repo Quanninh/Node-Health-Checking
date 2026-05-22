@@ -10,17 +10,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-final class JoinPlanner {
+public final class JoinPlanner {
 
     private final NodeAddress localAddress;
     private final int maxNeighbors;
 
-    JoinPlanner(NodeAddress localAddress, int maxNeighbors) {
+    public JoinPlanner(NodeAddress localAddress, int maxNeighbors) {
         this.localAddress = localAddress;
         this.maxNeighbors = maxNeighbors;
     }
 
-    JoinPlan createPlan(Collection<JoinAck> acks) {
+    public JoinPlan createPlan(Collection<JoinAck> acks) {
         Map<String, JoinAck> uniqueAcks = new LinkedHashMap<>();
 
         for (JoinAck ack : acks) {
@@ -90,12 +90,4 @@ final class JoinPlanner {
         System.out.println("[" + LocalDateTime.now() + "] " + message);
     }
 
-    record JoinPlan(
-            List<NodeAddress> directTargets,
-            Map<NodeAddress, NodeAddress> evictionByDirectTarget
-    ) {
-        static JoinPlan empty() {
-            return new JoinPlan(List.of(), Map.of());
-        }
-    }
 }
