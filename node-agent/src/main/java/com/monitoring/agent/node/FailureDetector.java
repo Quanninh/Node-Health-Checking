@@ -188,8 +188,8 @@ public class FailureDetector {
         NodeState state = optionalState.get();
 
         double phi = phiDetector.calculatePhi(
-                state.slidingWindowSeconds(),
-                state.lastAckTimeMillis(),
+                state.getSlidingWindowSeconds(),
+                state.getLastAckTimeMs(),
                 System.currentTimeMillis());
 
         NodeStatus phiStatus = phiDetector.determineStatus(phi);

@@ -160,7 +160,7 @@ public class NeighborDirectory {
             return NodeStatus.UNKNOWN;
         }
 
-        return state.status();
+        return state.getStatus();
     }
 
     /**
@@ -204,7 +204,7 @@ public class NeighborDirectory {
             return 0;
         }
 
-        return state.incarnationNumber();
+        return state.getIncarnationNumber();
     }
 
     /**
@@ -230,7 +230,7 @@ public class NeighborDirectory {
             case UNREACHABLE -> state.markUnreachableFromGossip(incarnationNumber);
             case ALIVE -> state.markAliveFromGossip(incarnationNumber);
             case JOIN -> {
-                if (incarnationNumber > state.incarnationNumber()) {
+                if (incarnationNumber > state.getIncarnationNumber()) {
                     state.markAliveFromGossip(incarnationNumber);
                 }
             }
@@ -245,7 +245,7 @@ public class NeighborDirectory {
      */
     public List<NodeState> states() {
         List<NodeState> states = new ArrayList<>(nodeStates.values());
-        states.sort(Comparator.comparing(state -> state.address().nodeId()));
+        states.sort(Comparator.comparing(state -> state.getNodeAddress().nodeId()));
         return states;
     }
 }
