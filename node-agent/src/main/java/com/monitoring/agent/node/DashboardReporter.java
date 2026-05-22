@@ -71,7 +71,7 @@ public class DashboardReporter {
      * @param phi        phi calculations for the failed node
      * @return
      */
-    CompletableFuture<Void> reportFailure(NodeAddress failedNode, double phi, double threshold) {
+    public CompletableFuture<Void> reportFailure(NodeAddress failedNode, double phi, double threshold) {
         String message = "Node " + localNodeId
                 + " classifies Node " + failedNode.nodeId()
                 + " as UNREACHABLE by phi threshold. phi=" + String.format("%.4f", phi) + ", threshold="

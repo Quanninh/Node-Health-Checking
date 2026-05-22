@@ -129,15 +129,17 @@ public final class ConnectionManager {
 
     // TODO: What is txID?
     /**
+     * Adds a new node to the neighbor list, while "evicting" another node.
      * 
-     * @param txId
-     * @param joiningNode
-     * @param evictedNodeId
+     * @param txId          transaction ID?
+     * @param joiningNode   the new node
+     * @param evictedNodeId the evicted node
      * @return
      */
     public CommitResult applyDirectTargetCommit(String txId, NodeAddress joiningNode, String evictedNodeId) {
         lock.lock();
         try {
+            // add returns false if already in set
             if (!processedTransactions.add("DIRECT:" + txId)) {
                 return new CommitResult(true, "duplicate direct commit ignored");
             }
@@ -175,6 +177,15 @@ public final class ConnectionManager {
         }
     }
 
+    // TODO: Javadoc
+    /**
+     * I don't really understand this
+     * 
+     * @param txId
+     * @param joiningNode
+     * @param oldDirectTargetId
+     * @return
+     */
     public CommitResult applyEvictedNodeCommit(String txId, NodeAddress joiningNode, String oldDirectTargetId) {
         lock.lock();
         try {
