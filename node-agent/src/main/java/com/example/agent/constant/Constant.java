@@ -6,7 +6,7 @@ public final class Constant {
     public static final int DEFAULT_JOIN_TIMEOUT_SECONDS = 3;
     public static final double DEFAULT_JOIN_MIN_PROBABILITY = 0.35;
     public static final double DEFAULT_JOIN_MAX_PROBABILITY = 0.75;
-    public static final int UNREACHABLE_CLEANUP_INTERVAL_SECONDS = 5;
+    public static final long UNREACHABLE_CLEANUP_INTERVAL_SECONDS = 5;
 
     public static final int DEFAULT_GOSSIP_INTERVAL_SECONDS = 5;
     public static final int DEFAULT_ACK_TIMEOUT_SECONDS = 10;
@@ -19,4 +19,5 @@ public final class Constant {
     public static final double DEFAULT_MIN_STD_DEVIATION = 0.1;
     public static final double DEFAULT_MIN_PROBABILITY = 1e-12;
 
+    public static final int DEFAULT_GOSSIP_TTL = 4;
 }

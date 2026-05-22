@@ -2,17 +2,16 @@ package com.example.agent.node;
 
 import java.util.List;
 
-public class PhiAccrualFailureDetector {
-    private final int windowSize;
+public class PhiAccrualFailure {
 
+    private final int windowSize;
     private final double warningThreshold;
     private final double suspectedThreshold;
     private final double unreachableThreshold;
-
     private final double minStdDeviation;
     private final double minProbability;
 
-    public PhiAccrualFailureDetector(
+    public PhiAccrualFailure(
             int windowSize,
             double warningThreshold,
             double suspectedThreshold,
@@ -36,7 +35,7 @@ public class PhiAccrualFailureDetector {
             long lastHeartbeatTimeMillis,
             long currentTimeMillis) {
         if (lastHeartbeatTimeMillis <= 0) {
-            return 0.0;
+            return Double.POSITIVE_INFINITY;
         }
 
         if (currentTimeMillis < lastHeartbeatTimeMillis) {
@@ -48,7 +47,6 @@ public class PhiAccrualFailureDetector {
         }
 
         double elapsedTimeSeconds = (currentTimeMillis - lastHeartbeatTimeMillis) / 1000.0;
-
         double mean = calculateMean(slidingWindow);
         double stdDeviation = calculateStandardDeviation(slidingWindow, mean);
 
@@ -57,9 +55,7 @@ public class PhiAccrualFailureDetector {
         }
 
         double z = (elapsedTimeSeconds - mean) / stdDeviation;
-
         double cdf = normalCdf(z);
-
         double pLater = 1.0 - cdf;
 
         if (pLater < minProbability) {
@@ -69,7 +65,6 @@ public class PhiAccrualFailureDetector {
         return -Math.log10(pLater);
     }
 
-    // This one is depend what you need
     public NodeStatus determineStatus(double phi) {
         if (phi >= unreachableThreshold) {
             return NodeStatus.UNREACHABLE;
@@ -133,7 +128,7 @@ public class PhiAccrualFailureDetector {
         return Math.sqrt(variance);
     }
 
-    public double normalCdf(double z) {
+    double normalCdf(double z) {
         return 0.5 * (1.0 + erf(z / Math.sqrt(2.0)));
     }
 

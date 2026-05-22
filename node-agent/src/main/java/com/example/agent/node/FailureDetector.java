@@ -6,9 +6,7 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit; 
-
-import static com.example.agent.constant.Constant.UNREACHABLE_CLEANUP_INTERVAL_SECONDS; 
+import java.util.concurrent.TimeUnit;
 
 class FailureDetector {
 
@@ -16,7 +14,8 @@ class FailureDetector {
     private final NeighborDirectory neighborDirectory;
     private final NodeClient nodeClient;
     private final DashboardReporter dashboardReporter;
-    private final PhiAccrualFailureDetector phiDetector;
+    private final PhiAccrualFailure phiDetector;
+    private final GossipService gossipService;
     private final int probeIntervalSeconds;
     private final ScheduledExecutorService scheduler;
 
@@ -25,13 +24,15 @@ class FailureDetector {
             NeighborDirectory neighborDirectory,
             NodeClient nodeClient,
             DashboardReporter dashboardReporter,
-            PhiAccrualFailureDetector phiDetector,
+            PhiAccrualFailure phiDetector,
+            GossipService gossipService,
             int probeIntervalSeconds) {
         this.localNodeId = localNodeId;
         this.neighborDirectory = neighborDirectory;
         this.nodeClient = nodeClient;
         this.dashboardReporter = dashboardReporter;
         this.phiDetector = phiDetector;
+        this.gossipService = gossipService;
         this.probeIntervalSeconds = probeIntervalSeconds;
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
     }
@@ -42,12 +43,6 @@ class FailureDetector {
                 0,
                 probeIntervalSeconds,
                 TimeUnit.SECONDS);
-
-        scheduler.scheduleAtFixedRate(
-        neighborDirectory::removeUnreachableNeighbors,
-        UNREACHABLE_CLEANUP_INTERVAL_SECONDS,
-        UNREACHABLE_CLEANUP_INTERVAL_SECONDS,
-        TimeUnit.SECONDS);
     }
 
     private void runOneProbeSafely() {
@@ -144,6 +139,12 @@ class FailureDetector {
                         + targetNode.nodeId()
                         + " through " + source
                         + ". Status becomes ALIVE.");
+
+        if (previousStatus == NodeStatus.SUSPECTED
+                || previousStatus == NodeStatus.WARNING
+                || previousStatus == NodeStatus.UNKNOWN) {
+            gossipService.gossipAlive(targetNode);
+        }
     }
 
     private void handleNoAckAfterDirectAndIndirect(NodeAddress targetNode) {
@@ -171,6 +172,7 @@ class FailureDetector {
             neighborDirectory.markWarning(targetNode.nodeId(), phi);
         } else {
             neighborDirectory.markSuspected(targetNode.nodeId(), phi);
+            gossipService.gossipSuspect(targetNode);
         }
 
         System.out.println(
@@ -196,6 +198,7 @@ class FailureDetector {
                         + ". It must rejoin as a new node if it comes back.");
 
         if (previousStatus != NodeStatus.UNREACHABLE) {
+            gossipService.gossipUnreachable(targetNode);
             dashboardReporter.reportFailure(targetNode, phi);
         }
     }

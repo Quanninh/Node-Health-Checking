@@ -5,7 +5,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -23,7 +22,7 @@ class NodeClient {
                                 .build();
         }
 
-        CompletableFuture<Boolean> ping(NodeAddress peer) {
+        CompletableFuture<Boolean> ping(NodeAddress targetNode) {
                 String json = """
                                 {
                                   "type": "PING",
@@ -31,10 +30,10 @@ class NodeClient {
                                   "targetNodeId": "%s",
                                   "timestamp": "%s"
                                 }
-                                """.formatted(localNodeId, peer.nodeId(), LocalDateTime.now());
+                                """.formatted(localNodeId, targetNode.nodeId(), LocalDateTime.now());
 
                 HttpRequest request = HttpRequest.newBuilder()
-                                .uri(peer.pingUri())
+                                .uri(targetNode.pingUri())
                                 .timeout(Duration.ofSeconds(ackTimeoutSeconds))
                                 .header("Content-Type", "application/json")
                                 .POST(HttpRequest.BodyPublishers.ofString(json))
@@ -47,7 +46,7 @@ class NodeClient {
                                 .exceptionally(error -> false);
         }
 
-        CompletableFuture<Boolean> pingReq(NodeAddress helper, NodeAddress target) {
+        CompletableFuture<Boolean> pingReq(NodeAddress helperNode, NodeAddress targetNode) {
                 String json = """
                                 {
                                   "type": "PING_REQ",
@@ -60,14 +59,14 @@ class NodeClient {
                                 }
                                 """.formatted(
                                 localNodeId,
-                                helper.nodeId(),
-                                target.nodeId(),
-                                target.host(),
-                                target.port(),
+                                helperNode.nodeId(),
+                                targetNode.nodeId(),
+                                targetNode.host(),
+                                targetNode.port(),
                                 LocalDateTime.now());
 
                 HttpRequest request = HttpRequest.newBuilder()
-                                .uri(helper.pingReqUri())
+                                .uri(helperNode.pingReqUri())
                                 .timeout(Duration.ofSeconds(ackTimeoutSeconds * 2L))
                                 .header("Content-Type", "application/json")
                                 .POST(HttpRequest.BodyPublishers.ofString(json))
@@ -82,23 +81,36 @@ class NodeClient {
                                 .exceptionally(error -> false);
         }
 
-        CompletableFuture<Optional<JoinAck>> join(NodeAddress bootstrapPeer, NodeAddress localAddress) {
+        CompletableFuture<Void> sendGossipMessage(NodeAddress destinationNode, GossipMessage message) {
+                String safeDetails = message.details() == null
+                                ? ""
+                                : message.details().replace("\\", "\\\\").replace("\"", "\\\"");
+
                 String json = """
                                 {
-                                  "type": "JOIN_REQUEST",
-                                  "nodeId": "%s",
-                                  "advertiseHost": "%s",
-                                  "p2pPort": %d,
-                                  "timestamp": "%s"
+                                  "senderNodeId": "%s",
+                                  "messageId": "%s",
+                                  "sourceNodeId": "%s",
+                                  "subjectNodeId": "%s",
+                                  "messageType": "%s",
+                                  "incarnationNumber": %d,
+                                  "timestamp": %d,
+                                  "ttl": %d,
+                                  "details": "%s"
                                 }
                                 """.formatted(
-                                localAddress.nodeId(),
-                                P2pJson.escape(localAddress.host()),
-                                localAddress.port(),
-                                LocalDateTime.now());
+                                localNodeId,
+                                message.messageId(),
+                                message.sourceNodeId(),
+                                message.subjectNodeId(),
+                                message.messageType(),
+                                message.incarnationNumber(),
+                                message.timestamp(),
+                                message.ttl(),
+                                safeDetails);
 
                 HttpRequest request = HttpRequest.newBuilder()
-                                .uri(bootstrapPeer.joinUri())
+                                .uri(destinationNode.gossipUri())
                                 .timeout(Duration.ofSeconds(ackTimeoutSeconds * 2L))
                                 .header("Content-Type", "application/json")
                                 .POST(HttpRequest.BodyPublishers.ofString(json))
@@ -107,113 +119,17 @@ class NodeClient {
                 return httpClient
                                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
                                 .orTimeout(ackTimeoutSeconds * 2L, TimeUnit.SECONDS)
-                                .thenApply(response -> {
-                                        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                                                return Optional.<JoinAck>empty();
-                                        }
-
-                                        return Optional.of(parseJoinAck(response.body()));
-                                })
-                                .exceptionally(error -> Optional.empty());
-        }
-
-        CompletableFuture<Optional<JoinConfirmResult>> confirmJoin(NodeAddress selectedPeer, NodeAddress localAddress) {
-                String json = """
-                                {
-                                  "type": "JOIN_CONFIRM",
-                                  "nodeId": "%s",
-                                  "advertiseHost": "%s",
-                                  "p2pPort": %d,
-                                  "timestamp": "%s"
-                                }
-                                """.formatted(
-                                localAddress.nodeId(),
-                                P2pJson.escape(localAddress.host()),
-                                localAddress.port(),
-                                LocalDateTime.now());
-
-                HttpRequest request = HttpRequest.newBuilder()
-                                .uri(selectedPeer.joinConfirmUri())
-                                .timeout(Duration.ofSeconds(ackTimeoutSeconds * 2L))
-                                .header("Content-Type", "application/json")
-                                .POST(HttpRequest.BodyPublishers.ofString(json))
-                                .build();
-
-                return httpClient
-                                .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                                .orTimeout(ackTimeoutSeconds * 2L, TimeUnit.SECONDS)
-                                .thenApply(response -> {
-                                        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                                                return Optional.<JoinConfirmResult>empty();
-                                        }
-
-                                        return Optional.of(parseJoinConfirmResult(response.body(), selectedPeer));
-                                })
-                                .exceptionally(error -> Optional.empty());
-        }
-
-        CompletableFuture<Boolean> notifyNeighborRemove(NodeAddress removedPeer, NodeAddress localAddress) {
-                String json = """
-                                {
-                                  "type": "NEIGHBOR_REMOVE",
-                                  "nodeId": "%s",
-                                  "advertiseHost": "%s",
-                                  "p2pPort": %d,
-                                  "timestamp": "%s"
-                                }
-                                """.formatted(
-                                localAddress.nodeId(),
-                                P2pJson.escape(localAddress.host()),
-                                localAddress.port(),
-                                LocalDateTime.now());
-
-                HttpRequest request = HttpRequest.newBuilder()
-                                .uri(removedPeer.removeNeighborUri())
-                                .timeout(Duration.ofSeconds(ackTimeoutSeconds))
-                                .header("Content-Type", "application/json")
-                                .POST(HttpRequest.BodyPublishers.ofString(json))
-                                .build();
-
-                return httpClient
-                                .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                                .orTimeout(ackTimeoutSeconds, TimeUnit.SECONDS)
-                                .thenApply(response -> response.statusCode() >= 200 && response.statusCode() < 300)
-                                .exceptionally(error -> false);
-        }
-
-        private JoinAck parseJoinAck(String json) {
-                boolean accepted = P2pJson.booleanValue(json, "accepted");
-                String responderNodeId = P2pJson.stringValue(json, "responderNodeId");
-                String responderHost = P2pJson.stringValue(json, "responderHost");
-                int responderPort = P2pJson.intValue(json, "responderPort");
-                String suggestedNodeId = P2pJson.optionalStringValue(json, "suggestedNodeId");
-                String suggestedHost = P2pJson.optionalStringValue(json, "suggestedHost");
-                String reason = P2pJson.optionalStringValue(json, "reason");
-
-                NodeAddress responder = new NodeAddress(responderNodeId, responderHost, responderPort);
-                NodeAddress suggestedPeer = null;
-
-                if (suggestedNodeId != null && suggestedHost != null) {
-                        int suggestedPort = P2pJson.intValue(json, "suggestedPort");
-                        suggestedPeer = new NodeAddress(suggestedNodeId, suggestedHost, suggestedPort);
-                }
-
-                return new JoinAck(accepted, responder, suggestedPeer, reason);
-        }
-
-        private JoinConfirmResult parseJoinConfirmResult(String json, NodeAddress selectedPeer) {
-                boolean accepted = P2pJson.booleanValue(json, "accepted");
-                String evictedNodeId = P2pJson.optionalStringValue(json, "evictedNodeId");
-                String evictedHost = P2pJson.optionalStringValue(json, "evictedHost");
-                String reason = P2pJson.optionalStringValue(json, "reason");
-
-                NodeAddress evictedPeer = null;
-
-                if (evictedNodeId != null && evictedHost != null) {
-                        int evictedPort = P2pJson.intValue(json, "evictedPort");
-                        evictedPeer = new NodeAddress(evictedNodeId, evictedHost, evictedPort);
-                }
-
-                return new JoinConfirmResult(accepted, selectedPeer, evictedPeer, reason);
+                                .thenAccept(response -> System.out.println(
+                                                "[" + LocalDateTime.now() + "] "
+                                                                + "Gossip sent to " + destinationNode.nodeId()
+                                                                + ". statusCode=" + response.statusCode()))
+                                .exceptionally(error -> {
+                                        System.out.println(
+                                                        "[" + LocalDateTime.now() + "] "
+                                                                        + "Could not send gossip to "
+                                                                        + destinationNode.nodeId() + ": "
+                                                                        + error.getMessage());
+                                        return null;
+                                });
         }
 }
