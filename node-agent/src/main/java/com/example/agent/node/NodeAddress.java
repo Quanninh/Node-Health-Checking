@@ -35,8 +35,16 @@ record NodeAddress(String nodeId, String host, int port) {
         return URI.create("http://" + host + ":" + port + "/ping-req");
     }
 
-    URI gossipUri() {
-        return URI.create("http://" + host + ":" + port + "/gossip");
+    URI joinUri() {
+        return URI.create("http://" + host + ":" + port + "/join");
+    }
+
+    URI joinConfirmUri() {
+        return URI.create("http://" + host + ":" + port + "/join-confirm");
+    }
+
+    URI removeNeighborUri() {
+        return URI.create("http://" + host + ":" + port + "/neighbor-remove");
     }
 
     @Override

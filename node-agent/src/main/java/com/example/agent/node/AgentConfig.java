@@ -14,7 +14,7 @@ public record AgentConfig(
                 int p2pPort,
                 String dashboardUrl,
                 List<NodeAddress> neighborList,
-                int probeIntervalSeconds,
+                int gossipIntervalSeconds,
                 int ackTimeoutSeconds,
                 int gossipTtl,
                 int phiWindowSize,
@@ -40,7 +40,7 @@ public record AgentConfig(
                                 "--dashboard-url",
                                 "http://localhost:6789/api");
 
-                int probeIntervalSeconds = Integer.parseInt(values.getOrDefault(
+                int gossipIntervalSeconds = Integer.parseInt(values.getOrDefault(
                                 "--probe-interval-seconds",
                                 values.getOrDefault("--gossip-interval-seconds",
                                                 String.valueOf(DEFAULT_GOSSIP_INTERVAL_SECONDS))));
@@ -77,7 +77,11 @@ public record AgentConfig(
                                 "--phi-min-probability",
                                 String.valueOf(DEFAULT_MIN_PROBABILITY)));
 
-                List<NodeAddress> neighborList = parseNeighborList(values.getOrDefault("--neighbors", ""));
+                String rawBootstrapPeers = values.getOrDefault(
+                                "--bootstrap-peers",
+                                values.getOrDefault("--neighbors", ""));
+
+                List<NodeAddress> bootstrapPeers = parseNodeAddressList(rawBootstrapPeers);
 
                 return new AgentConfig(
                                 nodeId,
@@ -86,7 +90,7 @@ public record AgentConfig(
                                 p2pPort,
                                 dashboardUrl,
                                 neighborList,
-                                probeIntervalSeconds,
+                                gossipIntervalSeconds,
                                 ackTimeoutSeconds,
                                 gossipTtl,
                                 phiWindowSize,
@@ -116,14 +120,14 @@ public record AgentConfig(
                 return values;
         }
 
-        private static List<NodeAddress> parseNeighborList(String rawNeighbors) {
-                List<NodeAddress> neighborList = new ArrayList<>();
+        private static List<NodeAddress> parseNodeAddressList(String rawAddresses) {
+                List<NodeAddress> addresses = new ArrayList<>();
 
-                if (rawNeighbors == null || rawNeighbors.isBlank()) {
-                        return neighborList;
+                if (rawAddresses == null || rawAddresses.isBlank()) {
+                        return addresses;
                 }
 
-                String[] nodeTokens = rawNeighbors.split(",");
+                String[] nodeTokens = rawAddresses.split(",");
 
                 for (String token : nodeTokens) {
                         String trimmed = token.trim();
@@ -132,9 +136,9 @@ public record AgentConfig(
                                 continue;
                         }
 
-                        neighborList.add(NodeAddress.from(trimmed));
+                        addresses.add(NodeAddress.from(trimmed));
                 }
 
-                return neighborList;
+                return addresses;
         }
 }

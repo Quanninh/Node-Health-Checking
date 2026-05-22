@@ -6,7 +6,9 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeUnit; 
+
+import static com.example.agent.constant.Constant.UNREACHABLE_CLEANUP_INTERVAL_SECONDS; 
 
 class FailureDetector {
 
@@ -43,6 +45,12 @@ class FailureDetector {
                 0,
                 probeIntervalSeconds,
                 TimeUnit.SECONDS);
+
+        scheduler.scheduleAtFixedRate(
+        neighborDirectory::removeUnreachableNeighbors,
+        UNREACHABLE_CLEANUP_INTERVAL_SECONDS,
+        UNREACHABLE_CLEANUP_INTERVAL_SECONDS,
+        TimeUnit.SECONDS);
     }
 
     private void runOneProbeSafely() {

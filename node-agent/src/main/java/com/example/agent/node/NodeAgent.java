@@ -1,13 +1,19 @@
 package com.example.agent.node;
 
 import java.io.IOException;
+import java.util.List;
 
 public class NodeAgent {
 
         public static void main(String[] args) throws IOException {
                 AgentConfig config = AgentConfig.fromArgs(args);
 
-                NeighborDirectory neighborDirectory = new NeighborDirectory(config.neighborList());
+                NodeAddress localAddress = new NodeAddress(
+                                config.nodeId(),
+                                config.advertiseHost(),
+                                config.p2pPort());
+
+                NeighborDirectory neighborDirectory = new NeighborDirectory(List.of(), config.maxNeighbors());
 
                 DashboardReporter dashboardReporter = new DashboardReporter(
                                 config.nodeId(),
@@ -29,15 +35,9 @@ public class NodeAgent {
                                 config.nodeId(),
                                 config.bindHost(),
                                 config.p2pPort(),
-                                nodeClient);
-
-                GossipService gossipService = new GossipService(
-                                config.nodeId(),
-                                neighborDirectory,
-                                nodeClient,
-                                config.gossipTtl());
-
-                nodeServer.setGossipService(gossipService);
+                                localAddress,
+                                peerClient,
+                                neighborDirectory);
 
                 FailureDetector failureDetector = new FailureDetector(
                                 config.nodeId(),
@@ -48,25 +48,41 @@ public class NodeAgent {
                                 gossipService,
                                 config.probeIntervalSeconds());
 
-                nodeServer.start();
+                JoinCoordinator joinCoordinator = new JoinCoordinator(
+                                localAddress,
+                                neighborDirectory,
+                                peerClient,
+                                config.bootstrapPeers(),
+                                config.maxNeighbors(),
+                                config.joinTimeoutSeconds(),
+                                config.joinMinProbability(),
+                                config.joinMaxProbability());
+
+                peerServer.start();
+
+                joinCoordinator.joinNetwork();
 
                 dashboardReporter.reportSelfAlive(config.advertiseHost(), config.p2pPort());
 
                 failureDetector.start();
 
-                printStartupInfo(config);
+                printStartupInfo(config, neighborDirectory);
         }
 
-        private static void printStartupInfo(AgentConfig config) {
+        private static void printStartupInfo(AgentConfig config, NeighborDirectory neighborDirectory) {
                 System.out.println("====================================");
                 System.out.println("Node Agent Started");
                 System.out.println("Node ID              : " + config.nodeId());
                 System.out.println("Bind Address         : " + config.bindHost() + ":" + config.p2pPort());
                 System.out.println("Advertise Address    : " + config.advertiseHost() + ":" + config.p2pPort());
                 System.out.println("Dashboard URL        : " + config.dashboardUrl());
-                System.out.println("Neighbor list        : " + config.neighborList());
-                System.out.println("K known nodes        : " + config.neighborList().size());
-                System.out.println("Probe interval       : " + config.probeIntervalSeconds() + " seconds");
+                System.out.println("Bootstrap peers      : " + config.bootstrapPeers());
+                System.out.println("Current neighbors    : " + neighborDirectory.addresses());
+                System.out.println("Max neighbors k      : " + config.maxNeighbors());
+                System.out.println("Join timeout         : " + config.joinTimeoutSeconds() + " seconds");
+                System.out.println("Join probability     : [" + config.joinMinProbability()
+                                + ", " + config.joinMaxProbability() + "]");
+                System.out.println("Probe interval       : " + config.gossipIntervalSeconds() + " seconds");
                 System.out.println("ACK timeout          : " + config.ackTimeoutSeconds() + " seconds");
                 System.out.println("Gossip TTL           : " + config.gossipTtl());
                 System.out.println("Phi window size      : " + config.phiWindowSize());
