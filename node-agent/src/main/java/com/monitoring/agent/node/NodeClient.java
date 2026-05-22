@@ -126,10 +126,10 @@ public class NodeClient {
                                 + ". statusCode=" + response.statusCode()))
                 .exceptionally(error -> {
                     System.out.println(
-                            "\n[" + Constant.NOW() + "] "
+                            "\n[" + Constant.NOW() + "] " + Constant.RED
                                     + "Could not send gossip to "
                                     + destinationNode.nodeId() + ": "
-                                    + error.getMessage());
+                                    + error.getMessage() + Constant.RESET);
                     return null;
                 });
     }

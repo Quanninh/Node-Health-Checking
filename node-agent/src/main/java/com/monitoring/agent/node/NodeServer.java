@@ -32,7 +32,7 @@ class NodeServer {
         this.server.createContext("/ping", this::handlePing);
         this.server.createContext("/ping-req", this::handlePingReq);
         this.server.createContext("/gossip", this::handleGossip);
-        this.server.setExecutor(Executors.newFixedThreadPool(4));
+        this.server.setExecutor(Executors.newFixedThreadPool(10));
     }
 
     void setGossipService(GossipService gossipService) {
@@ -42,10 +42,7 @@ class NodeServer {
     void start() {
         server.start();
 
-        System.out.println(
-                "\n[" + Constant.NOW() + "] "
-                        + "Node server listening on "
-                        + bindHost + ":" + port);
+        System.out.println("\n[" + Constant.NOW() + "] " + "Node server listening on " + bindHost + ":" + port);
     }
 
     private void handlePing(HttpExchange exchange) throws IOException {
@@ -105,18 +102,19 @@ class NodeServer {
         }
 
         if (gossipService == null) {
-            sendResponse(exchange, 503, "{\"error\":\"GossipService not ready\"}");
+            sendResponse(exchange, 503,
+                    "{\"error\":\"GossipService not ready\"}");
             return;
         }
 
         String requestBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
 
+        sendResponse(exchange, 200, "{\"status\":\"gossip received\"}");
+
         GossipMessage message = GossipMessage.fromJson(requestBody);
         String senderNodeId = extractJsonValue(requestBody, "senderNodeId");
 
         gossipService.receiveGossip(message, senderNodeId);
-
-        sendResponse(exchange, 200, "{\"status\":\"gossip received\"}");
     }
 
     private String extractJsonValue(String json, String fieldName) {

@@ -80,7 +80,7 @@ public class FailureDetector {
         Optional<NodeAddress> selectedTarget = neighborDirectory.nextTargetNode();
 
         if (selectedTarget.isEmpty()) {
-            System.out.println("\n[" + Constant.NOW() + "] " + Constant.RED
+            System.out.println("\n[" + Constant.NOW() + "] " + Constant.PURPLE
                     + "No reachable neighbor nodes configured. Nothing to ping." + Constant.RESET);
             return;
         }
@@ -206,12 +206,12 @@ public class FailureDetector {
             gossipService.gossipSuspect(targetNode);
         }
 
-        System.out.println("\n[" + Constant.NOW() + "] "
+        System.out.println("\n[" + Constant.NOW() + "] " + Constant.YELLOW
                 + "targetNode " + targetNode.nodeId()
                 + " has no direct/indirect ACK. phi="
                 + String.format("%.4f", phi)
                 + ", status=" + neighborDirectory.getStatus(targetNode.nodeId())
-                + ". It is not declared unreachable yet.");
+                + ". It is not declared unreachable yet." + Constant.RESET);
     }
 
     /**

@@ -198,7 +198,7 @@ public class GossipService {
                 + ", ttl=" + message.ttl());
 
         for (NodeAddress neighborNode : neighborDirectory.neighborList()) {
-            if (neighborNode.nodeId().equals(senderNodeId)) {
+            if (neighborNode.nodeId().equals(senderNodeId) || neighborNode.nodeId().equals(localNodeId)) {
                 continue;
             }
 
@@ -237,5 +237,5 @@ public class GossipService {
                 + " to " + destinationNode.nodeId());
         nodeClient.sendGossipMessage(destinationNode, message);
     }
-    
+
 }
