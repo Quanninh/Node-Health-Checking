@@ -3,17 +3,20 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Decentralized Node Failure Dashboard</title>
+    <title>Node Health Checking Dashboard</title>
     <link rel="stylesheet" href="style.css">
+
+    <!-- Chart.js is used for CPU and memory history line chart. -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
     <header>
         <div>
-            <h1>Decentralized Node Failure Dashboard</h1>
+            <h1>Node Health Checking Dashboard</h1>
             <p>
-                Read-only observer dashboard.
-                It shows failure events reported or received by each node.
+                P2P nodes perform decentralized health checks.
+                This dashboard displays centralized observability data reported to Spring Boot.
             </p>
         </div>
 
@@ -23,43 +26,62 @@
     <div class="container">
 
         <div id="connectionStatus" class="connection-status">
-            Connecting to node agents...
+            Connecting to Spring Boot API...
         </div>
 
         <div id="alertBox" class="alert hidden"></div>
 
         <section class="cards">
             <div class="card">
-                <h2 id="totalEvents">0</h2>
-                <p>Event Copies Observed</p>
+                <h2 id="totalNodes">0</h2>
+                <p>Total Nodes</p>
+            </div>
+
+            <div class="card green">
+                <h2 id="upNodes">0</h2>
+                <p>UP Nodes</p>
             </div>
 
             <div class="card red">
                 <h2 id="failedNodes">0</h2>
-                <p>Unique Failed Nodes</p>
+                <p>FAILED / DOWN Nodes</p>
             </div>
 
             <div class="card orange">
-                <h2 id="reportingNodes">0</h2>
-                <p>Reporting Nodes</p>
-            </div>
-
-            <div class="card green">
-                <h2 id="reachableNodes">0</h2>
-                <p>Reachable Endpoints</p>
-            </div>
-
-            <div class="card blue">
-                <h2 id="uniqueEvents">0</h2>
-                <p>Unique Failure Events</p>
+                <h2 id="failureReports">0</h2>
+                <p>Failure Reports</p>
             </div>
         </section>
 
         <section class="panel">
             <div class="panel-header">
-                <h2>Failure Event Log</h2>
+                <h2>Node Status</h2>
                 <p>
-                    Same event appearing under multiple "Seen From" nodes means the failure event propagated.
+                    Current node information received through Spring Boot REST API.
+                </p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Node ID</th>
+                        <th>IP Address</th>
+                        <th>CPU %</th>
+                        <th>Memory %</th>
+                        <th>Status</th>
+                        <th>Last Heartbeat</th>
+                    </tr>
+                </thead>
+
+                <tbody id="nodeTable"></tbody>
+            </table>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Failure Reports</h2>
+                <p>
+                    Reports sent by node-agents after they locally detect another node as unreachable.
                 </p>
             </div>
 
@@ -68,7 +90,6 @@
                     <tr>
                         <th>Failed Node</th>
                         <th>Reported By</th>
-                        <th>Seen From</th>
                         <th>Status</th>
                         <th>Phi</th>
                         <th>Threshold</th>
@@ -77,8 +98,19 @@
                     </tr>
                 </thead>
 
-                <tbody id="failureTable"></tbody>
+                <tbody id="failureReportTable"></tbody>
             </table>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2 id="chartTitle">CPU / Memory History</h2>
+                <p>
+                    Click a node row to load its stored CPU and memory history.
+                </p>
+            </div>
+
+            <canvas id="cpuMemoryChart"></canvas>
         </section>
 
     </div>

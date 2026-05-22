@@ -47,7 +47,7 @@ class ServerApplicationTests {
         nodeRepository.save(activeNode);
         nodeRepository.save(staleNode);
 
-        // nodeService.checkNodeStatus();
+		nodeService.checkNodeStatus();
 
         Node updatedActiveNode = nodeRepository.findById("active-node").orElseThrow();
         Node updatedStaleNode = nodeRepository.findById("stale-node").orElseThrow();

@@ -17,6 +17,12 @@ public class FailureReport {
     private String message;
     private LocalDateTime timestamp;
 
+    private Double phi;
+
+    private Double threshold;
+
+    private String status;
+
     public Long getId() {
         return id;
     }
@@ -51,5 +57,29 @@ public class FailureReport {
 
     public void setTimestamp(LocalDateTime timestamp) {
         this.timestamp = timestamp;
+    }
+
+    public Double getPhi() {
+        return phi;
+    }
+
+    public void setPhi(Double phi) {
+        this.phi = phi;
+    }
+
+    public Double getThreshold() {
+        return threshold;
+    }
+
+    public void setThreshold(Double threshold) {
+        this.threshold = threshold;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

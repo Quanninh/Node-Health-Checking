@@ -1,83 +1,50 @@
 /*
- * Decentralized dashboard observer.
+ * Centralized observability dashboard.
  *
- * This dashboard does NOT decide whether a node is dead.
- * It only asks each node-agent what failure events it has seen.
+ * Health checking remains decentralized:
+ * nodes ping/check each other through P2P.
+ *
+ * Dashboard reporting is centralized:
+ * node-agents send heartbeats and failure reports to Spring Boot,
+ * then this dashboard reads from Spring Boot REST API.
  */
 
-const NODE_ENDPOINTS = [
-    {
-        nodeId: "node-a",
-        baseUrl: "http://localhost:9001",
-    },
-    {
-        nodeId: "node-b",
-        baseUrl: "http://localhost:9002",
-    },
-    {
-        nodeId: "node-c",
-        baseUrl: "http://localhost:9003",
-    },
-    {
-        nodeId: "node-d",
-        baseUrl: "http://localhost:9004",
-    },
-];
-
+const API = "http://localhost:6789/api/nodes";
+const FAILURE_REPORTS_API = "http://localhost:6789/api/failure-reports";
 const REFRESH_INTERVAL_MS = 2000;
 
-async function fetchAllFailureEvents() {
-    const allRows = [];
-    const reachableNodes = [];
-    const unreachableNodes = [];
+let chart;
+let selectedNodeId = null;
+let isLoadingHistory = false;
 
-    for (const endpoint of NODE_ENDPOINTS) {
-        try {
-            const events = await fetchFailureEventsFromNode(endpoint);
+async function refreshDashboard() {
+    try {
+        const nodes = await fetchNodes();
+        const failureReports = await fetchFailureReports();
 
-            reachableNodes.push(endpoint.nodeId);
+        updateConnectionStatus("Connected to Spring Boot API", true);
+        updateCards(nodes, failureReports);
+        updateNodeTable(nodes);
+        updateFailureReportTable(failureReports);
+        updateAlert(nodes, failureReports);
 
-            for (const event of events) {
-                allRows.push({
-                    ...event,
-
-                    /*
-                     * "seenFromNode" means:
-                     * We fetched this event from this node's local event log.
-                     *
-                     * Example:
-                     * reporterNodeId = node-a
-                     * failedNodeId   = node-d
-                     * seenFromNode   = node-b
-                     *
-                     * Meaning:
-                     * node-a reported node-d unreachable,
-                     * and node-b has received/stored that event.
-                     */
-                    seenFromNode: endpoint.nodeId,
-                });
-            }
-        } catch (error) {
-            unreachableNodes.push(endpoint.nodeId);
-            console.warn(`Endpoint offline: ${endpoint.nodeId} at ${endpoint.baseUrl}`);
-            //console.warn(`Could not fetch from ${endpoint.nodeId}:`, error);
+        if (selectedNodeId) {
+            loadHistory(selectedNodeId);
         }
+    } catch (error) {
+        updateConnectionStatus(
+            "Cannot connect to Spring Boot API. Start ServerApplication first.",
+            false,
+        );
+        console.error(error);
     }
-
-    allRows.sort((a, b) => {
-        const left = new Date(a.timestamp || 0).getTime();
-        const right = new Date(b.timestamp || 0).getTime();
-        return right - left;
-    });
-
-    updateDashboard(allRows, reachableNodes, unreachableNodes);
 }
 
-async function fetchFailureEventsFromNode(endpoint) {
-    const response = await fetch(`${endpoint.baseUrl}/failure-events`);
+async function fetchNodes() {
+    const response = await fetch(API);
 
     if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(`GET /api/nodes returned HTTP ${response.status}`);
     }
 
     const data = await response.json();
@@ -89,146 +56,310 @@ async function fetchFailureEventsFromNode(endpoint) {
     return data;
 }
 
-function updateDashboard(rows, reachableNodes, unreachableNodes) {
-    updateConnectionStatus(reachableNodes, unreachableNodes);
-    updateCards(rows, reachableNodes);
-    updateAlert(rows, unreachableNodes);
-    updateFailureTable(rows);
+async function fetchFailureReports() {
+    const response = await fetch(FAILURE_REPORTS_API);
+
+    if (!response.ok) {
+        throw new Error(
+            `GET /api/failure-reports returned HTTP ${response.status}`,
+        );
+    }
+
+    const data = await response.json();
+
+    if (!Array.isArray(data)) {
+        return [];
+    }
+
+    return data;
 }
 
-function updateConnectionStatus(reachableNodes, unreachableNodes) {
-    const status = document.getElementById("connectionStatus");
+function updateCards(nodes, failureReports) {
+    const upNodes = nodes.filter(
+        (node) => normalizeStatus(node.status) === "UP",
+    ).length;
 
-    status.className = "connection-status";
+    const failedNodes = nodes.filter((node) => {
+        const status = normalizeStatus(node.status);
+        return (
+            status === "FAILED" || status === "DOWN" || status === "UNREACHABLE"
+        );
+    }).length;
 
-    if (unreachableNodes.length === 0) {
-        status.classList.add("connected");
-        status.innerText = `All node endpoints reachable: ${reachableNodes.join(", ")}`;
+    document.getElementById("totalNodes").innerText = nodes.length;
+    document.getElementById("upNodes").innerText = upNodes;
+    document.getElementById("failedNodes").innerText = failedNodes;
+    document.getElementById("failureReports").innerText = failureReports.length;
+}
+
+function updateNodeTable(nodes) {
+    const table = document.getElementById("nodeTable");
+
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+
+    table.innerHTML = "";
+
+    if (nodes.length === 0) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td colspan="6" class="empty-table">
+                No nodes received yet.
+            </td>
+        `;
+        table.appendChild(row);
         return;
     }
 
-    if (reachableNodes.length === 0) {
-        status.classList.add("disconnected");
-        status.innerText = `No node endpoints reachable. Start node-agent instances first.`;
+    for (const node of nodes) {
+        const row = document.createElement("tr");
+
+        if (node.id === selectedNodeId) {
+            row.classList.add("selected-row");
+        }
+
+        row.innerHTML = `
+            <td>${safeText(node.id)}</td>
+            <td>${safeText(node.ipAddress)}</td>
+            <td>${formatNumber(node.cpuUsage)}%</td>
+            <td>${formatNumber(node.memoryUsage)}%</td>
+            <td class="${statusClass(node.status)}">${safeText(node.status)}</td>
+            <td>${formatTimestamp(node.lastHeartbeat)}</td>
+        `;
+
+        row.onclick = () => {
+            selectedNodeId = node.id;
+            highlightSelectedRow(node.id);
+            loadHistory(node.id);
+        };
+
+        table.appendChild(row);
+    }
+
+    window.scrollTo(scrollX, scrollY);
+}
+
+function updateFailureReportTable(failureReports) {
+    const table = document.getElementById("failureReportTable");
+    table.innerHTML = "";
+
+    if (failureReports.length === 0) {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td colspan="7" class="empty-table">
+                No failure reports received yet.
+            </td>
+        `;
+        table.appendChild(row);
         return;
     }
 
-    status.classList.add("partial");
-    status.innerText =
-        `Reachable: ${reachableNodes.join(", ")} | ` +
-        `Unreachable endpoints: ${unreachableNodes.join(", ")}`;
-}
+    const sortedReports = [...failureReports].sort((a, b) => {
+        const left = new Date(a.timestamp || 0).getTime();
+        const right = new Date(b.timestamp || 0).getTime();
+        return right - left;
+    });
 
-function updateCards(rows, reachableNodes) {
-    const failedNodeIds = new Set();
-    const reporterNodeIds = new Set();
-    const uniqueEventIds = new Set();
+    for (const report of sortedReports) {
+        const row = document.createElement("tr");
 
-    for (const row of rows) {
-        if (row.failedNodeId) {
-            failedNodeIds.add(row.failedNodeId);
-        }
+        row.innerHTML = `
+            <td>${safeText(report.failedNodeId)}</td>
+            <td>${safeText(report.reporterNodeId)}</td>
+            <td class="${statusClass(report.status)}">${safeText(report.status)}</td>
+            <td>${formatNumber(report.phi)}</td>
+            <td>${formatNumber(report.threshold)}</td>
+            <td>${formatTimestamp(report.timestamp)}</td>
+            <td class="message-cell">${safeText(report.message)}</td>
+        `;
 
-        if (row.reporterNodeId) {
-            reporterNodeIds.add(row.reporterNodeId);
-        }
-
-        if (row.eventId) {
-            uniqueEventIds.add(row.eventId);
-        }
-    }
-
-    document.getElementById("totalEvents").innerText = rows.length;
-    document.getElementById("failedNodes").innerText = failedNodeIds.size;
-    document.getElementById("reportingNodes").innerText = reporterNodeIds.size;
-    document.getElementById("reachableNodes").innerText = reachableNodes.length;
-
-    const uniqueEventsElement = document.getElementById("uniqueEvents");
-    if (uniqueEventsElement) {
-        uniqueEventsElement.innerText = uniqueEventIds.size;
+        table.appendChild(row);
     }
 }
 
-function updateAlert(rows, unreachableNodes) {
+function updateAlert(nodes, failureReports) {
     const alertBox = document.getElementById("alertBox");
 
-    if (rows.length === 0) {
+    const failedNodeIds = new Set();
+
+    for (const node of nodes) {
+        const status = normalizeStatus(node.status);
+
+        if (
+            status === "FAILED" ||
+            status === "DOWN" ||
+            status === "UNREACHABLE"
+        ) {
+            failedNodeIds.add(node.id);
+        }
+    }
+
+    for (const report of failureReports) {
+        if (report.failedNodeId) {
+            failedNodeIds.add(report.failedNodeId);
+        }
+    }
+
+    if (failedNodeIds.size === 0) {
         alertBox.classList.add("hidden");
         alertBox.innerText = "";
         return;
     }
 
-    const failedNodeIds = [...new Set(rows.map((row) => row.failedNodeId))];
-
     alertBox.classList.remove("hidden");
     alertBox.innerText =
-        `Failure event(s) detected for: ${failedNodeIds.join(", ")}. ` +
-        `Unreachable endpoints: ${unreachableNodes.join(", ") || "none"}.`;
+        `Failure detected for: ${[...failedNodeIds].join(", ")}. ` +
+        `Reports received: ${failureReports.length}.`;
 }
 
-function updateFailureTable(rows) {
-    const table = document.getElementById("failureTable");
-    table.innerHTML = "";
-
-    if (rows.length === 0) {
-        const row = document.createElement("tr");
-
-        row.innerHTML = `
-            <td colspan="8" class="empty-table">
-                No failure events observed yet.
-            </td>
-        `;
-
-        table.appendChild(row);
+async function loadHistory(nodeId) {
+    if (isLoadingHistory) {
         return;
     }
 
-    for (const event of rows) {
-        const row = document.createElement("tr");
+    selectedNodeId = nodeId;
+    isLoadingHistory = true;
 
-        row.title = event.eventId || "";
+    document.getElementById("chartTitle").innerText =
+        "CPU / Memory History for " + nodeId;
 
-        row.innerHTML = `
-            <td>${safeText(event.failedNodeId)}</td>
-            <td>${safeText(event.reporterNodeId)}</td>
-            <td>${safeText(event.seenFromNode)}</td>
-            <td class="${statusClass(event.status)}">${safeText(event.status)}</td>
-            <td>${formatNumber(event.phi)}</td>
-            <td>${formatNumber(event.threshold)}</td>
-            <td>${formatTimestamp(event.timestamp)}</td>
-            <td class="message-cell">${safeText(event.message)}</td>
-        `;
+    try {
+        const response = await fetch(`${API}/${nodeId}/history`);
 
-        table.appendChild(row);
+        if (!response.ok) {
+            throw new Error(
+                `GET /api/nodes/${nodeId}/history returned HTTP ${response.status}`,
+            );
+        }
+
+        const data = await response.json();
+
+        const labels = data.map((entry) =>
+            new Date(entry.timestamp).toLocaleTimeString(),
+        );
+
+        const cpu = data.map((entry) => Number(entry.cpuUsage || 0));
+        const memory = data.map((entry) => Number(entry.memoryUsage || 0));
+
+        drawChart(labels, cpu, memory);
+    } catch (error) {
+        console.error(error);
+    } finally {
+        isLoadingHistory = false;
     }
 }
 
-function statusClass(status) {
-    const normalized = String(status || "").toUpperCase();
+function drawChart(labels, cpuData, memoryData) {
+    const canvas = document.getElementById("cpuMemoryChart");
 
-    if (normalized === "UNREACHABLE" || normalized === "FAILED" || normalized === "DOWN") {
-        return "status-down";
+    if (!canvas) {
+        return;
+    }
+
+    const ctx = canvas.getContext("2d");
+
+    if (chart) {
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = cpuData;
+        chart.data.datasets[1].data = memoryData;
+        chart.update("none");
+        return;
+    }
+
+    chart = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: "CPU %",
+                    data: cpuData,
+                    borderColor: "#22c55e",
+                    fill: false,
+                    tension: 0.2,
+                },
+                {
+                    label: "Memory %",
+                    data: memoryData,
+                    borderColor: "#3b82f6",
+                    fill: false,
+                    tension: 0.2,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: "index",
+                intersect: false,
+            },
+            scales: {
+                y: {
+                    min: 0,
+                    max: 100,
+                },
+            },
+        },
+    });
+}
+
+function highlightSelectedRow(nodeId) {
+    document.querySelectorAll("#nodeTable tr").forEach((row) => {
+        row.classList.remove("selected-row");
+    });
+
+    document.querySelectorAll("#nodeTable tr").forEach((row) => {
+        if (row.children.length > 0 && row.children[0].innerText === nodeId) {
+            row.classList.add("selected-row");
+        }
+    });
+}
+
+function updateConnectionStatus(message, isConnected) {
+    const status = document.getElementById("connectionStatus");
+
+    status.innerText = message;
+    status.className = isConnected
+        ? "connection-status connected"
+        : "connection-status disconnected";
+}
+
+function statusClass(status) {
+    const normalized = normalizeStatus(status);
+
+    if (normalized === "UP" || normalized === "ALIVE") {
+        return "status-up";
     }
 
     if (normalized === "WARNING" || normalized === "SUSPECTED") {
         return "status-warning";
     }
 
-    if (normalized === "ALIVE" || normalized === "UP") {
-        return "status-up";
+    if (
+        normalized === "DOWN" ||
+        normalized === "FAILED" ||
+        normalized === "UNREACHABLE"
+    ) {
+        return "status-down";
     }
 
     return "status-unknown";
+}
+
+function normalizeStatus(status) {
+    return String(status || "")
+        .trim()
+        .toUpperCase();
 }
 
 function formatNumber(value) {
     const number = Number(value);
 
     if (Number.isNaN(number)) {
-        return "-";
+        return "0.0";
     }
 
-    return number.toFixed(4);
+    return number.toFixed(1);
 }
 
 function formatTimestamp(value) {
@@ -253,7 +384,9 @@ function safeText(value) {
     return String(value);
 }
 
-document.getElementById("refreshButton").addEventListener("click", fetchAllFailureEvents);
+document
+    .getElementById("refreshButton")
+    .addEventListener("click", refreshDashboard);
 
-setInterval(fetchAllFailureEvents, REFRESH_INTERVAL_MS);
-fetchAllFailureEvents();
+setInterval(refreshDashboard, REFRESH_INTERVAL_MS);
+refreshDashboard();

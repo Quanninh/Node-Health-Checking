@@ -5,6 +5,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 
 import com.example.agent.constant.Constant;
@@ -52,11 +53,11 @@ public class DashboardReporter {
 
         return httpClient
                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenAccept(response -> System.out.println("\n[" + Constant.NOW() + "] " + Constant.CYAN
+                .thenAccept(response -> System.out.println("[" + Constant.NOW() + "] " + Constant.CYAN
                         + "Registered self with dashboard. Status: " + response.statusCode() + Constant.RESET))
                 .exceptionally(error -> {
                     System.out.println(
-                            "\n[" + Constant.NOW() + "] " + Constant.RED + "Could not register with dashboard: "
+                            "[" + Constant.NOW() + "] " + Constant.RED + "Could not register with dashboard: "
                                     + error.getMessage() + Constant.RESET);
                     return null;
                 });
@@ -69,26 +70,33 @@ public class DashboardReporter {
      * @param phi        phi calculations for the failed node
      * @return
      */
-    public CompletableFuture<Void> reportFailure(NodeAddress failedNode, double phi) {
+    CompletableFuture<Void> reportFailure(NodeAddress failedNode, double phi, double threshold) {
         String message = "Node " + localNodeId
                 + " classifies Node " + failedNode.nodeId()
-                + " as UNREACHABLE by phi threshold. phi=" + String.format("%.4f", phi)
+                + " as UNREACHABLE by phi threshold. phi=" + String.format("%.4f", phi) + ", threshold="
+                + String.format("%.4f", threshold)
                 + ". If this node comes back, it must rejoin as a new node.";
 
-        String json = """
-                {
-                  "reporterNodeId": "%s",
-                  "failedNodeId": "%s",
-                  "message": "%s",
-                  "phi": %.6f,
-                  "status": "UNREACHABLE",
-                  "timestamp": "%s"
-                }
-                """.formatted(
+        // This report is sent to the centralized Spring Boot observability server.
+        // The health checking decision is still made locally by this node.
+        String json = String.format(
+                Locale.US,
+                """
+                        {
+                          "reporterNodeId": "%s",
+                          "failedNodeId": "%s",
+                          "message": "%s",
+                          "phi": %.6f,
+                          "threshold": %.6f,
+                          "status": "UNREACHABLE",
+                          "timestamp": "%s"
+                        }
+                        """,
                 localNodeId,
                 failedNode.nodeId(),
                 message,
                 phi,
+                threshold,
                 Constant.NOW());
 
         HttpRequest request = HttpRequest.newBuilder()
@@ -111,6 +119,12 @@ public class DashboardReporter {
                 });
     }
 
+    // Backward-compatible overload in case some old code still calls
+    // reportFailure(node, phi).
+    // CompletableFuture<Void> reportFailure(NodeAddress failedNode, double phi) {
+    // return reportFailure(failedNode, phi, 5.0);
+    // }
+
     /**
      * Removes trailing forward slashes from URLs
      * 
@@ -124,5 +138,4 @@ public class DashboardReporter {
 
         return value;
     }
-
 }
