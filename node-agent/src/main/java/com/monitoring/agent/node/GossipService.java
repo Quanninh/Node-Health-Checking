@@ -6,6 +6,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.monitoring.agent.constant.Constant;
 
+/**
+ * Gossips or receives gossips about the status of a target node.
+ */
 public class GossipService {
 
     private final String localNodeId;
@@ -14,10 +17,7 @@ public class GossipService {
     private final int defaultTtl;
     private final Set<String> seenMessages;
 
-    GossipService(
-            String localNodeId,
-            NeighborDirectory neighborDirectory,
-            NodeClient nodeClient,
+    public GossipService(String localNodeId, NeighborDirectory neighborDirectory, NodeClient nodeClient,
             int defaultTtl) {
         this.localNodeId = localNodeId;
         this.neighborDirectory = neighborDirectory;
@@ -26,7 +26,12 @@ public class GossipService {
         this.seenMessages = ConcurrentHashMap.newKeySet();
     }
 
-    void gossipSuspect(NodeAddress targetNode) {
+    /**
+     * Gossips that the target node is suspected to be dead.
+     * 
+     * @param targetNode the suspected target node
+     */
+    public void gossipSuspect(NodeAddress targetNode) {
         GossipMessage message = createSuspectMessage(targetNode);
         System.out.println("\n[" + Constant.NOW() + "] "
                 + "Created gossip message: type=SUSPECT, subjectNodeId="
@@ -35,7 +40,12 @@ public class GossipService {
         receiveGossip(message, localNodeId);
     }
 
-    void gossipUnreachable(NodeAddress targetNode) {
+    /**
+     * Gossips that the target node is unreachable.
+     * 
+     * @param targetNode the unreachable target node
+     */
+    public void gossipUnreachable(NodeAddress targetNode) {
         GossipMessage message = createUnreachableMessage(targetNode);
         System.out.println("\n[" + Constant.NOW() + "] "
                 + "Created gossip message: type=UNREACHABLE, subjectNodeId="
@@ -44,12 +54,17 @@ public class GossipService {
         receiveGossip(message, localNodeId);
     }
 
-    void gossipAlive(NodeAddress targetNode) {
+    /**
+     * Gossips that the target node is alive.
+     * 
+     * @param targetNode the alive target node
+     */
+    public void gossipAlive(NodeAddress targetNode) {
         GossipMessage message = createAliveMessage(targetNode);
         receiveGossip(message, localNodeId);
     }
 
-    void gossipJoin(String subjectNodeId, int incarnationNumber) {
+    private void gossipJoin(String subjectNodeId, int incarnationNumber) {
         GossipMessage message = createMessage(
                 subjectNodeId,
                 GossipMessageType.JOIN,
@@ -58,7 +73,14 @@ public class GossipService {
         receiveGossip(message, localNodeId);
     }
 
-    GossipMessage createUnreachableMessage(NodeAddress targetNode) {
+    /**
+     * Creates an UNREACHABLE message with
+     * {@link #createMessage(String, GossipMessageType, int, String)}.
+     * 
+     * @param targetNode
+     * @return the UNREACHABLE gossip message
+     */
+    private GossipMessage createUnreachableMessage(NodeAddress targetNode) {
         return createMessage(
                 targetNode.nodeId(),
                 GossipMessageType.UNREACHABLE,
@@ -66,7 +88,14 @@ public class GossipService {
                 "Node " + targetNode.nodeId() + " is UNREACHABLE.");
     }
 
-    GossipMessage createSuspectMessage(NodeAddress targetNode) {
+    /**
+     * Creates a SUSPECT message with
+     * {@link #createMessage(String, GossipMessageType, int, String)}.
+     * 
+     * @param targetNode
+     * @return the SUSPECT gossip message
+     */
+    private GossipMessage createSuspectMessage(NodeAddress targetNode) {
         return createMessage(
                 targetNode.nodeId(),
                 GossipMessageType.SUSPECT,
@@ -74,7 +103,14 @@ public class GossipService {
                 "Node " + targetNode.nodeId() + " is SUSPECTED.");
     }
 
-    GossipMessage createAliveMessage(NodeAddress targetNode) {
+    /**
+     * Creates an ALIVE message with
+     * {@link #createMessage(String, GossipMessageType, int, String)}.
+     * 
+     * @param targetNode
+     * @return the ALIVE gossip message
+     */
+    private GossipMessage createAliveMessage(NodeAddress targetNode) {
         return createMessage(
                 targetNode.nodeId(),
                 GossipMessageType.ALIVE,
@@ -82,11 +118,21 @@ public class GossipService {
                 "Node " + targetNode.nodeId() + " is ALIVE.");
     }
 
+    /**
+     * Creates a gossip message
+     * 
+     * @param subjectNodeId     the target node
+     * @param messageType       message type
+     * @param incarnationNumber incarnation number
+     * @param details           extra details
+     * @return
+     */
     private GossipMessage createMessage(
             String subjectNodeId,
             GossipMessageType messageType,
             int incarnationNumber,
             String details) {
+
         return new GossipMessage(
                 UUID.randomUUID().toString(),
                 localNodeId,
@@ -96,9 +142,18 @@ public class GossipService {
                 System.currentTimeMillis(),
                 defaultTtl,
                 details);
+
     }
 
-    void receiveGossip(GossipMessage message, String senderNodeId) {
+    /**
+     * Receives a gossip message. Will ignore duplicated gossip messages. Otherwise,
+     * add the message to the list of seen messages. Messages will be processed by
+     * {@link #applyGossipMessage(GossipMessage)}.
+     * 
+     * @param message      the gossip message
+     * @param senderNodeId sender node id
+     */
+    public void receiveGossip(GossipMessage message, String senderNodeId) {
         if (message == null) {
             return;
         }
@@ -112,13 +167,12 @@ public class GossipService {
 
         seenMessages.add(message.messageId());
 
-        System.out.println(
-                "\n[" + Constant.NOW() + "] "
-                        + "Received gossip message type=" + message.messageType()
-                        + ", subjectNodeId=" + message.subjectNodeId()
-                        + ", sourceNodeId=" + message.sourceNodeId()
-                        + ", senderNodeId=" + senderNodeId
-                        + ", ttl=" + message.ttl());
+        System.out.println("\n[" + Constant.NOW() + "] "
+                + "Received gossip message type=" + message.messageType()
+                + ", subjectNodeId=" + message.subjectNodeId()
+                + ", sourceNodeId=" + message.sourceNodeId()
+                + ", senderNodeId=" + senderNodeId
+                + ", ttl=" + message.ttl());
 
         applyGossipMessage(message);
 
@@ -127,7 +181,13 @@ public class GossipService {
         }
     }
 
-    void forwardGossip(GossipMessage message, String senderNodeId) {
+    /**
+     * Forwards a given gossip message to all its neighbors.
+     * 
+     * @param message      the gossip message
+     * @param senderNodeId the sender of the original gossip message
+     */
+    private void forwardGossip(GossipMessage message, String senderNodeId) {
         if (message.ttl() <= 0) {
             return;
         }
@@ -138,10 +198,6 @@ public class GossipService {
                 + ", ttl=" + message.ttl());
 
         for (NodeAddress neighborNode : neighborDirectory.neighborList()) {
-            if (neighborNode.nodeId().equals(localNodeId)) {
-                continue;
-            }
-
             if (neighborNode.nodeId().equals(senderNodeId)) {
                 continue;
             }
@@ -154,14 +210,27 @@ public class GossipService {
         }
     }
 
-    void applyGossipMessage(GossipMessage message) {
+    /**
+     * Stores the information received from the gossip message into the neighbor
+     * directory.
+     * 
+     * @param message the gossip message
+     * @see NeighborDirectory
+     */
+    private void applyGossipMessage(GossipMessage message) {
         neighborDirectory.applyGossipStatus(
                 message.subjectNodeId(),
                 message.messageType(),
                 message.incarnationNumber());
     }
 
-    void sendGossipMessage(NodeAddress destinationNode, GossipMessage message) {
+    /**
+     * Sends a gossip message to the destination node.
+     * 
+     * @param destinationNode the destination
+     * @param message         the gossip message
+     */
+    private void sendGossipMessage(NodeAddress destinationNode, GossipMessage message) {
         System.out.println("\n[" + Constant.NOW() + "] "
                 + "Sending gossip message type=" + message.messageType()
                 + ", subjectNodeId=" + message.subjectNodeId()
