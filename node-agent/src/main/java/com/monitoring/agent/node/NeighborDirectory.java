@@ -10,12 +10,25 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.monitoring.agent.constant.Constant;
 
+/**
+ * A directory to keep track of all neighbors of a given node and their states.
+ */
 public class NeighborDirectory {
+
+    /** List of neighbors. */
     private final List<NodeAddress> neighborList;
+
+    /**
+     * Mapping of node id and its state.
+     * 
+     * @see NodeState
+     */
     private final Map<String, NodeState> nodeStates;
+
+    /** Index for iterating through neighbors (for failure detection). */
     private int nextIndex = 0;
 
-    NeighborDirectory(List<NodeAddress> neighborList) {
+    public NeighborDirectory(List<NodeAddress> neighborList) {
         this.neighborList = new ArrayList<>(neighborList);
         this.nodeStates = new ConcurrentHashMap<>();
 
@@ -24,23 +37,20 @@ public class NeighborDirectory {
         }
     }
 
-    synchronized Optional<NodeAddress> nextTargetNode() {
-        List<NodeAddress> reachableNeighbors = neighborList.stream()
-                .filter(node -> getStatus(node.nodeId()) != NodeStatus.UNREACHABLE)
-                .toList();
-
-        if (reachableNeighbors.isEmpty()) {
-            return Optional.empty();
-        }
-
+    /**
+     * Gets the next node from the list of neighbors. Shuffles the list if the node
+     * has retrieve all neighbors already to simulate randomness.
+     * 
+     * @return the next node, empty if node has no active neighbors
+     */
+    public synchronized Optional<NodeAddress> nextTargetNode() {
         if (nextIndex >= neighborList.size()) {
             Collections.shuffle(neighborList);
             nextIndex = 0;
 
-            System.out.println(
-                    "\n[" + Constant.NOW() + "] "
-                            + "Completed one full neighbor cycle. Shuffled neighborList: "
-                            + neighborList);
+            System.out.println("\n[" + Constant.NOW() + "] " + Constant.BLUE
+                    + "Completed one full neighbor cycle. Shuffled neighborList: "
+                    + neighborList + Constant.RESET);
         }
 
         int attempts = 0;
@@ -49,6 +59,7 @@ public class NeighborDirectory {
             nextIndex = (nextIndex + 1) % neighborList.size();
             attempts++;
 
+            // Check if the neighbor is reachable
             if (getStatus(selectedNode.nodeId()) != NodeStatus.UNREACHABLE) {
                 return Optional.of(selectedNode);
             }
@@ -57,27 +68,31 @@ public class NeighborDirectory {
         return Optional.empty();
     }
 
-    List<NodeAddress> selectHelperNodes(NodeAddress targetNode) {
-        List<NodeAddress> helperNodes = new ArrayList<>();
-
-        for (NodeAddress node : neighborList) {
-            if (node.nodeId().equals(targetNode.nodeId())) {
-                continue;
-            }
-
-            if (getStatus(node.nodeId()) == NodeStatus.UNREACHABLE) {
-                continue;
-            }
-
-            helperNodes.add(node);
-        }
-
+    /**
+     * Gets a list of helper nodes. These nodes must be reachable and not the same
+     * node as target node.
+     * 
+     * @param targetNode the target node
+     * @return the list of helper nodes
+     */
+    public List<NodeAddress> selectHelperNodes(NodeAddress targetNode) {
+        List<NodeAddress> helperNodes = new ArrayList<>(neighborList.stream()
+                .filter(node -> (getStatus(node.nodeId()) != NodeStatus.UNREACHABLE)
+                        && (!node.nodeId().equals(targetNode.nodeId())))
+                .toList());
         Collections.shuffle(helperNodes);
 
         return helperNodes;
     }
 
-    void markAlive(String nodeId, PhiAccrualFailure phiDetector) {
+    /**
+     * Marks the given node as ALIVE.
+     * 
+     * @param nodeId      the node id
+     * @param phiDetector phi accrual failure
+     * @see PhiAccrualFailure
+     */
+    public void markAlive(String nodeId, PhiAccrualFailure phiDetector) {
         NodeState state = nodeStates.get(nodeId);
 
         if (state != null) {
@@ -85,7 +100,14 @@ public class NeighborDirectory {
         }
     }
 
-    void markWarning(String nodeId, double phi) {
+    /**
+     * Marks the given node as WARNING.
+     * 
+     * @param nodeId the node id
+     * @param phi    the phi value
+     * @see PhiAccrualFailure
+     */
+    public void markWarning(String nodeId, double phi) {
         NodeState state = nodeStates.get(nodeId);
 
         if (state != null) {
@@ -93,7 +115,14 @@ public class NeighborDirectory {
         }
     }
 
-    void markSuspected(String nodeId, double phi) {
+    /**
+     * Marks the given node as SUSPECTED.
+     * 
+     * @param nodeId the node id
+     * @param phi    the phi value
+     * @see PhiAccrualFailure
+     */
+    public void markSuspected(String nodeId, double phi) {
         NodeState state = nodeStates.get(nodeId);
 
         if (state != null) {
@@ -101,7 +130,14 @@ public class NeighborDirectory {
         }
     }
 
-    void markUnreachable(String nodeId, double phi) {
+    /**
+     * Marks the given node as UNREACHABLE.
+     * 
+     * @param nodeId the node id
+     * @param phi    the phi value
+     * @see PhiAccrualFailure
+     */
+    public void markUnreachable(String nodeId, double phi) {
         NodeState state = nodeStates.get(nodeId);
 
         if (state != null) {
@@ -109,7 +145,15 @@ public class NeighborDirectory {
         }
     }
 
-    NodeStatus getStatus(String nodeId) {
+    /**
+     * Gets the status of a node (part of NodeState).
+     * 
+     * @param nodeId
+     * @return the status
+     * @see NodeStatus
+     * @see NodeState
+     */
+    public NodeStatus getStatus(String nodeId) {
         NodeState state = nodeStates.get(nodeId);
 
         if (state == null) {
@@ -119,21 +163,41 @@ public class NeighborDirectory {
         return state.status();
     }
 
-    Optional<NodeState> getState(String nodeId) {
+    /**
+     * Gets the state of a node (includes #getStatus).
+     * 
+     * @param nodeId
+     * @return
+     * @see NodeState
+     */
+    public Optional<NodeState> getState(String nodeId) {
         return Optional.ofNullable(nodeStates.get(nodeId));
     }
 
-    List<NodeAddress> neighborList() {
+    public List<NodeAddress> neighborList() {
         return new ArrayList<>(neighborList);
     }
 
-    Optional<NodeAddress> getAddress(String nodeId) {
+    /**
+     * Gets the address of the target node
+     * 
+     * @param targetNodeId the id of the target node
+     * @return the node address
+     * @see NodeAddress
+     */
+    public Optional<NodeAddress> getAddress(String targetNodeId) {
         return neighborList.stream()
-                .filter(node -> node.nodeId().equals(nodeId))
+                .filter(node -> node.nodeId().equals(targetNodeId))
                 .findFirst();
     }
 
-    int incarnationNumber(String nodeId) {
+    // TODO: Javadoc
+    /**
+     * 
+     * @param nodeId
+     * @return
+     */
+    public int incarnationNumber(String nodeId) {
         NodeState state = nodeStates.get(nodeId);
 
         if (state == null) {
@@ -143,7 +207,14 @@ public class NeighborDirectory {
         return state.incarnationNumber();
     }
 
-    void applyGossipStatus(String subjectNodeId, GossipMessageType messageType, int incarnationNumber) {
+    /**
+     * Applies the state of the
+     * 
+     * @param subjectNodeId
+     * @param messageType
+     * @param incarnationNumber
+     */
+    public void applyGossipStatus(String subjectNodeId, GossipMessageType messageType, int incarnationNumber) {
         NodeState state = nodeStates.get(subjectNodeId);
 
         if (state == null) {
@@ -155,7 +226,7 @@ public class NeighborDirectory {
         }
 
         switch (messageType) {
-            case SUSPECT -> state.markSuspectedFromGossip(incarnationNumber);
+            case SUSPECTED -> state.markSuspectedFromGossip(incarnationNumber);
             case UNREACHABLE -> state.markUnreachableFromGossip(incarnationNumber);
             case ALIVE -> state.markAliveFromGossip(incarnationNumber);
             case JOIN -> {
@@ -166,7 +237,13 @@ public class NeighborDirectory {
         }
     }
 
-    List<NodeState> states() {
+    /**
+     * Gets list of states sort by ID.
+     * 
+     * @return sorted list of states
+     * @see NodeState
+     */
+    public List<NodeState> states() {
         List<NodeState> states = new ArrayList<>(nodeStates.values());
         states.sort(Comparator.comparing(state -> state.address().nodeId()));
         return states;

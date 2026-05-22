@@ -1,7 +1,7 @@
 package com.monitoring.agent.node;
 
 public enum GossipMessageType {
-    SUSPECT,
+    SUSPECTED,
     UNREACHABLE,
     ALIVE,
     JOIN,

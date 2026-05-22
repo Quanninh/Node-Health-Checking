@@ -56,7 +56,7 @@ public class NodeAgent {
                 phiDetector,
                 gossipService,
                 config.probeIntervalSeconds(),
-                                config.unreachableThreshold());
+                config.unreachableThreshold());
 
         nodeServer.start();
 

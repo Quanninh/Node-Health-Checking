@@ -98,7 +98,7 @@ public class GossipService {
     private GossipMessage createSuspectMessage(NodeAddress targetNode) {
         return createMessage(
                 targetNode.nodeId(),
-                GossipMessageType.SUSPECT,
+                GossipMessageType.SUSPECTED,
                 neighborDirectory.incarnationNumber(targetNode.nodeId()),
                 "Node " + targetNode.nodeId() + " is SUSPECTED.");
     }
@@ -237,4 +237,5 @@ public class GossipService {
                 + " to " + destinationNode.nodeId());
         nodeClient.sendGossipMessage(destinationNode, message);
     }
+    
 }

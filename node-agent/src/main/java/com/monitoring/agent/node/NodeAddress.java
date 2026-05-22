@@ -2,9 +2,18 @@ package com.monitoring.agent.node;
 
 import java.net.URI;
 
+/**
+ * Node Address. Normally refered to as nodeId@host:port.
+ */
 public record NodeAddress(String nodeId, String host, int port) {
 
-    public static NodeAddress from(String value) {
+    /**
+     * Converts string to node address.
+     * 
+     * @param value the string
+     * @return the node address associated with the string
+     */
+    public static NodeAddress fromString(String value) {
         String[] idAndAddress = value.split("@");
 
         if (idAndAddress.length != 2) {
@@ -27,14 +36,29 @@ public record NodeAddress(String nodeId, String host, int port) {
         return new NodeAddress(nodeId, host, port);
     }
 
+    /**
+     * URI for ping.
+     * 
+     * @return ping URI
+     */
     public URI pingUri() {
         return URI.create("http://" + host + ":" + port + "/ping");
     }
 
+    /**
+     * URI for ping request (asks node to ping another node).
+     * 
+     * @return ping request URI
+     */
     public URI pingReqUri() {
         return URI.create("http://" + host + ":" + port + "/ping-req");
     }
 
+    /**
+     * URI for gossipping.
+     * 
+     * @return gossip URI
+     */
     public URI gossipUri() {
         return URI.create("http://" + host + ":" + port + "/gossip");
     }

@@ -1,5 +1,11 @@
 package com.monitoring.agent.node;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
 import static com.monitoring.agent.constant.Constant.DEFAULT_ACK_TIMEOUT_SECONDS;
 import static com.monitoring.agent.constant.Constant.DEFAULT_GOSSIP_INTERVAL_SECONDS;
 import static com.monitoring.agent.constant.Constant.DEFAULT_GOSSIP_TTL;
@@ -9,12 +15,6 @@ import static com.monitoring.agent.constant.Constant.DEFAULT_PHI_WINDOW_SIZE;
 import static com.monitoring.agent.constant.Constant.DEFAULT_SUSPECTED_THRESHOLD;
 import static com.monitoring.agent.constant.Constant.DEFAULT_UNREACHABLE_THRESHOLD;
 import static com.monitoring.agent.constant.Constant.DEFAULT_WARNING_THRESHOLD;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Configuration settings for an agent.
@@ -181,7 +181,7 @@ public record AgentConfig(
                 continue;
             }
 
-            neighborList.add(NodeAddress.from(trimmed));
+            neighborList.add(NodeAddress.fromString(trimmed));
         }
 
         return neighborList;
