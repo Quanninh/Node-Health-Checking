@@ -1,8 +1,8 @@
-package com.monitoring.agent.node;
+// package com.monitoring.agent.node;
 
-record NeighborUpdateResult(
-        boolean accepted,
-        NodeAddress addedPeer,
-        NodeAddress evictedPeer,
-        String reason) {
-}
+// private record NeighborUpdateResult(
+// boolean accepted,
+// NodeAddress addedPeer,
+// NodeAddress evictedPeer,
+// String reason) {
+// }
