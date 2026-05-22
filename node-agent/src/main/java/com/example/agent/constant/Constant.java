@@ -1,5 +1,8 @@
 package com.example.agent.constant;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 public final class Constant {
 
     public static final int DEFAULT_MAX_NEIGHBORS = 2;
@@ -29,5 +32,9 @@ public final class Constant {
     public static final String BLUE = "\u001B[34m";
     public static final String PURPLE = "\u001B[35m";
     public static final String CYAN = "\u001B[36m";
+
+    public static String NOW() {
+        return LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd.MM.yy_HH:mm:ss.SSS"));
+    }
 
 }

@@ -1,9 +1,10 @@
 package com.example.agent.node;
 
-import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.example.agent.constant.Constant;
 
 public class GossipService {
 
@@ -27,7 +28,7 @@ public class GossipService {
 
     void gossipSuspect(NodeAddress targetNode) {
         GossipMessage message = createSuspectMessage(targetNode);
-        System.out.println("[" + LocalDateTime.now() + "] "
+        System.out.println("[" + Constant.NOW() + "] "
                 + "Created gossip message: type=SUSPECT, subjectNodeId="
                 + targetNode.nodeId()
                 + ", sourceNodeId=" + localNodeId);
@@ -36,7 +37,7 @@ public class GossipService {
 
     void gossipUnreachable(NodeAddress targetNode) {
         GossipMessage message = createUnreachableMessage(targetNode);
-        System.out.println("[" + LocalDateTime.now() + "] "
+        System.out.println("[" + Constant.NOW() + "] "
                 + "Created gossip message: type=UNREACHABLE, subjectNodeId="
                 + targetNode.nodeId()
                 + ", sourceNodeId=" + localNodeId);
@@ -104,7 +105,7 @@ public class GossipService {
 
         if (seenMessages.contains(message.messageId())) {
             System.out.println(
-                    "[" + LocalDateTime.now() + "] "
+                    "[" + Constant.NOW() + "] "
                             + "Duplicate gossip message ignored: " + message.messageId());
             return;
         }
@@ -112,7 +113,7 @@ public class GossipService {
         seenMessages.add(message.messageId());
 
         System.out.println(
-                "[" + LocalDateTime.now() + "] "
+                "[" + Constant.NOW() + "] "
                         + "Received gossip message type=" + message.messageType()
                         + ", subjectNodeId=" + message.subjectNodeId()
                         + ", sourceNodeId=" + message.sourceNodeId()
@@ -131,7 +132,7 @@ public class GossipService {
             return;
         }
 
-        System.out.println("[" + LocalDateTime.now() + "] "
+        System.out.println("[" + Constant.NOW() + "] "
                 + "Forwarding gossip message type=" + message.messageType()
                 + ", subjectNodeId=" + message.subjectNodeId()
                 + ", ttl=" + message.ttl());
@@ -161,7 +162,7 @@ public class GossipService {
     }
 
     void sendGossipMessage(NodeAddress destinationNode, GossipMessage message) {
-        System.out.println("[" + LocalDateTime.now() + "] "
+        System.out.println("[" + Constant.NOW() + "] "
                 + "Sending gossip message type=" + message.messageType()
                 + ", subjectNodeId=" + message.subjectNodeId()
                 + " to " + destinationNode.nodeId());

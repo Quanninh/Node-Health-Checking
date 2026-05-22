@@ -1,7 +1,8 @@
 package com.example.agent.node;
 
-import java.time.LocalDateTime;
 import java.util.Locale;
+
+import com.example.agent.constant.Constant;
 
 /**
  * Represents one failure detection event.
@@ -25,10 +26,9 @@ record FailureEvent(
         String status,
         double phi,
         double threshold,
-        LocalDateTime timestamp,
+        String timestamp,
         String message,
-        int ttl
-) {
+        int ttl) {
 
     private static final int DEFAULT_TTL = 3;
 
@@ -38,7 +38,7 @@ record FailureEvent(
             double phi,
             double threshold) {
 
-        LocalDateTime now = LocalDateTime.now();
+        String now = Constant.NOW();
 
         String eventId = reporterNodeId
                 + "->"
@@ -54,8 +54,7 @@ record FailureEvent(
                 reporterNodeId,
                 failedPeer.nodeId(),
                 phi,
-                threshold
-        );
+                threshold);
 
         return new FailureEvent(
                 eventId,
@@ -68,8 +67,7 @@ record FailureEvent(
                 threshold,
                 now,
                 message,
-                DEFAULT_TTL
-        );
+                DEFAULT_TTL);
     }
 
     /**
@@ -90,8 +88,7 @@ record FailureEvent(
                 threshold,
                 timestamp,
                 message,
-                Math.max(0, ttl - 1)
-        );
+                Math.max(0, ttl - 1));
     }
 
     /**
@@ -111,9 +108,7 @@ record FailureEvent(
         double phi = P2pJson.doubleValue(json, "phi");
         double threshold = P2pJson.doubleValue(json, "threshold");
 
-        LocalDateTime timestamp = LocalDateTime.parse(
-                P2pJson.stringValue(json, "timestamp")
-        );
+        String timestamp = P2pJson.stringValue(json, "timestamp");
 
         String message = P2pJson.stringValue(json, "message");
 
@@ -130,8 +125,7 @@ record FailureEvent(
                 threshold,
                 timestamp,
                 message,
-                ttl
-        );
+                ttl);
     }
 
     /**
@@ -142,20 +136,20 @@ record FailureEvent(
         return String.format(
                 Locale.US,
                 """
-                {
-                  "eventId": "%s",
-                  "reporterNodeId": "%s",
-                  "failedNodeId": "%s",
-                  "failedHost": "%s",
-                  "failedPort": %d,
-                  "status": "%s",
-                  "phi": %.6f,
-                  "threshold": %.6f,
-                  "timestamp": "%s",
-                  "message": "%s",
-                  "ttl": %d
-                }
-                """,
+                        {
+                          "eventId": "%s",
+                          "reporterNodeId": "%s",
+                          "failedNodeId": "%s",
+                          "failedHost": "%s",
+                          "failedPort": %d,
+                          "status": "%s",
+                          "phi": %.6f,
+                          "threshold": %.6f,
+                          "timestamp": "%s",
+                          "message": "%s",
+                          "ttl": %d
+                        }
+                        """,
                 P2pJson.escape(eventId),
                 P2pJson.escape(reporterNodeId),
                 P2pJson.escape(failedNodeId),
@@ -166,7 +160,6 @@ record FailureEvent(
                 threshold,
                 timestamp,
                 P2pJson.escape(message),
-                ttl
-        );
+                ttl);
     }
 }

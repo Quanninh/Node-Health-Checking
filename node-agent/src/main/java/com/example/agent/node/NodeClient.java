@@ -4,9 +4,10 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+
+import com.example.agent.constant.Constant;
 
 public class NodeClient {
 
@@ -30,7 +31,7 @@ public class NodeClient {
                   "targetNodeId": "%s",
                   "timestamp": "%s"
                 }
-                """.formatted(localNodeId, targetNode.nodeId(), LocalDateTime.now());
+                """.formatted(localNodeId, targetNode.nodeId(), Constant.NOW());
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(targetNode.pingUri())
@@ -63,7 +64,7 @@ public class NodeClient {
                 targetNode.nodeId(),
                 targetNode.host(),
                 targetNode.port(),
-                LocalDateTime.now());
+                Constant.NOW());
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(helperNode.pingReqUri())
@@ -120,12 +121,12 @@ public class NodeClient {
                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .orTimeout(ackTimeoutSeconds * 2L, TimeUnit.SECONDS)
                 .thenAccept(response -> System.out.println(
-                        "[" + LocalDateTime.now() + "] "
+                        "[" + Constant.NOW() + "] "
                                 + "Gossip sent to " + destinationNode.nodeId()
                                 + ". statusCode=" + response.statusCode()))
                 .exceptionally(error -> {
                     System.out.println(
-                            "[" + LocalDateTime.now() + "] "
+                            "[" + Constant.NOW() + "] "
                                     + "Could not send gossip to "
                                     + destinationNode.nodeId() + ": "
                                     + error.getMessage());

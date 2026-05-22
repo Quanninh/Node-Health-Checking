@@ -1,6 +1,5 @@
 package com.example.agent.node;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -8,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.example.agent.constant.Constant;
 
 public class NeighborDirectory {
     private final List<NodeAddress> neighborList;
@@ -37,7 +38,7 @@ public class NeighborDirectory {
             nextIndex = 0;
 
             System.out.println(
-                    "[" + LocalDateTime.now() + "] "
+                    "[" + Constant.NOW() + "] "
                             + "Completed one full neighbor cycle. Shuffled neighborList: "
                             + neighborList);
         }
@@ -147,7 +148,7 @@ public class NeighborDirectory {
 
         if (state == null) {
             System.out.println(
-                    "[" + LocalDateTime.now() + "] "
+                    "[" + Constant.NOW() + "] "
                             + "Gossip subjectNodeId " + subjectNodeId
                             + " is not in this node's neighborList. Message is recorded but not added.");
             return;

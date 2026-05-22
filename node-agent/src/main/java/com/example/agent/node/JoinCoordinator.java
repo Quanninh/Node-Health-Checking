@@ -45,14 +45,14 @@
 // void joinNetwork() {
 // if (bootstrapPeers.isEmpty()) {
 // System.out.println(
-// "[" + LocalDateTime.now() + "] "
+// "[" + Constant.NOW() + "] "
 // + "No bootstrap peers configured. Node starts as the first node in a new
 // overlay.");
 // return;
 // }
 
 // System.out.println(
-// "[" + LocalDateTime.now() + "] "
+// "[" + Constant.NOW() + "] "
 // + "Sending HTTP JOIN requests to bootstrap peers: " + bootstrapPeers);
 
 // List<CompletableFuture<Optional<JoinAck>>> joinRequests =
@@ -68,7 +68,7 @@
 // allRequests.orTimeout(joinTimeoutSeconds, TimeUnit.SECONDS).join();
 // } catch (Exception ignored) {
 // System.out.println(
-// "[" + LocalDateTime.now() + "] "
+// "[" + Constant.NOW() + "] "
 // + "JOIN collection window ended. Continuing with replies received so far.");
 // }
 
@@ -81,7 +81,7 @@
 
 // if (replies.isEmpty()) {
 // System.out.println(
-// "[" + LocalDateTime.now() + "] "
+// "[" + Constant.NOW() + "] "
 // + "No JOIN_ACK replies received. Node remains alone until new peers join
 // later.");
 // return;
@@ -90,13 +90,13 @@
 // List<NodeAddress> candidates = chooseCandidates(replies);
 
 // System.out.println(
-// "[" + LocalDateTime.now() + "] "
+// "[" + Constant.NOW() + "] "
 // + "Selected join candidates after random filtering: " + candidates);
 
 // confirmCandidates(candidates);
 
 // System.out.println(
-// "[" + LocalDateTime.now() + "] "
+// "[" + Constant.NOW() + "] "
 // + "JOIN finished. Current neighbors: " + neighborDirectory.addresses());
 // }
 

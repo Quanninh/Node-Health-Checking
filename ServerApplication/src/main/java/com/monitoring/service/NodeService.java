@@ -56,21 +56,23 @@ public class NodeService {
 
     // @Scheduled(fixedRate = 5000)
     // public void checkNodeStatus() {
-    //     try {
-    //         LocalDateTime cutoffTime = LocalDateTime.now().minusSeconds(NODE_TIMEOUT_SECONDS);
-    //         List<Node> nodes = nodeRepository.findAll();
+    // try {
+    // LocalDateTime cutoffTime = Constant.NOW().minusSeconds(NODE_TIMEOUT_SECONDS);
+    // List<Node> nodes = nodeRepository.findAll();
 
-    //         for (Node node : nodes) {
-    //             LocalDateTime lastHeartbeat = node.getLastHeartbeat();
+    // for (Node node : nodes) {
+    // LocalDateTime lastHeartbeat = node.getLastHeartbeat();
 
-    //             if (lastHeartbeat != null && lastHeartbeat.isBefore(cutoffTime) && !node.getStatus().equals("DOWN")) {
-    //                 node.setStatus("DOWN");
-    //                 nodeRepository.save(node);
-    //             }
-    //         }
-    //     } catch (Exception e) {
-    //         System.out.println("[" + LocalDateTime.now() + "] Scheduler skipped: " + e.getMessage());
-    //     }
+    // if (lastHeartbeat != null && lastHeartbeat.isBefore(cutoffTime) &&
+    // !node.getStatus().equals("DOWN")) {
+    // node.setStatus("DOWN");
+    // nodeRepository.save(node);
+    // }
+    // }
+    // } catch (Exception e) {
+    // System.out.println("[" + Constant.NOW() + "] Scheduler skipped: " +
+    // e.getMessage());
+    // }
     // }
 
     public void processFailureReport(FailureReport report) {
@@ -82,8 +84,7 @@ public class NodeService {
             report.setMessage(
                     "Node " + report.getReporterNodeId()
                             + " finds out Node " + report.getFailedNodeId()
-                            + " has failed"
-            );
+                            + " has failed");
         }
 
         failureReportRepository.save(report);
@@ -103,8 +104,7 @@ public class NodeService {
 
         System.out.println(
                 "[" + LocalDateTime.now() + "] "
-                        + report.getMessage()
-        );
+                        + report.getMessage());
     }
 
     public List<FailureReport> getFailureReports() {

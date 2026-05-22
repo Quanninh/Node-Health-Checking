@@ -5,7 +5,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.concurrent.CompletableFuture;
 
 import com.example.agent.constant.Constant;
@@ -53,11 +52,11 @@ public class DashboardReporter {
 
         return httpClient
                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenAccept(response -> System.out.println("[" + LocalDateTime.now() + "] " + Constant.CYAN
+                .thenAccept(response -> System.out.println("[" + Constant.NOW() + "] " + Constant.CYAN
                         + "Registered self with dashboard. Status: " + response.statusCode() + Constant.RESET))
                 .exceptionally(error -> {
                     System.out.println(
-                            "[" + LocalDateTime.now() + "] " + Constant.RED + "Could not register with dashboard: "
+                            "[" + Constant.NOW() + "] " + Constant.RED + "Could not register with dashboard: "
                                     + error.getMessage() + Constant.RESET);
                     return null;
                 });
@@ -90,7 +89,7 @@ public class DashboardReporter {
                 failedNode.nodeId(),
                 message,
                 phi,
-                LocalDateTime.now());
+                Constant.NOW());
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(dashboardUrl + "/failure-report"))
@@ -101,13 +100,13 @@ public class DashboardReporter {
 
         return httpClient
                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenAccept(response -> System.out.println("[" + LocalDateTime.now() + "] " + Constant.PURPLE
+                .thenAccept(response -> System.out.println("[" + Constant.NOW() + "] " + Constant.PURPLE
                         + "UNREACHABLE report sent to dashboard. Status: " + response.statusCode() + Constant.RESET))
                 .exceptionally(error -> {
                     System.out.println(
-                            "[" + LocalDateTime.now() + "] "
+                            "[" + Constant.NOW() + "] " + Constant.RED
                                     + "Could not report unreachable node to dashboard: "
-                                    + error.getMessage());
+                                    + error.getMessage() + Constant.RESET);
                     return null;
                 });
     }
