@@ -61,7 +61,7 @@ class FailureDetector {
 
         if (selectedTarget.isEmpty()) {
             System.out.println(
-                    "[" + LocalDateTime.now() + "] "
+                    "\n[" + LocalDateTime.now() + "] "
                             + "No reachable neighbor nodes configured. Nothing to ping.");
             return;
         }
@@ -69,7 +69,7 @@ class FailureDetector {
         NodeAddress targetNode = selectedTarget.get();
 
         System.out.println(
-                "[" + LocalDateTime.now() + "] "
+                "\n[" + LocalDateTime.now() + "] "
                         + "Node " + localNodeId
                         + " directly pings targetNode " + targetNode.nodeId()
                         + " at " + targetNode.host() + ":" + targetNode.port());
