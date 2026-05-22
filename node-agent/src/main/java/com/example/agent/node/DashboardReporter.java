@@ -52,11 +52,11 @@ public class DashboardReporter {
 
         return httpClient
                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenAccept(response -> System.out.println("[" + Constant.NOW() + "] " + Constant.CYAN
+                .thenAccept(response -> System.out.println("\n[" + Constant.NOW() + "] " + Constant.CYAN
                         + "Registered self with dashboard. Status: " + response.statusCode() + Constant.RESET))
                 .exceptionally(error -> {
                     System.out.println(
-                            "[" + Constant.NOW() + "] " + Constant.RED + "Could not register with dashboard: "
+                            "\n[" + Constant.NOW() + "] " + Constant.RED + "Could not register with dashboard: "
                                     + error.getMessage() + Constant.RESET);
                     return null;
                 });
@@ -100,11 +100,11 @@ public class DashboardReporter {
 
         return httpClient
                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenAccept(response -> System.out.println("[" + Constant.NOW() + "] " + Constant.PURPLE
+                .thenAccept(response -> System.out.println("\n[" + Constant.NOW() + "] " + Constant.PURPLE
                         + "UNREACHABLE report sent to dashboard. Status: " + response.statusCode() + Constant.RESET))
                 .exceptionally(error -> {
                     System.out.println(
-                            "[" + Constant.NOW() + "] " + Constant.RED
+                            "\n[" + Constant.NOW() + "] " + Constant.RED
                                     + "Could not report unreachable node to dashboard: "
                                     + error.getMessage() + Constant.RESET);
                     return null;

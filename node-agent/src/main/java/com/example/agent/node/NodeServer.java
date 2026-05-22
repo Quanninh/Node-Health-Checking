@@ -43,7 +43,7 @@ class NodeServer {
         server.start();
 
         System.out.println(
-                "[" + Constant.NOW() + "] "
+                "\n[" + Constant.NOW() + "] "
                         + "Node server listening on "
                         + bindHost + ":" + port);
     }

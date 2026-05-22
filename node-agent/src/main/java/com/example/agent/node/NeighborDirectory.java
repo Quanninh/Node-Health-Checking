@@ -38,7 +38,7 @@ public class NeighborDirectory {
             nextIndex = 0;
 
             System.out.println(
-                    "[" + Constant.NOW() + "] "
+                    "\n[" + Constant.NOW() + "] "
                             + "Completed one full neighbor cycle. Shuffled neighborList: "
                             + neighborList);
         }
@@ -148,7 +148,7 @@ public class NeighborDirectory {
 
         if (state == null) {
             System.out.println(
-                    "[" + Constant.NOW() + "] "
+                    "\n[" + Constant.NOW() + "] "
                             + "Gossip subjectNodeId " + subjectNodeId
                             + " is not in this node's neighborList. Message is recorded but not added.");
             return;

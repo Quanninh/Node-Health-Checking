@@ -30,7 +30,7 @@ public class NodeState {
     synchronized void markAlive(PhiAccrualFailure phiDetector) {
         if (status == NodeStatus.UNREACHABLE) {
             System.out.println(
-                    "[" + Constant.NOW() + "] "
+                    "\n[" + Constant.NOW() + "] "
                             + "ACK received from " + nodeAddress.nodeId()
                             + ", but it is already UNREACHABLE locally. "
                             + "It must rejoin as a new node instance.");
@@ -58,7 +58,7 @@ public class NodeState {
 
         if (status == NodeStatus.UNREACHABLE) {
             System.out.println(
-                    "[" + Constant.NOW() + "] "
+                    "\n[" + Constant.NOW() + "] "
                             + "ALIVE gossip for " + nodeAddress.nodeId()
                             + " is newer, but local state is UNREACHABLE. "
                             + "Treat this as requiring JOIN/rejoin, not simple recovery.");

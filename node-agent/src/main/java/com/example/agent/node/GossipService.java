@@ -28,7 +28,7 @@ public class GossipService {
 
     void gossipSuspect(NodeAddress targetNode) {
         GossipMessage message = createSuspectMessage(targetNode);
-        System.out.println("[" + Constant.NOW() + "] "
+        System.out.println("\n[" + Constant.NOW() + "] "
                 + "Created gossip message: type=SUSPECT, subjectNodeId="
                 + targetNode.nodeId()
                 + ", sourceNodeId=" + localNodeId);
@@ -37,7 +37,7 @@ public class GossipService {
 
     void gossipUnreachable(NodeAddress targetNode) {
         GossipMessage message = createUnreachableMessage(targetNode);
-        System.out.println("[" + Constant.NOW() + "] "
+        System.out.println("\n[" + Constant.NOW() + "] "
                 + "Created gossip message: type=UNREACHABLE, subjectNodeId="
                 + targetNode.nodeId()
                 + ", sourceNodeId=" + localNodeId);
@@ -105,7 +105,7 @@ public class GossipService {
 
         if (seenMessages.contains(message.messageId())) {
             System.out.println(
-                    "[" + Constant.NOW() + "] "
+                    "\n[" + Constant.NOW() + "] "
                             + "Duplicate gossip message ignored: " + message.messageId());
             return;
         }
@@ -113,7 +113,7 @@ public class GossipService {
         seenMessages.add(message.messageId());
 
         System.out.println(
-                "[" + Constant.NOW() + "] "
+                "\n[" + Constant.NOW() + "] "
                         + "Received gossip message type=" + message.messageType()
                         + ", subjectNodeId=" + message.subjectNodeId()
                         + ", sourceNodeId=" + message.sourceNodeId()
@@ -132,7 +132,7 @@ public class GossipService {
             return;
         }
 
-        System.out.println("[" + Constant.NOW() + "] "
+        System.out.println("\n[" + Constant.NOW() + "] "
                 + "Forwarding gossip message type=" + message.messageType()
                 + ", subjectNodeId=" + message.subjectNodeId()
                 + ", ttl=" + message.ttl());
@@ -162,7 +162,7 @@ public class GossipService {
     }
 
     void sendGossipMessage(NodeAddress destinationNode, GossipMessage message) {
-        System.out.println("[" + Constant.NOW() + "] "
+        System.out.println("\n[" + Constant.NOW() + "] "
                 + "Sending gossip message type=" + message.messageType()
                 + ", subjectNodeId=" + message.subjectNodeId()
                 + " to " + destinationNode.nodeId());

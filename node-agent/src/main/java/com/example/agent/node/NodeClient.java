@@ -121,12 +121,12 @@ public class NodeClient {
                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .orTimeout(ackTimeoutSeconds * 2L, TimeUnit.SECONDS)
                 .thenAccept(response -> System.out.println(
-                        "[" + Constant.NOW() + "] "
+                        "\n[" + Constant.NOW() + "] "
                                 + "Gossip sent to " + destinationNode.nodeId()
                                 + ". statusCode=" + response.statusCode()))
                 .exceptionally(error -> {
                     System.out.println(
-                            "[" + Constant.NOW() + "] "
+                            "\n[" + Constant.NOW() + "] "
                                     + "Could not send gossip to "
                                     + destinationNode.nodeId() + ": "
                                     + error.getMessage());

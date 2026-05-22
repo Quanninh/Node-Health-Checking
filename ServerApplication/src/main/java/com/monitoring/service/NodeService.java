@@ -70,7 +70,7 @@ public class NodeService {
     // }
     // }
     // } catch (Exception e) {
-    // System.out.println("[" + Constant.NOW() + "] Scheduler skipped: " +
+    // System.out.println("\n[" + Constant.NOW() + "] Scheduler skipped: " +
     // e.getMessage());
     // }
     // }
@@ -103,7 +103,7 @@ public class NodeService {
         nodeRepository.save(failedNode);
 
         System.out.println(
-                "[" + LocalDateTime.now() + "] "
+                "\n[" + LocalDateTime.now() + "] "
                         + report.getMessage());
     }
 
