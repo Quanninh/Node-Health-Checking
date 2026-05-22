@@ -54,24 +54,24 @@ public class NodeService {
         return historyRepository.findByNodeId(id);
     }
 
-    // @Scheduled(fixedRate = 5000)
-    // public void checkNodeStatus() {
-    //     try {
-    //         LocalDateTime cutoffTime = LocalDateTime.now().minusSeconds(NODE_TIMEOUT_SECONDS);
-    //         List<Node> nodes = nodeRepository.findAll();
+    //@Scheduled(fixedRate = 5000)
+    public void checkNodeStatus() {
+        try {
+            LocalDateTime cutoffTime = LocalDateTime.now().minusSeconds(NODE_TIMEOUT_SECONDS);
+            List<Node> nodes = nodeRepository.findAll();
 
-    //         for (Node node : nodes) {
-    //             LocalDateTime lastHeartbeat = node.getLastHeartbeat();
+            for (Node node : nodes) {
+                LocalDateTime lastHeartbeat = node.getLastHeartbeat();
 
-    //             if (lastHeartbeat != null && lastHeartbeat.isBefore(cutoffTime) && !node.getStatus().equals("DOWN")) {
-    //                 node.setStatus("DOWN");
-    //                 nodeRepository.save(node);
-    //             }
-    //         }
-    //     } catch (Exception e) {
-    //         System.out.println("[" + LocalDateTime.now() + "] Scheduler skipped: " + e.getMessage());
-    //     }
-    // }
+                if (lastHeartbeat != null && lastHeartbeat.isBefore(cutoffTime) && !node.getStatus().equals("DOWN")) {
+                    node.setStatus("DOWN");
+                    nodeRepository.save(node);
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("[" + LocalDateTime.now() + "] Scheduler skipped: " + e.getMessage());
+        }
+    }
 
     public void processFailureReport(FailureReport report) {
         if (report.getTimestamp() == null) {

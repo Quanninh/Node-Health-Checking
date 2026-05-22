@@ -18,6 +18,7 @@ class FailureDetector {
     private final GossipService gossipService;
     private final int probeIntervalSeconds;
     private final ScheduledExecutorService scheduler;
+    private final double unreachableThreshold;
 
     FailureDetector(
             String localNodeId,
@@ -26,7 +27,8 @@ class FailureDetector {
             DashboardReporter dashboardReporter,
             PhiAccrualFailure phiDetector,
             GossipService gossipService,
-            int probeIntervalSeconds) {
+            int probeIntervalSeconds,
+            double unreachableThreshold) {
         this.localNodeId = localNodeId;
         this.neighborDirectory = neighborDirectory;
         this.nodeClient = nodeClient;
@@ -35,12 +37,13 @@ class FailureDetector {
         this.gossipService = gossipService;
         this.probeIntervalSeconds = probeIntervalSeconds;
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
+        this.unreachableThreshold = unreachableThreshold;
     }
 
     void start() {
         scheduler.scheduleAtFixedRate(
                 this::runOneProbeSafely,
-                0,
+                probeIntervalSeconds,
                 probeIntervalSeconds,
                 TimeUnit.SECONDS);
     }
@@ -164,7 +167,7 @@ class FailureDetector {
         NodeStatus phiStatus = phiDetector.determineStatus(phi);
 
         if (phiStatus == NodeStatus.UNREACHABLE) {
-            handleUnreachableNode(targetNode, phi);
+            handleUnreachableNode(targetNode, phi, unreachableThreshold);
             return;
         }
 
@@ -184,7 +187,7 @@ class FailureDetector {
                         + ". It is not declared unreachable yet.");
     }
 
-    private void handleUnreachableNode(NodeAddress targetNode, double phi) {
+    private void handleUnreachableNode(NodeAddress targetNode, double phi, double unreachableThreshold) {
         NodeStatus previousStatus = neighborDirectory.getStatus(targetNode.nodeId());
 
         neighborDirectory.markUnreachable(targetNode.nodeId(), phi);

@@ -6,6 +6,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 
 class DashboardReporter {
@@ -53,26 +54,35 @@ class DashboardReporter {
                                 });
         }
 
-        CompletableFuture<Void> reportFailure(NodeAddress failedNode, double phi) {
-                String message = "Node " + localNodeId
-                                + " classifies Node " + failedNode.nodeId()
-                                + " as UNREACHABLE by phi threshold. phi=" + String.format("%.4f", phi)
-                                + ". If this node comes back, it must rejoin as a new node.";
-
-                String json = """
-                                {
-                                  "reporterNodeId": "%s",
-                                  "failedNodeId": "%s",
-                                  "message": "%s",
-                                  "phi": %.6f,
-                                  "status": "UNREACHABLE",
-                                  "timestamp": "%s"
-                                }
-                                """.formatted(
+        CompletableFuture<Void> reportFailure(NodeAddress failedNode, double phi, double threshold) {
+                String message = String.format(
+                                Locale.US,
+                                "Node %s classifies Node %s as UNREACHABLE by phi threshold. phi=%.4f, threshold=%.4f. If this node comes back, it must rejoin as a new node.",
                                 localNodeId,
                                 failedNode.nodeId(),
-                                message,
                                 phi,
+                                threshold);
+
+                // This report is sent to the centralized Spring Boot observability server.
+                // The health checking decision is still made locally by this node.
+                String json = String.format(
+                                Locale.US,
+                                """
+                                                {
+                                                  "reporterNodeId": "%s",
+                                                  "failedNodeId": "%s",
+                                                  "message": "%s",
+                                                  "phi": %.6f,
+                                                  "threshold": %.6f,
+                                                  "status": "UNREACHABLE",
+                                                  "timestamp": "%s"
+                                                }
+                                                """,
+                                localNodeId,
+                                failedNode.nodeId(),
+                                escapeJson(message),
+                                phi,
+                                threshold,
                                 LocalDateTime.now());
 
                 HttpRequest request = HttpRequest.newBuilder()
@@ -97,11 +107,27 @@ class DashboardReporter {
                                 });
         }
 
+        // Backward-compatible overload in case some old code still calls
+        // reportFailure(node, phi).
+        CompletableFuture<Void> reportFailure(NodeAddress failedNode, double phi) {
+                return reportFailure(failedNode, phi, 5.0);
+        }
+
         private String removeTrailingSlash(String value) {
                 if (value.endsWith("/")) {
                         return value.substring(0, value.length() - 1);
                 }
 
                 return value;
+        }
+
+        private String escapeJson(String value) {
+                if (value == null) {
+                        return "";
+                }
+
+                return value
+                                .replace("\\", "\\\\")
+                                .replace("\"", "\\\"");
         }
 }

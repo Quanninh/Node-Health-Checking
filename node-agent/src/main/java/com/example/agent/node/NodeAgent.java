@@ -46,7 +46,8 @@ public class NodeAgent {
                                 dashboardReporter,
                                 phiDetector,
                                 gossipService,
-                                config.probeIntervalSeconds());
+                                config.probeIntervalSeconds(),
+                                config.unreachableThreshold());
 
                 nodeServer.start();
 

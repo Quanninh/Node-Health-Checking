@@ -186,6 +186,13 @@ tr:hover {
     font-weight: bold;
 }
 
+.selected-row {
+    background: #1d4ed8 !important;
+}
+
+#cpuMemoryChart {
+    max-height: 360px;
+}
 .message-cell {
     max-width: 420px;
     word-break: break-word;
