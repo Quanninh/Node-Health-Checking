@@ -77,11 +77,8 @@ public class DashboardReporter {
                 + String.format("%.4f", threshold)
                 + ". If this node comes back, it must rejoin as a new node.";
 
-        // This report is sent to the centralized Spring Boot observability server.
-        // The health checking decision is still made locally by this node.
         String json = String.format(
-                Locale.US,
-                """
+                Locale.US, """
                         {
                           "reporterNodeId": "%s",
                           "failedNodeId": "%s",
@@ -118,12 +115,6 @@ public class DashboardReporter {
                     return null;
                 });
     }
-
-    // Backward-compatible overload in case some old code still calls
-    // reportFailure(node, phi).
-    // CompletableFuture<Void> reportFailure(NodeAddress failedNode, double phi) {
-    // return reportFailure(failedNode, phi, 5.0);
-    // }
 
     /**
      * Removes trailing forward slashes from URLs

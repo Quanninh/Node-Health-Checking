@@ -87,10 +87,8 @@ public class FailureDetector {
         NodeAddress targetNode = selectedTarget.get();
 
         System.out.println(
-                "\n[" + Constant.NOW() + "] "
-                        + "Node " + localNodeId
-                        + " directly pings targetNode " + targetNode.nodeId()
-                        + " at " + targetNode.host() + ":" + targetNode.port());
+                "\n[" + Constant.NOW() + "] " + Constant.CYAN + "Node " + localNodeId + " directly pings targetNode "
+                        + targetNode.nodeId() + " at " + targetNode.host() + ":" + targetNode.port() + Constant.RESET);
 
         nodeClient.ping(targetNode).thenAccept(ackReceived -> {
             if (ackReceived) {
@@ -104,7 +102,7 @@ public class FailureDetector {
     }
 
     /**
-     * Handle when node can't ping the targeted node. The node asks a group of
+     * Handles when node can't ping the targeted node. The node asks a group of
      * "helper nodes" to send pings to the targeted node (PING_REQ).
      * 
      * @param targetNode the node that this node can't ping
@@ -140,6 +138,12 @@ public class FailureDetector {
                 });
     }
 
+    /**
+     * Handles when the ACK from the target node is received successfully.
+     * 
+     * @param targetNode the target node
+     * @param source     the source of the ACK (direct, indirect...)
+     */
     private void handleAckReceived(NodeAddress targetNode, String source) {
         NodeStatus previousStatus = neighborDirectory.getStatus(targetNode.nodeId());
 
@@ -163,6 +167,16 @@ public class FailureDetector {
         }
     }
 
+    /**
+     * Handle when the target node can't be pinged in any way (directly or
+     * indirectly). The status of the target node is determined by the Phi Accural
+     * Failure. If the node is Suspected to be down (SUSPECTED), this information is
+     * gossiped to other nodes. If the node status is UNREACHABLE, the situation is
+     * handled by {@link #handleUnreachableNode(NodeAddress, double, double)}.
+     * 
+     * @param targetNode
+     * @see PhiAccrualFailure
+     */
     private void handleNoAckAfterDirectAndIndirect(NodeAddress targetNode) {
         Optional<NodeState> optionalState = neighborDirectory.getState(targetNode.nodeId());
 
@@ -191,27 +205,32 @@ public class FailureDetector {
             gossipService.gossipSuspect(targetNode);
         }
 
-        System.out.println(
-                "\n[" + Constant.NOW() + "] "
-                        + "targetNode " + targetNode.nodeId()
-                        + " has no direct/indirect ACK. phi="
-                        + String.format("%.4f", phi)
-                        + ", status=" + neighborDirectory.getStatus(targetNode.nodeId())
-                        + ". It is not declared unreachable yet.");
+        System.out.println("\n[" + Constant.NOW() + "] "
+                + "targetNode " + targetNode.nodeId()
+                + " has no direct/indirect ACK. phi="
+                + String.format("%.4f", phi)
+                + ", status=" + neighborDirectory.getStatus(targetNode.nodeId())
+                + ". It is not declared unreachable yet.");
     }
 
+    /**
+     * Marks a node as UNREACHABLE. Gossips this information to all other nodes.
+     * 
+     * @param targetNode           the unreachable node
+     * @param phi                  the phi value
+     * @param unreachableThreshold the unreachable threshold
+     */
     private void handleUnreachableNode(NodeAddress targetNode, double phi, double unreachableThreshold) {
         NodeStatus previousStatus = neighborDirectory.getStatus(targetNode.nodeId());
 
         neighborDirectory.markUnreachable(targetNode.nodeId(), phi);
 
-        System.out.println(
-                "\n[" + Constant.NOW() + "] "
-                        + "Node " + localNodeId
-                        + " marks targetNode " + targetNode.nodeId()
-                        + " as UNREACHABLE. phi="
-                        + String.format("%.4f", phi)
-                        + ". It must rejoin as a new node if it comes back.");
+        System.out.println("\n[" + Constant.NOW() + "] "
+                + "Node " + localNodeId
+                + " marks targetNode " + targetNode.nodeId()
+                + " as UNREACHABLE. phi="
+                + String.format("%.4f", phi)
+                + ". It must rejoin as a new node if it comes back.");
 
         if (previousStatus != NodeStatus.UNREACHABLE) {
             gossipService.gossipUnreachable(targetNode);
@@ -219,11 +238,14 @@ public class FailureDetector {
         }
     }
 
+    /**
+     * Prints the states of this node's neighbor.
+     */
     private void printLocalNodeStates() {
         System.out.println("----- Local Neighbor Node States at Node " + localNodeId + " -----");
 
         for (NodeState state : neighborDirectory.states()) {
-            System.out.println(state);
+            System.out.println(state + "\n");
         }
 
         System.out.println("---------------------------------------------------------------");
