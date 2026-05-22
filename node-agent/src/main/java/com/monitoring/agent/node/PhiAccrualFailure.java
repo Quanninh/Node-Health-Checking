@@ -2,6 +2,9 @@ package com.monitoring.agent.node;
 
 import java.util.List;
 
+/**
+ * 
+ */
 public class PhiAccrualFailure {
 
     private final int windowSize;
@@ -30,10 +33,15 @@ public class PhiAccrualFailure {
         this.minProbability = minProbability;
     }
 
-    public double calculatePhi(
-            List<Double> slidingWindow,
-            long lastHeartbeatTimeMillis,
-            long currentTimeMillis) {
+    /**
+     * Calculates the phi value for heartbeat time.
+     * 
+     * @param slidingWindow
+     * @param lastHeartbeatTimeMillis
+     * @param currentTimeMillis
+     * @return
+     */
+    public double calculatePhi(List<Double> slidingWindow, long lastHeartbeatTimeMillis, long currentTimeMillis) {
         if (lastHeartbeatTimeMillis <= 0) {
             return Double.POSITIVE_INFINITY;
         }
@@ -47,14 +55,13 @@ public class PhiAccrualFailure {
         }
 
         double elapsedTimeSeconds = (currentTimeMillis - lastHeartbeatTimeMillis) / 1000.0;
-        double mean = calculateMean(slidingWindow);
-        double stdDeviation = calculateStandardDeviation(slidingWindow, mean);
+        double meanSlidingWindow = mean(slidingWindow);
+        double sdSlidingWindow = standardDeviation(slidingWindow);
 
-        if (stdDeviation < minStdDeviation) {
-            stdDeviation = minStdDeviation;
-        }
+        sdSlidingWindow = sdSlidingWindow < minStdDeviation ? minStdDeviation : sdSlidingWindow;
 
-        double z = (elapsedTimeSeconds - mean) / stdDeviation;
+        // z - number of sd away from mean
+        double z = (elapsedTimeSeconds - meanSlidingWindow) / sdSlidingWindow;
         double cdf = normalCdf(z);
         double pLater = 1.0 - cdf;
 
@@ -65,6 +72,12 @@ public class PhiAccrualFailure {
         return -Math.log10(pLater);
     }
 
+    /**
+     * From the phi value, determine the status of the node.
+     * 
+     * @param phi phi value
+     * @return the node status
+     */
     public NodeStatus determineStatus(double phi) {
         if (phi >= unreachableThreshold) {
             return NodeStatus.UNREACHABLE;
@@ -81,6 +94,13 @@ public class PhiAccrualFailure {
         return NodeStatus.ALIVE;
     }
 
+    /**
+     * Updates the sliding window. New values are added to the end, older values are
+     * removed.
+     * 
+     * @param slidingWindow      the sliding window
+     * @param newIntervalSeconds the new value to be added
+     */
     public void updateSlidingWindow(List<Double> slidingWindow, double newIntervalSeconds) {
         if (slidingWindow == null) {
             throw new IllegalArgumentException("slidingWindow cannot be null.");
@@ -97,7 +117,13 @@ public class PhiAccrualFailure {
         }
     }
 
-    public double calculateMean(List<Double> values) {
+    /**
+     * Calculate the mean of the values.
+     * 
+     * @param values the list of values
+     * @return the mean :)
+     */
+    private double mean(List<Double> values) {
         if (values == null || values.isEmpty()) {
             throw new IllegalArgumentException("values cannot be null or empty.");
         }
@@ -111,7 +137,14 @@ public class PhiAccrualFailure {
         return sum / values.size();
     }
 
-    public double calculateStandardDeviation(List<Double> values, double mean) {
+    /**
+     * Calculates the standard deviation of the values.
+     * 
+     * @param values the list of values
+     * @return the standard deviation
+     */
+    private double standardDeviation(List<Double> values) {
+        double mean = mean(values);
         if (values == null || values.size() < 2) {
             return minStdDeviation;
         }
@@ -128,10 +161,24 @@ public class PhiAccrualFailure {
         return Math.sqrt(variance);
     }
 
-    double normalCdf(double z) {
+    /**
+     * Normal distribution cumulative probability.
+     * 
+     * @param z z-score in [-1, 1]
+     * @return [0, 1]
+     */
+    private double normalCdf(double z) {
         return 0.5 * (1.0 + erf(z / Math.sqrt(2.0)));
     }
 
+    /**
+     * Error function, denoted as erf. erf(a/(sigma * sqrt(2))) is the probability
+     * that the error of a single measurement lies between -a and a. It is used here
+     * to normalize the z-score.
+     * 
+     * @param x
+     * @return erf in [-1; 1]
+     */
     private double erf(double x) {
         double sign = Math.signum(x);
         x = Math.abs(x);
@@ -145,9 +192,7 @@ public class PhiAccrualFailure {
 
         double t = 1.0 / (1.0 + p * x);
 
-        double y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1)
-                * t
-                * Math.exp(-x * x);
+        double y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
 
         return sign * y;
     }

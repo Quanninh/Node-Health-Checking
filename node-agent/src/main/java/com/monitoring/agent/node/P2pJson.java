@@ -5,12 +5,19 @@ import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-final class P2pJson {
-    
+/**
+ * JSON Parser. I suggest using a library for this, it will be much easier to
+ * understand and less errors.
+ */
+public final class P2pJson {
+
+    /**
+     * Don't allow constructor.
+     */
     private P2pJson() {
     }
 
-    static String stringValue(String json, String fieldName) {
+    public static String stringValue(String json, String fieldName) {
         Pattern pattern = Pattern.compile("\\\"" + Pattern.quote(fieldName) + "\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"");
         Matcher matcher = pattern.matcher(json);
 
@@ -21,7 +28,7 @@ final class P2pJson {
         throw new IllegalArgumentException("Missing string field in JSON: " + fieldName);
     }
 
-    static int intValue(String json, String fieldName) {
+    public static int intValue(String json, String fieldName) {
         Pattern pattern = Pattern.compile("\\\"" + Pattern.quote(fieldName) + "\\\"\\s*:\\s*(-?\\d+)");
         Matcher matcher = pattern.matcher(json);
 
@@ -32,9 +39,7 @@ final class P2pJson {
         throw new IllegalArgumentException("Missing int field in JSON: " + fieldName);
     }
 
-    // Parses JSON numeric values such as 5, 5.0, or 12.000000.
-    // JSON must use "." for decimal values, so FailureEvent.toJson() uses Locale.US.
-    static double doubleValue(String json, String fieldName) {
+    public static double doubleValue(String json, String fieldName) {
         Pattern pattern = Pattern.compile("\\\"" + Pattern.quote(fieldName) + "\\\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)");
         Matcher matcher = pattern.matcher(json);
 
@@ -45,7 +50,7 @@ final class P2pJson {
         throw new IllegalArgumentException("Missing double field in JSON: " + fieldName);
     }
 
-    static boolean booleanValue(String json, String fieldName) {
+    public static boolean booleanValue(String json, String fieldName) {
         Pattern pattern = Pattern.compile("\\\"" + Pattern.quote(fieldName) + "\\\"\\s*:\\s*(true|false)");
         Matcher matcher = pattern.matcher(json);
 
@@ -56,7 +61,7 @@ final class P2pJson {
         throw new IllegalArgumentException("Missing boolean field in JSON: " + fieldName);
     }
 
-    static String optionalStringValue(String json, String fieldName) {
+    public static String optionalStringValue(String json, String fieldName) {
         Pattern stringPattern = Pattern.compile("\\\"" + Pattern.quote(fieldName) + "\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"");
         Matcher stringMatcher = stringPattern.matcher(json);
 
@@ -74,7 +79,7 @@ final class P2pJson {
         return null;
     }
 
-    static String escape(String value) {
+    public static String escape(String value) {
         if (value == null) {
             return "";
         }
@@ -86,5 +91,5 @@ final class P2pJson {
                 .replace("\r", "\\r")
                 .replace("\t", "\\t");
     }
-    
+
 }
