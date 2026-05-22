@@ -1,4 +1,4 @@
-package com.example.agent.node;
+package com.monitoring.agent.node;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -9,7 +9,7 @@ import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.example.agent.constant.Constant;
+import com.monitoring.agent.constant.Constant;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 

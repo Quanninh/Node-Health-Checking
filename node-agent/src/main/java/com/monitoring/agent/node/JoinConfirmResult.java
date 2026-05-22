@@ -1,4 +1,4 @@
-package com.example.agent.node;
+package com.monitoring.agent.node;
 
 record JoinConfirmResult(
         boolean accepted,

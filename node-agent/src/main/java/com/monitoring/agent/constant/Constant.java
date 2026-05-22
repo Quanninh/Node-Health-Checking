@@ -1,4 +1,4 @@
-package com.example.agent.constant;
+package com.monitoring.agent.constant;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

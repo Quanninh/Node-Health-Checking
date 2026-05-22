@@ -1,4 +1,4 @@
-package com.example.agent.node;
+package com.monitoring.agent.node;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -8,7 +8,7 @@ import java.time.Duration;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 
-import com.example.agent.constant.Constant;
+import com.monitoring.agent.constant.Constant;
 
 /**
  * Reports the status of the node to the dashboard.

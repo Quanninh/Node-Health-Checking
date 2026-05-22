@@ -1,4 +1,4 @@
-package com.example.agent.node;
+package com.monitoring.agent.node;
 
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -7,7 +7,7 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-import com.example.agent.constant.Constant;
+import com.monitoring.agent.constant.Constant;
 
 public class NodeClient {
 

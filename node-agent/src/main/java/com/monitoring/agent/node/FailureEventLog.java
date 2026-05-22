@@ -1,4 +1,4 @@
-package com.example.agent.node;
+package com.monitoring.agent.node;
 
 import java.util.Comparator;
 import java.util.List;

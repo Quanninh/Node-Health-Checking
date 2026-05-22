@@ -11,8 +11,8 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import com.example.agent.node.NodeStatus;
-import com.example.agent.node.PhiAccrualFailure;
+import com.monitoring.agent.node.NodeStatus;
+import com.monitoring.agent.node.PhiAccrualFailure;
 
 public class PhiAccrualFailureDetectorTest {
     private PhiAccrualFailure detector;

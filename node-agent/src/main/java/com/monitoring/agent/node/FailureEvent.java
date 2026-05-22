@@ -1,8 +1,8 @@
-package com.example.agent.node;
+package com.monitoring.agent.node;
 
 import java.util.Locale;
 
-import com.example.agent.constant.Constant;
+import com.monitoring.agent.constant.Constant;
 
 /**
  * Represents one failure detection event.

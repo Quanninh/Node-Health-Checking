@@ -1,8 +1,8 @@
-package com.example.agent;
+package com.monitoring.agent;
 
 import java.io.IOException;
 
-import com.example.agent.node.NodeAgent;
+import com.monitoring.agent.node.NodeAgent;
 
 public class App {
 

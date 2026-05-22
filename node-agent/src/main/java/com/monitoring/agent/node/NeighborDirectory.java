@@ -1,4 +1,4 @@
-package com.example.agent.node;
+package com.monitoring.agent.node;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.example.agent.constant.Constant;
+import com.monitoring.agent.constant.Constant;
 
 public class NeighborDirectory {
     private final List<NodeAddress> neighborList;

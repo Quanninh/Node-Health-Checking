@@ -6,7 +6,7 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.example.agent</groupId>
+    <groupId>com.monitoring.agent</groupId>
     <artifactId>node-agent</artifactId>
     <version>1.0-SNAPSHOT</version>
 
@@ -48,7 +48,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.3.0</version>
                 <configuration>
-                    <mainClass>com.example.agent.node.NodeAgent</mainClass>
+                    <mainClass>com.monitoring.agent.node.NodeAgent</mainClass>
                 </configuration>
             </plugin>
         </plugins>

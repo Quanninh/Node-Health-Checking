@@ -1,13 +1,14 @@
-package com.example.agent.node;
+package com.monitoring.agent.node;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import com.example.agent.constant.Constant;
+import com.monitoring.agent.constant.Constant;
 
 public class NodeState {
+
     private final NodeAddress nodeAddress;
     private final List<Double> slidingWindowSeconds;
     private volatile NodeStatus status;
@@ -145,15 +146,14 @@ public class NodeState {
 
     @Override
     public String toString() {
-        return "NodeState{" +
-                "nodeAddress=" + nodeAddress +
-                ", status=" + status +
-                ", phi=" + String.format("%.4f", phi) +
+        return "NodeState{\n\tnodeAddress=" + Constant.CYAN + nodeAddress + Constant.RESET +
+                ", status=" + Constant.YELLOW + status + Constant.RESET +
+                ",\n\tphi=" + String.format("%.4f", phi) +
                 ", slidingWindowSeconds=" + slidingWindowSeconds +
                 ", lastAckTime=" + lastAckTime +
                 ", lastSuspicionTime=" + lastSuspicionTime +
                 ", lastUnreachableTime=" + lastUnreachableTime +
                 ", incarnationNumber=" + incarnationNumber +
-                '}';
+                "}";
     }
 }
