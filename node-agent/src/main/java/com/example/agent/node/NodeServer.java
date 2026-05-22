@@ -5,11 +5,11 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.example.agent.constant.Constant;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
@@ -43,7 +43,7 @@ class NodeServer {
         server.start();
 
         System.out.println(
-                "[" + LocalDateTime.now() + "] "
+                "[" + Constant.NOW() + "] "
                         + "Node server listening on "
                         + bindHost + ":" + port);
     }
@@ -60,7 +60,7 @@ class NodeServer {
                   "receiverNodeId": "%s",
                   "timestamp": "%s"
                 }
-                """.formatted(nodeId, LocalDateTime.now());
+                """.formatted(nodeId, Constant.NOW());
 
         sendResponse(exchange, 200, responseJson);
     }
@@ -93,7 +93,7 @@ class NodeServer {
                 nodeId,
                 targetNodeId,
                 ackReceived,
-                LocalDateTime.now());
+                Constant.NOW());
 
         sendResponse(exchange, 200, responseJson);
     }

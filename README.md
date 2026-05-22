@@ -77,10 +77,10 @@ Copy it and create a new file:
 .env
 ```
 
-inside the project root directory:
+inside the ServerApplication directory:
 
 ```text
-Node-Health-Checking/
+Node-Health-Checking/ServerApplication
 ```
 
 ---
@@ -153,16 +153,15 @@ When launching a `NodeAgent`, the following parameters are used to configure its
 | `--advertise-host` | The IP address that this node tells its peers to use when reaching back to it. | Same as `--bind-host` |
 | `--p2p-port` | The port dedicated to P2P node-to-node communication (Gossip/SWIM). | `9001` |
 | `--dashboard-url` | The API endpoint of the centralized server used for demo, testing, and state visualization. | `http://localhost:6789/api` |
-| `--bootstrap-peers` (or `--neighbors`) | A comma-separated list of known bootstrap peers formatted as `ID@IP:PORT`. | Empty |
+| `--neighbors` | A comma-separated list of known bootstrap peers formatted as `ID@IP:PORT`. | Empty |
 
-### Cluster & Neighbor Management
+<!-- ### Cluster & Neighbor Management
 
 | Flag | Description | Default |
 | :--- | :--- | :--- |
-| `--max-neighbors` | Maximum number of neighbors/peers the node can maintain. | `3` |
 | `--join-timeout-seconds` | Timeout (in seconds) for joining the network. | `30` |
 | `--join-min-probability` | Minimum probability threshold for join operations. | `0.1` |
-| `--join-max-probability` | Maximum probability threshold for join operations. | `0.5` |
+| `--join-max-probability` | Maximum probability threshold for join operations. | `0.5` | -->
 
 ### Gossip & Failure Detection Intervals
 
@@ -186,7 +185,7 @@ When launching a `NodeAgent`, the following parameters are used to configure its
 
 ## Local Deployment Steps
 
-To simulate the decentralized network on your local machine, open three separate terminal windows and run the following commands sequentially.
+To simulate the decentralized network on your local machine, open four separate terminal windows and run the following commands sequentially.
 
 ### Step 1: Start Node A
 Node A will listen on port `9001` and attempt to connect with Node B and Node C.
@@ -196,7 +195,6 @@ java -cp target/classes com.example.agent.node.NodeAgent \
   --bind-host 127.0.0.1 \
   --advertise-host 127.0.0.1 \
   --p2p-port 9001 \
-  --max-neighbors 2
 ```
 For Window
 ```bash
@@ -205,7 +203,6 @@ java -cp target/classes com.example.agent.node.NodeAgent `
   --bind-host 127.0.0.1 `
   --advertise-host 127.0.0.1 `
   --p2p-port 9001 `
-  --max-neighbors 2 `
   --neighbors node-b@127.0.0.1:9002,node-c@127.0.0.1:9003 `
   --phi-window-size 5 `
   --phi-warning-threshold 1.0 `
@@ -221,7 +218,6 @@ java -cp target/classes com.example.agent.node.NodeAgent \
   --bind-host 127.0.0.1 \
   --advertise-host 127.0.0.1 \
   --p2p-port 9002 \
-  --max-neighbors 2 \
   --bootstrap-peers node-a@127.0.0.1:9001
 ```
 For Window
@@ -231,7 +227,6 @@ java -cp target/classes com.example.agent.node.NodeAgent `
   --bind-host 127.0.0.1 `
   --advertise-host 127.0.0.1 `
   --p2p-port 9002 `
-  --max-neighbors 2 `
   --neighbors node-a@127.0.0.1:9001,node-d@127.0.0.1:9004 `
   --bootstrap-peers node-a@127.0.0.1:9001 `
   --phi-window-size 5 `
@@ -248,7 +243,6 @@ java -cp target/classes com.example.agent.node.NodeAgent \
   --bind-host 127.0.0.1 \
   --advertise-host 127.0.0.1 \
   --p2p-port 9003 \
-  --max-neighbors 2 \
   --bootstrap-peers node-a@127.0.0.1:9001,node-b@127.0.0.1:9002
 ```
 For Window
@@ -258,7 +252,6 @@ java -cp target/classes com.example.agent.node.NodeAgent `
   --bind-host 127.0.0.1 `
   --advertise-host 127.0.0.1 `
   --p2p-port 9003 `
-  --max-neighbors 2 `
   --neighbors node-a@127.0.0.1:9001,node-d@127.0.0.1:9004 `
   --bootstrap-peers node-a@127.0.0.1:9001,node-b@127.0.0.1:9002 `
   --phi-window-size 5 `
@@ -275,7 +268,6 @@ java -cp target/classes com.example.agent.node.NodeAgent \
   --bind-host 127.0.0.1 \
   --advertise-host 127.0.0.1 \
   --p2p-port 9004 \
-  --max-neighbors 2 \
   --bootstrap-peers node-a@127.0.0.1:9001,node-b@127.0.0.1:9002
 ```
 For Window
@@ -285,7 +277,6 @@ java -cp target/classes com.example.agent.node.NodeAgent `
   --bind-host 127.0.0.1 `
   --advertise-host 127.0.0.1 `
   --p2p-port 9004 `
-  --max-neighbors 2 `
   --neighbors node-b@127.0.0.1:9002,node-c@127.0.0.1:9003 `
   --bootstrap-peers node-a@127.0.0.1:9001,node-b@127.0.0.1:9002 `
   --phi-window-size 5 `

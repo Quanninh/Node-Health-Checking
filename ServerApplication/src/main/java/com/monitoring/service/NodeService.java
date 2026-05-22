@@ -82,8 +82,7 @@ public class NodeService {
             report.setMessage(
                     "Node " + report.getReporterNodeId()
                             + " finds out Node " + report.getFailedNodeId()
-                            + " has failed"
-            );
+                            + " has failed");
         }
 
         failureReportRepository.save(report);
@@ -103,8 +102,7 @@ public class NodeService {
 
         System.out.println(
                 "[" + LocalDateTime.now() + "] "
-                        + report.getMessage()
-        );
+                        + report.getMessage());
     }
 
     public List<FailureReport> getFailureReports() {

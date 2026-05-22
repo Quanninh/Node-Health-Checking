@@ -2,9 +2,9 @@ package com.example.agent.node;
 
 import java.net.URI;
 
-record NodeAddress(String nodeId, String host, int port) {
+public record NodeAddress(String nodeId, String host, int port) {
 
-    static NodeAddress from(String value) {
+    public static NodeAddress from(String value) {
         String[] idAndAddress = value.split("@");
 
         if (idAndAddress.length != 2) {
@@ -27,15 +27,15 @@ record NodeAddress(String nodeId, String host, int port) {
         return new NodeAddress(nodeId, host, port);
     }
 
-    URI pingUri() {
+    public URI pingUri() {
         return URI.create("http://" + host + ":" + port + "/ping");
     }
 
-    URI pingReqUri() {
+    public URI pingReqUri() {
         return URI.create("http://" + host + ":" + port + "/ping-req");
     }
 
-    URI gossipUri() {
+    public URI gossipUri() {
         return URI.create("http://" + host + ":" + port + "/gossip");
     }
 

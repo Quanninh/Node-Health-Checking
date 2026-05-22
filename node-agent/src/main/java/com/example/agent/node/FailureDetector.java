@@ -1,12 +1,13 @@
 package com.example.agent.node;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+
+import com.example.agent.constant.Constant;
 
 class FailureDetector {
 
@@ -53,7 +54,7 @@ class FailureDetector {
             runOneProbe();
         } catch (Exception exception) {
             System.out.println(
-                    "[" + LocalDateTime.now() + "] "
+                    "[" + Constant.NOW() + "] "
                             + "Failure detector error: "
                             + exception.getMessage());
         }
@@ -64,7 +65,7 @@ class FailureDetector {
 
         if (selectedTarget.isEmpty()) {
             System.out.println(
-                    "[" + LocalDateTime.now() + "] "
+                    "\n[" + Constant.NOW() + "] "
                             + "No reachable neighbor nodes configured. Nothing to ping.");
             return;
         }
@@ -72,7 +73,7 @@ class FailureDetector {
         NodeAddress targetNode = selectedTarget.get();
 
         System.out.println(
-                "[" + LocalDateTime.now() + "] "
+                "\n[" + Constant.NOW() + "] "
                         + "Node " + localNodeId
                         + " directly pings targetNode " + targetNode.nodeId()
                         + " at " + targetNode.host() + ":" + targetNode.port());
@@ -92,7 +93,7 @@ class FailureDetector {
         List<NodeAddress> helperNodes = neighborDirectory.selectHelperNodes(targetNode);
 
         System.out.println(
-                "[" + LocalDateTime.now() + "] "
+                "[" + Constant.NOW() + "] "
                         + "Direct ping failed for targetNode " + targetNode.nodeId()
                         + ". helperNodes selected from neighborList: " + helperNodes);
 
@@ -126,7 +127,7 @@ class FailureDetector {
 
         if (previousStatus == NodeStatus.UNREACHABLE) {
             System.out.println(
-                    "[" + LocalDateTime.now() + "] "
+                    "[" + Constant.NOW() + "] "
                             + "ACK received from Node " + targetNode.nodeId()
                             + " through " + source
                             + ", but local state is UNREACHABLE. "
@@ -137,7 +138,7 @@ class FailureDetector {
         neighborDirectory.markAlive(targetNode.nodeId(), phiDetector);
 
         System.out.println(
-                "[" + LocalDateTime.now() + "] "
+                "[" + Constant.NOW() + "] "
                         + "ACK received from Node "
                         + targetNode.nodeId()
                         + " through " + source
@@ -179,7 +180,7 @@ class FailureDetector {
         }
 
         System.out.println(
-                "[" + LocalDateTime.now() + "] "
+                "[" + Constant.NOW() + "] "
                         + "targetNode " + targetNode.nodeId()
                         + " has no direct/indirect ACK. phi="
                         + String.format("%.4f", phi)
@@ -193,7 +194,7 @@ class FailureDetector {
         neighborDirectory.markUnreachable(targetNode.nodeId(), phi);
 
         System.out.println(
-                "[" + LocalDateTime.now() + "] "
+                "[" + Constant.NOW() + "] "
                         + "Node " + localNodeId
                         + " marks targetNode " + targetNode.nodeId()
                         + " as UNREACHABLE. phi="

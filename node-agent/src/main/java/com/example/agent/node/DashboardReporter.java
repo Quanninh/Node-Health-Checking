@@ -9,28 +9,25 @@ import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 
-class DashboardReporter {
+import com.example.agent.constant.Constant;
 
-        private final String localNodeId;
-        private final String dashboardUrl;
-        private final HttpClient httpClient;
+/**
+ * Reports the status of the node to the dashboard.
+ */
+public class DashboardReporter {
 
-        DashboardReporter(String localNodeId, String dashboardUrl) {
-                this.localNodeId = localNodeId;
-                this.dashboardUrl = removeTrailingSlash(dashboardUrl);
-                this.httpClient = HttpClient.newBuilder()
-                                .connectTimeout(Duration.ofSeconds(5))
-                                .build();
-        }
+    /** The node that this reporter is in. */
+    private final String localNodeId;
+    private final String dashboardUrl;
+    private final HttpClient httpClient;
 
-        CompletableFuture<Void> reportSelfAlive(String advertiseHost, int p2pPort) {
-                String json = """
-                                {
-                                  "id": "%s",
-                                  "ipAddress": "%s:%d",
-                                  "status": "UP"
-                                }
-                                """.formatted(localNodeId, advertiseHost, p2pPort);
+    public DashboardReporter(String localNodeId, String dashboardUrl) {
+        this.localNodeId = localNodeId;
+        this.dashboardUrl = removeTrailingSlash(dashboardUrl);
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(5))
+                .build();
+    }
 
                 HttpRequest request = HttpRequest.newBuilder()
                                 .uri(URI.create(dashboardUrl + "/heartbeat"))
@@ -92,20 +89,18 @@ class DashboardReporter {
                                 .POST(HttpRequest.BodyPublishers.ofString(json))
                                 .build();
 
-                return httpClient
-                                .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                                .thenAccept(response -> System.out.println(
-                                                "[" + LocalDateTime.now() + "] "
-                                                                + "UNREACHABLE report sent to dashboard. Status: "
-                                                                + response.statusCode()))
-                                .exceptionally(error -> {
-                                        System.out.println(
-                                                        "[" + LocalDateTime.now() + "] "
-                                                                        + "Could not report unreachable node to dashboard: "
-                                                                        + error.getMessage());
-                                        return null;
-                                });
-        }
+        return httpClient
+                .sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .thenAccept(response -> System.out.println("[" + Constant.NOW() + "] " + Constant.PURPLE
+                        + "UNREACHABLE report sent to dashboard. Status: " + response.statusCode() + Constant.RESET))
+                .exceptionally(error -> {
+                    System.out.println(
+                            "[" + Constant.NOW() + "] " + Constant.RED
+                                    + "Could not report unreachable node to dashboard: "
+                                    + error.getMessage() + Constant.RESET);
+                    return null;
+                });
+    }
 
         // Backward-compatible overload in case some old code still calls
         // reportFailure(node, phi).
@@ -119,15 +114,5 @@ class DashboardReporter {
                 }
 
                 return value;
-        }
-
-        private String escapeJson(String value) {
-                if (value == null) {
-                        return "";
-                }
-
-                return value
-                                .replace("\\", "\\\\")
-                                .replace("\"", "\\\"");
         }
 }

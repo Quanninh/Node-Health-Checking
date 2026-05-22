@@ -4,132 +4,133 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
-class NodeClient {
+import com.example.agent.constant.Constant;
 
-        private final String localNodeId;
-        private final int ackTimeoutSeconds;
-        private final HttpClient httpClient;
+public class NodeClient {
 
-        NodeClient(String localNodeId, int ackTimeoutSeconds) {
-                this.localNodeId = localNodeId;
-                this.ackTimeoutSeconds = ackTimeoutSeconds;
-                this.httpClient = HttpClient.newBuilder()
-                                .connectTimeout(Duration.ofSeconds(ackTimeoutSeconds))
-                                .build();
-        }
+    private final String localNodeId;
+    private final int ackTimeoutSeconds;
+    private final HttpClient httpClient;
 
-        CompletableFuture<Boolean> ping(NodeAddress targetNode) {
-                String json = """
-                                {
-                                  "type": "PING",
-                                  "senderNodeId": "%s",
-                                  "targetNodeId": "%s",
-                                  "timestamp": "%s"
-                                }
-                                """.formatted(localNodeId, targetNode.nodeId(), LocalDateTime.now());
+    public NodeClient(String localNodeId, int ackTimeoutSeconds) {
+        this.localNodeId = localNodeId;
+        this.ackTimeoutSeconds = ackTimeoutSeconds;
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(ackTimeoutSeconds))
+                .build();
+    }
 
-                HttpRequest request = HttpRequest.newBuilder()
-                                .uri(targetNode.pingUri())
-                                .timeout(Duration.ofSeconds(ackTimeoutSeconds))
-                                .header("Content-Type", "application/json")
-                                .POST(HttpRequest.BodyPublishers.ofString(json))
-                                .build();
+    public CompletableFuture<Boolean> ping(NodeAddress targetNode) {
+        String json = """
+                {
+                  "type": "PING",
+                  "senderNodeId": "%s",
+                  "targetNodeId": "%s",
+                  "timestamp": "%s"
+                }
+                """.formatted(localNodeId, targetNode.nodeId(), Constant.NOW());
 
-                return httpClient
-                                .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                                .orTimeout(ackTimeoutSeconds, TimeUnit.SECONDS)
-                                .thenApply(response -> response.statusCode() >= 200 && response.statusCode() < 300)
-                                .exceptionally(error -> false);
-        }
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(targetNode.pingUri())
+                .timeout(Duration.ofSeconds(ackTimeoutSeconds))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
 
-        CompletableFuture<Boolean> pingReq(NodeAddress helperNode, NodeAddress targetNode) {
-                String json = """
-                                {
-                                  "type": "PING_REQ",
-                                  "senderNodeId": "%s",
-                                  "helperNodeId": "%s",
-                                  "targetNodeId": "%s",
-                                  "targetHost": "%s",
-                                  "targetPort": %d,
-                                  "timestamp": "%s"
-                                }
-                                """.formatted(
-                                localNodeId,
-                                helperNode.nodeId(),
-                                targetNode.nodeId(),
-                                targetNode.host(),
-                                targetNode.port(),
-                                LocalDateTime.now());
+        return httpClient
+                .sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .orTimeout(ackTimeoutSeconds, TimeUnit.SECONDS)
+                .thenApply(response -> response.statusCode() >= 200 && response.statusCode() < 300)
+                .exceptionally(error -> false);
+    }
 
-                HttpRequest request = HttpRequest.newBuilder()
-                                .uri(helperNode.pingReqUri())
-                                .timeout(Duration.ofSeconds(ackTimeoutSeconds * 2L))
-                                .header("Content-Type", "application/json")
-                                .POST(HttpRequest.BodyPublishers.ofString(json))
-                                .build();
+    public CompletableFuture<Boolean> pingReq(NodeAddress helperNode, NodeAddress targetNode) {
+        String json = """
+                {
+                  "type": "PING_REQ",
+                  "senderNodeId": "%s",
+                  "helperNodeId": "%s",
+                  "targetNodeId": "%s",
+                  "targetHost": "%s",
+                  "targetPort": %d,
+                  "timestamp": "%s"
+                }
+                """.formatted(
+                localNodeId,
+                helperNode.nodeId(),
+                targetNode.nodeId(),
+                targetNode.host(),
+                targetNode.port(),
+                Constant.NOW());
 
-                return httpClient
-                                .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                                .orTimeout(ackTimeoutSeconds * 2L, TimeUnit.SECONDS)
-                                .thenApply(response -> response.statusCode() >= 200
-                                                && response.statusCode() < 300
-                                                && response.body().contains("\"ackReceived\": true"))
-                                .exceptionally(error -> false);
-        }
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(helperNode.pingReqUri())
+                .timeout(Duration.ofSeconds(ackTimeoutSeconds * 2L))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
 
-        CompletableFuture<Void> sendGossipMessage(NodeAddress destinationNode, GossipMessage message) {
-                String safeDetails = message.details() == null
-                                ? ""
-                                : message.details().replace("\\", "\\\\").replace("\"", "\\\"");
+        return httpClient
+                .sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .orTimeout(ackTimeoutSeconds * 2L, TimeUnit.SECONDS)
+                .thenApply(response -> response.statusCode() >= 200
+                        && response.statusCode() < 300
+                        && response.body().contains("\"ackReceived\": true"))
+                .exceptionally(error -> false);
+    }
 
-                String json = """
-                                {
-                                  "senderNodeId": "%s",
-                                  "messageId": "%s",
-                                  "sourceNodeId": "%s",
-                                  "subjectNodeId": "%s",
-                                  "messageType": "%s",
-                                  "incarnationNumber": %d,
-                                  "timestamp": %d,
-                                  "ttl": %d,
-                                  "details": "%s"
-                                }
-                                """.formatted(
-                                localNodeId,
-                                message.messageId(),
-                                message.sourceNodeId(),
-                                message.subjectNodeId(),
-                                message.messageType(),
-                                message.incarnationNumber(),
-                                message.timestamp(),
-                                message.ttl(),
-                                safeDetails);
+    public CompletableFuture<Void> sendGossipMessage(NodeAddress destinationNode, GossipMessage message) {
+        String safeDetails = message.details() == null
+                ? ""
+                : message.details().replace("\\", "\\\\").replace("\"", "\\\"");
 
-                HttpRequest request = HttpRequest.newBuilder()
-                                .uri(destinationNode.gossipUri())
-                                .timeout(Duration.ofSeconds(ackTimeoutSeconds * 2L))
-                                .header("Content-Type", "application/json")
-                                .POST(HttpRequest.BodyPublishers.ofString(json))
-                                .build();
+        String json = """
+                {
+                  "senderNodeId": "%s",
+                  "messageId": "%s",
+                  "sourceNodeId": "%s",
+                  "subjectNodeId": "%s",
+                  "messageType": "%s",
+                  "incarnationNumber": %d,
+                  "timestamp": %d,
+                  "ttl": %d,
+                  "details": "%s"
+                }
+                """.formatted(
+                localNodeId,
+                message.messageId(),
+                message.sourceNodeId(),
+                message.subjectNodeId(),
+                message.messageType(),
+                message.incarnationNumber(),
+                message.timestamp(),
+                message.ttl(),
+                safeDetails);
 
-                return httpClient
-                                .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                                .orTimeout(ackTimeoutSeconds * 2L, TimeUnit.SECONDS)
-                                .thenAccept(response -> System.out.println(
-                                                "[" + LocalDateTime.now() + "] "
-                                                                + "Gossip sent to " + destinationNode.nodeId()
-                                                                + ". statusCode=" + response.statusCode()))
-                                .exceptionally(error -> {
-                                        System.out.println(
-                                                        "[" + LocalDateTime.now() + "] "
-                                                                        + "Could not send gossip to "
-                                                                        + destinationNode.nodeId() + ": "
-                                                                        + error.getMessage());
-                                        return null;
-                                });
-        }
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(destinationNode.gossipUri())
+                .timeout(Duration.ofSeconds(ackTimeoutSeconds * 2L))
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+
+        return httpClient
+                .sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                .orTimeout(ackTimeoutSeconds * 2L, TimeUnit.SECONDS)
+                .thenAccept(response -> System.out.println(
+                        "[" + Constant.NOW() + "] "
+                                + "Gossip sent to " + destinationNode.nodeId()
+                                + ". statusCode=" + response.statusCode()))
+                .exceptionally(error -> {
+                    System.out.println(
+                            "[" + Constant.NOW() + "] "
+                                    + "Could not send gossip to "
+                                    + destinationNode.nodeId() + ": "
+                                    + error.getMessage());
+                    return null;
+                });
+    }
 }

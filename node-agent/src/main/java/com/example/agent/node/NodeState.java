@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.example.agent.constant.Constant;
+
 public class NodeState {
     private final NodeAddress nodeAddress;
     private final List<Double> slidingWindowSeconds;
@@ -28,7 +30,7 @@ public class NodeState {
     synchronized void markAlive(PhiAccrualFailure phiDetector) {
         if (status == NodeStatus.UNREACHABLE) {
             System.out.println(
-                    "[" + LocalDateTime.now() + "] "
+                    "[" + Constant.NOW() + "] "
                             + "ACK received from " + nodeAddress.nodeId()
                             + ", but it is already UNREACHABLE locally. "
                             + "It must rejoin as a new node instance.");
@@ -56,7 +58,7 @@ public class NodeState {
 
         if (status == NodeStatus.UNREACHABLE) {
             System.out.println(
-                    "[" + LocalDateTime.now() + "] "
+                    "[" + Constant.NOW() + "] "
                             + "ALIVE gossip for " + nodeAddress.nodeId()
                             + " is newer, but local state is UNREACHABLE. "
                             + "Treat this as requiring JOIN/rejoin, not simple recovery.");
@@ -116,7 +118,6 @@ public class NodeState {
         this.lastSuspicionTime = LocalDateTime.now();
         this.incarnationNumber = Math.max(this.incarnationNumber, messageIncarnationNumber);
     }
-
 
     NodeAddress address() {
         return nodeAddress;
