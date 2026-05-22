@@ -122,7 +122,7 @@ public class FailureDetector {
                 .toList();
 
         CompletableFuture
-                .allOf(helperChecks.toArray(new CompletableFuture[0]))
+                .allOf(helperChecks.toArray(CompletableFuture[]::new))
                 .thenAccept(ignored -> {
                     boolean anyHelperReceivedAck = helperChecks.stream()
                             .anyMatch(CompletableFuture::join);
@@ -141,23 +141,17 @@ public class FailureDetector {
         NodeStatus previousStatus = neighborDirectory.getStatus(targetNode.nodeId());
 
         if (previousStatus == NodeStatus.UNREACHABLE) {
-            System.out.println(
-                    "\n[" + Constant.NOW() + "] "
-                            + "ACK received from Node " + targetNode.nodeId()
-                            + " through " + source
-                            + ", but local state is UNREACHABLE. "
-                            + "This node must send JOIN and re-enter as a new node instance.");
+            System.out.println("\n[" + Constant.NOW() + "] " + Constant.YELLOW + "ACK received from Node "
+                    + targetNode.nodeId() + " through " + source
+                    + ", but local state is UNREACHABLE. This node must send JOIN and re-enter as a new node instance."
+                    + Constant.RESET);
             return;
         }
 
         neighborDirectory.markAlive(targetNode.nodeId(), phiDetector);
 
-        System.out.println(
-                "\n[" + Constant.NOW() + "] "
-                        + "ACK received from Node "
-                        + targetNode.nodeId()
-                        + " through " + source
-                        + ". Status becomes ALIVE.");
+        System.out.println("\n[" + Constant.NOW() + "] " + Constant.CYAN + "ACK received from Node "
+                + targetNode.nodeId() + " through " + source + ". Status becomes ALIVE." + Constant.RESET);
 
         if (previousStatus == NodeStatus.SUSPECTED
                 || previousStatus == NodeStatus.WARNING
