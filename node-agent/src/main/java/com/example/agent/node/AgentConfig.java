@@ -23,7 +23,8 @@ import static com.example.agent.constant.Constant.DEFAULT_WARNING_THRESHOLD;
  * @param bindHost             local network interface/IP address the node
  *                             listens on
  * @param advertiseHost        IP address that this node tells its peers to
- *                             use when reaching back to it
+ *                             use when reaching back to it (self-advertisement
+ *                             address)
  * @param p2pPort              port dedicated to P2P node-to-node
  *                             communication (Gossip/SWIM)
  * @param dashboardUrl         API endpoint of the centralized server used
