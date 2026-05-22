@@ -190,7 +190,7 @@ To simulate the decentralized network on your local machine, open four separate 
 ### Step 1: Start Node A
 Node A will listen on port `9001` and attempt to connect with Node B and Node C.
 ```bash
-java -cp target/classes com.example.agent.node.NodeAgent \
+java -cp target/classes com.monitoring.agent.App \
   --node-id node-a \
   --bind-host 127.0.0.1 \
   --advertise-host 127.0.0.1 \
@@ -198,7 +198,7 @@ java -cp target/classes com.example.agent.node.NodeAgent \
 ```
 For Window
 ```bash
-java -cp target/classes com.example.agent.node.NodeAgent `
+java -cp target/classes com.monitoring.agent.App `
   --node-id node-a `
   --bind-host 127.0.0.1 `
   --advertise-host 127.0.0.1 `
@@ -213,7 +213,7 @@ java -cp target/classes com.example.agent.node.NodeAgent `
 ### Step 2: Start Node B
 Node B will listen on port `9002` and attempt to connect with Node A and Node C.
 ```bash
-java -cp target/classes com.example.agent.node.NodeAgent \
+java -cp target/classes com.monitoring.agent.App \
   --node-id node-b \
   --bind-host 127.0.0.1 \
   --advertise-host 127.0.0.1 \
@@ -222,7 +222,7 @@ java -cp target/classes com.example.agent.node.NodeAgent \
 ```
 For Window
 ```bash
-java -cp target/classes com.example.agent.node.NodeAgent `
+java -cp target/classes com.monitoring.agent.App `
   --node-id node-b `
   --bind-host 127.0.0.1 `
   --advertise-host 127.0.0.1 `
@@ -238,7 +238,7 @@ java -cp target/classes com.example.agent.node.NodeAgent `
 ### Step 3: Start Node C
 Node C will listen on port 9003 and attempt to connect with Node A and Node B.
 ```bash
-java -cp target/classes com.example.agent.node.NodeAgent \
+java -cp target/classes com.monitoring.agent.App \
   --node-id node-c \
   --bind-host 127.0.0.1 \
   --advertise-host 127.0.0.1 \
@@ -247,7 +247,7 @@ java -cp target/classes com.example.agent.node.NodeAgent \
 ```
 For Window
 ```bash
-java -cp target/classes com.example.agent.node.NodeAgent `
+java -cp target/classes com.monitoring.agent.App `
   --node-id node-c `
   --bind-host 127.0.0.1 `
   --advertise-host 127.0.0.1 `
@@ -263,7 +263,7 @@ java -cp target/classes com.example.agent.node.NodeAgent `
 ### Step 4: Start Node D
 Node D will listen on port 9004 and attempt to connect with Node A and Node B.
 ```bash
-java -cp target/classes com.example.agent.node.NodeAgent \
+java -cp target/classes com.monitoring.agent.App \
   --node-id node-d \
   --bind-host 127.0.0.1 \
   --advertise-host 127.0.0.1 \
@@ -272,7 +272,7 @@ java -cp target/classes com.example.agent.node.NodeAgent \
 ```
 For Window
 ```bash
-java -cp target/classes com.example.agent.node.NodeAgent `
+java -cp target/classes com.monitoring.agent.App `
   --node-id node-d `
   --bind-host 127.0.0.1 `
   --advertise-host 127.0.0.1 `
