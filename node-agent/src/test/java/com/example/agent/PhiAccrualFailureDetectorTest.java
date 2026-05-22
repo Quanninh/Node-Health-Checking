@@ -138,7 +138,7 @@ public class PhiAccrualFailureDetectorTest {
 
         double phi = detector.calculatePhi(window, -1L, 105000L);
 
-        assertEquals(0.0, phi);
+        assertEquals(Double.POSITIVE_INFINITY, phi);
     }
 
     @Test

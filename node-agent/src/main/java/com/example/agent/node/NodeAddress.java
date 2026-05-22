@@ -9,7 +9,7 @@ record NodeAddress(String nodeId, String host, int port) {
 
         if (idAndAddress.length != 2) {
             throw new IllegalArgumentException(
-                    "Invalid peer format. Expected nodeId@host:port but got: " + value);
+                    "Invalid node format. Expected nodeId@host:port but got: " + value);
         }
 
         String nodeId = idAndAddress[0];
@@ -18,7 +18,7 @@ record NodeAddress(String nodeId, String host, int port) {
 
         if (hostAndPort.length != 2) {
             throw new IllegalArgumentException(
-                    "Invalid peer address. Expected host:port but got: " + idAndAddress[1]);
+                    "Invalid node address. Expected host:port but got: " + idAndAddress[1]);
         }
 
         String host = hostAndPort[0];
@@ -33,22 +33,6 @@ record NodeAddress(String nodeId, String host, int port) {
 
     URI pingReqUri() {
         return URI.create("http://" + host + ":" + port + "/ping-req");
-    }
-
-    URI joinUri() {
-        return URI.create("http://" + host + ":" + port + "/join");
-    }
-
-    URI joinConfirmUri() {
-        return URI.create("http://" + host + ":" + port + "/join-confirm");
-    }
-
-    URI removeNeighborUri() {
-        return URI.create("http://" + host + ":" + port + "/neighbor-remove");
-    }
-
-    URI failureEventUri() {
-        return URI.create("http://" + host + ":" + port + "/failure-event");
     }
 
     URI gossipUri() {

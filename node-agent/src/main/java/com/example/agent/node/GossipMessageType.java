@@ -10,7 +10,6 @@ public enum GossipMessageType {
     UNREACHABLE,
     ALIVE,
     JOIN,
-    LEAVE
 }
 
 record GossipMessage(

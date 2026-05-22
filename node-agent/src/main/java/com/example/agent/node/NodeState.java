@@ -6,7 +6,6 @@ import java.util.Collections;
 import java.util.List;
 
 public class NodeState {
-
     private final NodeAddress nodeAddress;
     private final List<Double> slidingWindowSeconds;
     private volatile NodeStatus status;
@@ -118,12 +117,6 @@ public class NodeState {
         this.incarnationNumber = Math.max(this.incarnationNumber, messageIncarnationNumber);
     }
 
-    synchronized void markLeftFromGossip(int incomingIncarnationNumber) {
-        if (incomingIncarnationNumber >= this.incarnationNumber) {
-            this.status = NodeStatus.UNREACHABLE;
-            this.incarnationNumber = incomingIncarnationNumber;
-        }
-    }
 
     NodeAddress address() {
         return nodeAddress;

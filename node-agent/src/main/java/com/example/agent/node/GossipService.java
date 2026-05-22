@@ -6,6 +6,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class GossipService {
+
     private final String localNodeId;
     private final NeighborDirectory neighborDirectory;
     private final NodeClient nodeClient;
@@ -53,15 +54,6 @@ public class GossipService {
                 GossipMessageType.JOIN,
                 incarnationNumber,
                 "Node " + subjectNodeId + " joined/rejoined.");
-        receiveGossip(message, localNodeId);
-    }
-
-    void gossipLeave(NodeAddress targetNode) {
-        GossipMessage message = createMessage(
-                targetNode.nodeId(),
-                GossipMessageType.LEAVE,
-                neighborDirectory.incarnationNumber(targetNode.nodeId()),
-                "Node " + targetNode.nodeId() + " voluntarily left.");
         receiveGossip(message, localNodeId);
     }
 

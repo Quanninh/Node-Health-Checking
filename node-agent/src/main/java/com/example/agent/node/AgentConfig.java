@@ -13,12 +13,8 @@ public record AgentConfig(
                 String advertiseHost,
                 int p2pPort,
                 String dashboardUrl,
-                List<NodeAddress> bootstrapPeers,
-                int maxNeighbors,
-                int joinTimeoutSeconds,
-                double joinMinProbability,
-                double joinMaxProbability,
-                int gossipIntervalSeconds,
+                List<NodeAddress> neighborList,
+                int probeIntervalSeconds,
                 int ackTimeoutSeconds,
                 int gossipTtl,
                 int phiWindowSize,
@@ -44,26 +40,10 @@ public record AgentConfig(
                                 "--dashboard-url",
                                 "http://localhost:6789/api");
 
-                int gossipIntervalSeconds = Integer.parseInt(values.getOrDefault(
+                int probeIntervalSeconds = Integer.parseInt(values.getOrDefault(
                                 "--probe-interval-seconds",
                                 values.getOrDefault("--gossip-interval-seconds",
                                                 String.valueOf(DEFAULT_GOSSIP_INTERVAL_SECONDS))));
-
-                int maxNeighbors = Integer.parseInt(values.getOrDefault(
-                                "--max-neighbors",
-                                String.valueOf(DEFAULT_MAX_NEIGHBORS)));
-
-                int joinTimeoutSeconds = Integer.parseInt(values.getOrDefault(
-                                "--join-timeout-seconds",
-                                String.valueOf(DEFAULT_JOIN_TIMEOUT_SECONDS)));
-
-                double joinMinProbability = Double.parseDouble(values.getOrDefault(
-                                "--join-min-probability",
-                                String.valueOf(DEFAULT_JOIN_MIN_PROBABILITY)));
-
-                double joinMaxProbability = Double.parseDouble(values.getOrDefault(
-                                "--join-max-probability",
-                                String.valueOf(DEFAULT_JOIN_MAX_PROBABILITY)));
 
                 int ackTimeoutSeconds = Integer.parseInt(values.getOrDefault(
                                 "--ack-timeout-seconds",
@@ -97,11 +77,7 @@ public record AgentConfig(
                                 "--phi-min-probability",
                                 String.valueOf(DEFAULT_MIN_PROBABILITY)));
 
-                String rawBootstrapPeers = values.getOrDefault(
-                                "--bootstrap-peers",
-                                values.getOrDefault("--neighbors", ""));
-
-                List<NodeAddress> bootstrapPeers = parseNodeAddressList(rawBootstrapPeers);
+                List<NodeAddress> neighborList = parseNeighborList(values.getOrDefault("--neighbors", ""));
 
                 return new AgentConfig(
                                 nodeId,
@@ -109,12 +85,8 @@ public record AgentConfig(
                                 advertiseHost,
                                 p2pPort,
                                 dashboardUrl,
-                                bootstrapPeers,
-                                maxNeighbors,
-                                joinTimeoutSeconds,
-                                joinMinProbability,
-                                joinMaxProbability,
-                                gossipIntervalSeconds,
+                                neighborList,
+                                probeIntervalSeconds,
                                 ackTimeoutSeconds,
                                 gossipTtl,
                                 phiWindowSize,
@@ -144,14 +116,14 @@ public record AgentConfig(
                 return values;
         }
 
-        private static List<NodeAddress> parseNodeAddressList(String rawAddresses) {
-                List<NodeAddress> addresses = new ArrayList<>();
+        private static List<NodeAddress> parseNeighborList(String rawNeighbors) {
+                List<NodeAddress> neighborList = new ArrayList<>();
 
-                if (rawAddresses == null || rawAddresses.isBlank()) {
-                        return addresses;
+                if (rawNeighbors == null || rawNeighbors.isBlank()) {
+                        return neighborList;
                 }
 
-                String[] nodeTokens = rawAddresses.split(",");
+                String[] nodeTokens = rawNeighbors.split(",");
 
                 for (String token : nodeTokens) {
                         String trimmed = token.trim();
@@ -160,9 +132,9 @@ public record AgentConfig(
                                 continue;
                         }
 
-                        addresses.add(NodeAddress.from(trimmed));
+                        neighborList.add(NodeAddress.from(trimmed));
                 }
 
-                return addresses;
+                return neighborList;
         }
 }
