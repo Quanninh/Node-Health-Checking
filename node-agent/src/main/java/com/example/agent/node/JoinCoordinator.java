@@ -143,6 +143,7 @@ class JoinCoordinator {
         return filtered;
     }
 
+
     private void confirmCandidates(List<NodeAddress> candidates) {
         List<NodeAddress> extraCandidatesFromRedistribution = new ArrayList<>();
 
@@ -172,7 +173,8 @@ class JoinCoordinator {
                 break;
             }
 
-            if (neighborDirectory.contains(redistributed.nodeId()) || redistributed.nodeId().equals(localAddress.nodeId())) {
+            if (neighborDirectory.contains(redistributed.nodeId())
+                    || redistributed.nodeId().equals(localAddress.nodeId())) {
                 continue;
             }
 

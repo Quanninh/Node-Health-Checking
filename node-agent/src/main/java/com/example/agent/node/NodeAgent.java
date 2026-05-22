@@ -6,6 +6,11 @@ import java.util.List;
 public class NodeAgent {
 
         public static void main(String[] args) throws IOException {
+                // Shared local failure log used by both:
+                // 1. FailureDetector to write local failure events
+                // 2. PeerServer to expose those events to dashboard/observers
+                FailureEventLog failureEventLog = new FailureEventLog();
+
                 AgentConfig config = AgentConfig.fromArgs(args);
 
                 NodeAddress localAddress = new NodeAddress(
@@ -36,8 +41,15 @@ public class NodeAgent {
                                 config.bindHost(),
                                 config.p2pPort(),
                                 localAddress,
-                                peerClient,
-                                neighborDirectory);
+                                nodeClient,
+                                neighborDirectory,
+                                failureEventLog);
+
+                GossipService gossipService = new GossipService(
+                                config.nodeId(),
+                                neighborDirectory,
+                                nodeClient,
+                                config.gossipTtl());
 
                 FailureDetector failureDetector = new FailureDetector(
                                 config.nodeId(),
@@ -45,20 +57,22 @@ public class NodeAgent {
                                 nodeClient,
                                 dashboardReporter,
                                 phiDetector,
-                                gossipService,
-                                config.probeIntervalSeconds());
+                                config.gossipIntervalSeconds(),
+                                failureEventLog,
+                                config.unreachableThreshold(),
+                                gossipService);
 
                 JoinCoordinator joinCoordinator = new JoinCoordinator(
                                 localAddress,
                                 neighborDirectory,
-                                peerClient,
+                                nodeClient,
                                 config.bootstrapPeers(),
                                 config.maxNeighbors(),
                                 config.joinTimeoutSeconds(),
                                 config.joinMinProbability(),
                                 config.joinMaxProbability());
 
-                peerServer.start();
+                nodeServer.start();
 
                 joinCoordinator.joinNetwork();
 

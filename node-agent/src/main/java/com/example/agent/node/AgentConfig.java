@@ -13,7 +13,11 @@ public record AgentConfig(
                 String advertiseHost,
                 int p2pPort,
                 String dashboardUrl,
-                List<NodeAddress> neighborList,
+                List<NodeAddress> bootstrapPeers,
+                int maxNeighbors,
+                int joinTimeoutSeconds,
+                double joinMinProbability,
+                double joinMaxProbability,
                 int gossipIntervalSeconds,
                 int ackTimeoutSeconds,
                 int gossipTtl,
@@ -44,6 +48,22 @@ public record AgentConfig(
                                 "--probe-interval-seconds",
                                 values.getOrDefault("--gossip-interval-seconds",
                                                 String.valueOf(DEFAULT_GOSSIP_INTERVAL_SECONDS))));
+
+                int maxNeighbors = Integer.parseInt(values.getOrDefault(
+                                "--max-neighbors",
+                                String.valueOf(DEFAULT_MAX_NEIGHBORS)));
+
+                int joinTimeoutSeconds = Integer.parseInt(values.getOrDefault(
+                                "--join-timeout-seconds",
+                                String.valueOf(DEFAULT_JOIN_TIMEOUT_SECONDS)));
+
+                double joinMinProbability = Double.parseDouble(values.getOrDefault(
+                                "--join-min-probability",
+                                String.valueOf(DEFAULT_JOIN_MIN_PROBABILITY)));
+
+                double joinMaxProbability = Double.parseDouble(values.getOrDefault(
+                                "--join-max-probability",
+                                String.valueOf(DEFAULT_JOIN_MAX_PROBABILITY)));
 
                 int ackTimeoutSeconds = Integer.parseInt(values.getOrDefault(
                                 "--ack-timeout-seconds",
@@ -89,7 +109,11 @@ public record AgentConfig(
                                 advertiseHost,
                                 p2pPort,
                                 dashboardUrl,
-                                neighborList,
+                                bootstrapPeers,
+                                maxNeighbors,
+                                joinTimeoutSeconds,
+                                joinMinProbability,
+                                joinMaxProbability,
                                 gossipIntervalSeconds,
                                 ackTimeoutSeconds,
                                 gossipTtl,

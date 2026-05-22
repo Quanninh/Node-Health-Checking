@@ -67,6 +67,79 @@ public class NeighborDirectory {
         return Optional.empty();
     }
 
+    synchronized boolean addNeighbor(NodeAddress peer) {
+        if (peer == null) {
+            return false;
+        }
+
+        if (contains(peer.nodeId())) {
+            return true;
+        }
+
+        if (neighborList.size() >= maxNeighbors) {
+            return false;
+        }
+
+        neighborList.add(peer);
+        nodeStates.putIfAbsent(peer.nodeId(), new NodeState(peer));
+
+        System.out.println(
+                "[" + LocalDateTime.now() + "] "
+                        + "Added neighbor " + peer + ". neighborList=" + neighborList);
+
+        return true;
+    }
+
+    synchronized boolean contains(String nodeId) {
+        return nodeStates.containsKey(nodeId);
+    }
+
+    synchronized int size() {
+        return neighborList.size();
+    }
+
+    synchronized int maxNeighbors() {
+        return maxNeighbors;
+    }
+
+    synchronized List<NodeAddress> addresses() {
+        return new ArrayList<>(neighborList);
+    }
+
+    synchronized boolean removeNeighbor(String nodeId) {
+        Optional<NodeAddress> existing = neighborList.stream()
+                .filter(node -> node.nodeId().equals(nodeId))
+                .findFirst();
+
+        if (existing.isEmpty()) {
+            return false;
+        }
+
+        neighborList.remove(existing.get());
+        nodeStates.remove(nodeId);
+
+        if (nextIndex > neighborList.size()) {
+            nextIndex = 0;
+        }
+
+        System.out.println(
+                "[" + LocalDateTime.now() + "] "
+                        + "Removed neighbor " + existing.get() + ". neighborList=" + neighborList);
+
+        return true;
+    }
+
+    synchronized void removeUnreachableNeighbors() {
+        List<String> unreachableNodeIds = nodeStates.values().stream()
+                .filter(state -> state.status() == NodeStatus.UNREACHABLE)
+                .map(state -> state.address().nodeId())
+                .toList();
+
+        for (String nodeId : unreachableNodeIds) {
+            removeNeighbor(nodeId);
+        }
+    }
+
     synchronized List<NodeAddress> selectHelperNodes(NodeAddress targetNode) {
         List<NodeAddress> helperNodes = new ArrayList<>();
 
@@ -101,6 +174,43 @@ public class NeighborDirectory {
         if (state != null) {
             state.markWarning(phi);
         }
+    }
+
+    synchronized NeighborUpdateResult addOrReplaceForJoin(NodeAddress peer) {
+        if (peer == null) {
+            return new NeighborUpdateResult(false, null, null, "peer is null");
+        }
+
+        if (contains(peer.nodeId())) {
+            return new NeighborUpdateResult(true, peer, null, "peer is already a neighbor");
+        }
+
+        NodeAddress evictedPeer = null;
+
+        if (neighborList.size() >= maxNeighbors) {
+            Optional<NodeAddress> selectedEviction = selectEvictionCandidate();
+
+            if (selectedEviction.isEmpty()) {
+                return new NeighborUpdateResult(false, null, null, "no eviction candidate available");
+            }
+
+            evictedPeer = selectedEviction.get();
+            removeNeighbor(evictedPeer.nodeId());
+        }
+
+        addNeighbor(peer);
+
+        return new NeighborUpdateResult(true, peer, evictedPeer, "accepted");
+    }
+
+    synchronized Optional<NodeAddress> randomNeighborForRedistribution() {
+        if (neighborList.isEmpty()) {
+            return Optional.empty();
+        }
+
+        List<NodeAddress> candidates = new ArrayList<>(neighborList);
+        Collections.shuffle(candidates);
+        return Optional.of(candidates.get(0));
     }
 
     synchronized void markSuspected(String nodeId, double phi) {

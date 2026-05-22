@@ -31,6 +31,19 @@ final class P2pJson {
         throw new IllegalArgumentException("Missing int field in JSON: " + fieldName);
     }
 
+    // Parses JSON numeric values such as 5, 5.0, or 12.000000.
+    // JSON must use "." for decimal values, so FailureEvent.toJson() uses Locale.US.
+    static double doubleValue(String json, String fieldName) {
+        Pattern pattern = Pattern.compile("\\\"" + Pattern.quote(fieldName) + "\\\"\\s*:\\s*(-?\\d+(?:\\.\\d+)?)");
+        Matcher matcher = pattern.matcher(json);
+
+        if (matcher.find()) {
+            return Double.parseDouble(matcher.group(1));
+        }
+
+        throw new IllegalArgumentException("Missing double field in JSON: " + fieldName);
+    }
+
     static boolean booleanValue(String json, String fieldName) {
         Pattern pattern = Pattern.compile("\\\"" + Pattern.quote(fieldName) + "\\\"\\s*:\\s*(true|false)");
         Matcher matcher = pattern.matcher(json);
@@ -72,4 +85,5 @@ final class P2pJson {
                 .replace("\r", "\\r")
                 .replace("\t", "\\t");
     }
+    
 }
