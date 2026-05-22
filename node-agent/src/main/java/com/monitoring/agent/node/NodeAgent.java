@@ -2,6 +2,9 @@ package com.monitoring.agent.node;
 
 import java.io.IOException;
 
+/**
+ * A single agent. It is capable of checking its neighbors' status.
+ */
 public class NodeAgent {
 
     private final AgentConfig config;
@@ -13,14 +16,18 @@ public class NodeAgent {
     private final GossipService gossipService;
     private final FailureDetector failureDetector;
 
+    /**
+     * Constructor for NodeAgent from command line arguments.
+     * 
+     * @param args command line arguments
+     * @throws IOException
+     */
     public NodeAgent(String[] args) throws IOException {
         config = AgentConfig.fromArgs(args);
 
         neighborDirectory = new NeighborDirectory(config.neighborList());
 
-        dashboardReporter = new DashboardReporter(
-                config.nodeId(),
-                config.dashboardUrl());
+        dashboardReporter = new DashboardReporter(config.nodeId(), config.dashboardUrl());
 
         phiDetector = new PhiAccrualFailure(
                 config.phiWindowSize(),
@@ -30,9 +37,7 @@ public class NodeAgent {
                 config.minStdDeviation(),
                 config.minProbability());
 
-        nodeClient = new NodeClient(
-                config.nodeId(),
-                config.ackTimeoutSeconds());
+        nodeClient = new NodeClient(config.nodeId(), config.ackTimeoutSeconds());
 
         nodeServer = new NodeServer(
                 config.nodeId(),
