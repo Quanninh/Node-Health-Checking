@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
  *
  * Later, broadcasted failure events can also be stored here.
  */
+@Deprecated
 class FailureEventLog {
 
     private final ConcurrentMap<String, FailureEvent> eventsById = new ConcurrentHashMap<>();

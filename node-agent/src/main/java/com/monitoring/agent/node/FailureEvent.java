@@ -17,7 +17,8 @@ import com.monitoring.agent.constant.Constant;
  * Phase 2:
  * - sent to neighbors and stored by receiving nodes.
  */
-record FailureEvent(
+@Deprecated
+public record FailureEvent(
         String eventId,
         String reporterNodeId,
         String failedNodeId,

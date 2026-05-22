@@ -1,10 +1,17 @@
 package com.monitoring.agent.node;
 
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
+/**
+ * A gossip message.
+ * 
+ * @param messageId         message id
+ * @param sourceNodeId      source node id
+ * @param subjectNodeId     target node id
+ * @param messageType       message type
+ * @param incarnationNumber incarnation number
+ * @param timestamp         timestamp
+ * @param ttl               time to live (hops)
+ * @param details           extra details
+ */
 public record GossipMessage(
         String messageId,
         String sourceNodeId,
@@ -38,6 +45,9 @@ public record GossipMessage(
     // escapeJson(details));
     // }
 
+    /**
+     * Decreases time to live of a gossip message.
+     */
     public GossipMessage decrementTtl() {
         return new GossipMessage(
                 messageId,
@@ -50,45 +60,22 @@ public record GossipMessage(
                 details);
     }
 
+    /**
+     * Converts JSON into a gossip message
+     * 
+     * @param json JSON message
+     * @return gossip message
+     */
     public static GossipMessage fromJson(String json) {
         return new GossipMessage(
-                extractString(json, "messageId"),
-                extractString(json, "sourceNodeId"),
-                extractString(json, "subjectNodeId"),
-                GossipMessageType.valueOf(extractString(json, "messageType")),
-                Integer.parseInt(extractNumber(json, "incarnationNumber")),
-                Long.parseLong(extractNumber(json, "timestamp")),
-                Integer.parseInt(extractNumber(json, "ttl")),
-                extractString(json, "details"));
+                P2pJson.stringValue(json, "messageId"),
+                P2pJson.stringValue(json, "sourceNodeId"),
+                P2pJson.stringValue(json, "subjectNodeId"),
+                GossipMessageType.valueOf(P2pJson.stringValue(json, "messageType")),
+                P2pJson.intValue(json, "incarnationNumber"),
+                Long.parseLong(P2pJson.stringValue(json, "timestamp")),
+                P2pJson.intValue(json, "ttl"),
+                P2pJson.stringValue(json, "details"));
     }
 
-    // private static String escapeJson(String value) {
-    // if (value == null) {
-    // return "";
-    // }
-
-    // return value.replace("\\", "\\\\").replace("\"", "\\\"");
-    // }
-
-    private static String extractString(String json, String fieldName) {
-        Pattern pattern = Pattern.compile("\\\"" + fieldName + "\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"");
-        Matcher matcher = pattern.matcher(json);
-
-        if (matcher.find()) {
-            return URLDecoder.decode(matcher.group(1), StandardCharsets.UTF_8);
-        }
-
-        throw new IllegalArgumentException("Missing string field in gossip JSON: " + fieldName);
-    }
-
-    private static String extractNumber(String json, String fieldName) {
-        Pattern pattern = Pattern.compile("\\\"" + fieldName + "\\\"\\s*:\\s*(-?\\d+)");
-        Matcher matcher = pattern.matcher(json);
-
-        if (matcher.find()) {
-            return matcher.group(1);
-        }
-
-        throw new IllegalArgumentException("Missing number field in gossip JSON: " + fieldName);
-    }
 }

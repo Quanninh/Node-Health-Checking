@@ -10,7 +10,8 @@ import java.util.concurrent.TimeUnit;
 import com.monitoring.agent.constant.Constant;
 
 /**
- * 
+ * Periodically sends out ping to this node's neighbors to detect if any node
+ * fails.
  */
 public class FailureDetector {
 
