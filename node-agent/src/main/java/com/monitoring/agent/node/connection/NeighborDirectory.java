@@ -9,7 +9,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
+import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.GossipMessageType;
 import com.monitoring.agent.node.NodeAddress;
 import com.monitoring.agent.node.NodeState;
@@ -54,6 +56,8 @@ public class NeighborDirectory {
             return Optional.empty();
         }
 
+        Console.log("neighbors: " + neighbors + " size=" + neighbors.size() + " currentId: " + nextIndex,
+                Constant.BG_YELLOW);
         if (nextIndex >= neighbors.size()) {
             Collections.shuffle(neighbors);
             nextIndex = 0;
@@ -61,7 +65,8 @@ public class NeighborDirectory {
         }
 
         NodeAddress selected = neighbors.get(nextIndex);
-        nextIndex = (nextIndex + 1) % neighbors.size();
+        // nextIndex = (nextIndex + 1) % neighbors.size();
+        nextIndex++;
         return Optional.of(selected);
     }
 
@@ -216,7 +221,7 @@ public class NeighborDirectory {
         syncStatesWithConnections();
         return connectionManager.addresses().stream()
                 .filter(node -> getStatusWithoutSync(node.nodeId()) != NodeStatus.UNREACHABLE)
-                .toList();
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     private NodeStatus getStatusWithoutSync(String nodeId) {
