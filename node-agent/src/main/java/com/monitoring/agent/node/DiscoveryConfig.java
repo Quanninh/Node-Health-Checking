@@ -1,8 +1,4 @@
-<<<<<<< HEAD:node-agent/src/main/java/com/monitoring/agent/node/DiscoveryConfig.java
 package com.monitoring.agent.node;
-=======
-package com.example.agent.node;
->>>>>>> d381a7a (neighbor discovery, still some bugs):node-agent/src/main/java/com/example/agent/node/DiscoveryConfig.java
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;

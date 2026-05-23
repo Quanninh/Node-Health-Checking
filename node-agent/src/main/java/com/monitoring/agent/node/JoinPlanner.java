@@ -1,8 +1,4 @@
-<<<<<<< HEAD:node-agent/src/main/java/com/monitoring/agent/node/JoinPlanner.java
 package com.monitoring.agent.node;
-=======
-package com.example.agent.node;
->>>>>>> d381a7a (neighbor discovery, still some bugs):node-agent/src/main/java/com/example/agent/node/JoinPlanner.java
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -14,29 +10,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-<<<<<<< HEAD:node-agent/src/main/java/com/monitoring/agent/node/JoinPlanner.java
 public final class JoinPlanner {
-=======
-final class JoinPlanner {
->>>>>>> d381a7a (neighbor discovery, still some bugs):node-agent/src/main/java/com/example/agent/node/JoinPlanner.java
 
     private final NodeAddress localAddress;
     private final int maxNeighbors;
 
-<<<<<<< HEAD:node-agent/src/main/java/com/monitoring/agent/node/JoinPlanner.java
     public JoinPlanner(NodeAddress localAddress, int maxNeighbors) {
-=======
-    JoinPlanner(NodeAddress localAddress, int maxNeighbors) {
->>>>>>> d381a7a (neighbor discovery, still some bugs):node-agent/src/main/java/com/example/agent/node/JoinPlanner.java
         this.localAddress = localAddress;
         this.maxNeighbors = maxNeighbors;
     }
 
-<<<<<<< HEAD:node-agent/src/main/java/com/monitoring/agent/node/JoinPlanner.java
     public JoinPlan createPlan(Collection<JoinAck> acks) {
-=======
-    JoinPlan createPlan(Collection<JoinAck> acks) {
->>>>>>> d381a7a (neighbor discovery, still some bugs):node-agent/src/main/java/com/example/agent/node/JoinPlanner.java
         Map<String, JoinAck> uniqueAcks = new LinkedHashMap<>();
 
         for (JoinAck ack : acks) {
@@ -106,15 +90,4 @@ final class JoinPlanner {
         System.out.println("[" + LocalDateTime.now() + "] " + message);
     }
 
-<<<<<<< HEAD:node-agent/src/main/java/com/monitoring/agent/node/JoinPlanner.java
-=======
-    record JoinPlan(
-            List<NodeAddress> directTargets,
-            Map<NodeAddress, NodeAddress> evictionByDirectTarget
-    ) {
-        static JoinPlan empty() {
-            return new JoinPlan(List.of(), Map.of());
-        }
-    }
->>>>>>> d381a7a (neighbor discovery, still some bugs):node-agent/src/main/java/com/example/agent/node/JoinPlanner.java
 }
