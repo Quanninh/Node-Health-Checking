@@ -27,6 +27,10 @@ import com.monitoring.agent.node.JoinAck;
 import com.monitoring.agent.node.NodeAddress;
 import com.monitoring.agent.util.Console;
 
+/**
+ * Uses multicast to send out join requests to nodes, and received
+ * acknowledgements from nodes in network.
+ */
 public final class MulticastDiscoveryService implements AutoCloseable {
 
     private final NodeAddress localAddress;
@@ -39,15 +43,18 @@ public final class MulticastDiscoveryService implements AutoCloseable {
     private volatile boolean running;
     private MulticastSocket multicastSocket;
 
-    public MulticastDiscoveryService(
-            NodeAddress localAddress,
-            DiscoveryConfig config,
+    public MulticastDiscoveryService(NodeAddress localAddress, DiscoveryConfig config,
             ConnectionManager connectionManager) {
         this.localAddress = localAddress;
         this.config = config;
         this.connectionManager = connectionManager;
     }
 
+    /**
+     * Starts multicast network joining process.
+     * 
+     * @throws IOException
+     */
     public void startResponder() throws IOException {
         multicastSocket = new MulticastSocket(null);
         multicastSocket.setReuseAddress(true);
@@ -67,10 +74,17 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                 + config.multicastPort() + " on interface " + config.networkInterface().getName(), Constant.YELLOW);
     }
 
+    /**
+     * Sends out join requests and received the ACKs.
+     * 
+     * @return list of JOIN_ACKs
+     * @throws IOException
+     */
+    @SuppressWarnings("SleepWhileInLoop")
     public List<JoinAck> discoverPeers() throws IOException {
         String txId = UUID.randomUUID().toString();
 
-        List<JoinAck> totalCollected = new ArrayList<>();
+        List<JoinAck> allAcksReceived = new ArrayList<>();
 
         try (DatagramSocket replySocket = new DatagramSocket(0)) {
             replySocket.setSoTimeout((int) config.retryInterval().toMillis());
@@ -79,19 +93,19 @@ public final class MulticastDiscoveryService implements AutoCloseable {
 
             for (int attempt = 1; attempt <= config.retryCount(); attempt++) {
                 sendJoinRequest(txId, attempt, replyPort);
+
                 List<JoinAck> collected = collectReplies(replySocket, txId, config.retryInterval());
-                // if (!collected.isEmpty()) {
-                // return collected;
-                // }
-                totalCollected.addAll(collected);
-                int randomNum = ThreadLocalRandom.current().nextInt(1000, 5001);
-                Thread.sleep(randomNum); // waits in case the network is crowded
+                allAcksReceived.addAll(collected);
+
+                int randomBackoffTime = ThreadLocalRandom.current().nextInt(1000, 5001);
+                Thread.sleep(randomBackoffTime);
             }
 
-            return totalCollected;
+            return allAcksReceived;
         } catch (InterruptedException e) {
             Console.log("Thred sleep interrupted", Constant.RED);
         }
+
         return new ArrayList<>();
     }
 
@@ -125,8 +139,8 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                 DiscoveryMessage message = DiscoveryMessage.decode(raw);
 
                 Console.log(message.transactionId() + message.type());
-                if (!"JOIN_ACK".equals(message.type())) {
-                    Console.log("Not Not JOIN_ACK received, discarded.", Constant.PURPLE);
+                if (message.type() != DiscoveryMessageType.JOIN_ACK) {
+                    Console.log("Not JOIN_ACK received, discarded.", Constant.PURPLE);
                     continue;
                 }
 
@@ -142,7 +156,7 @@ public final class MulticastDiscoveryService implements AutoCloseable {
 
                 String key = message.transactionId() + ":" + message.sender().nodeId();
 
-                // add returns false if key already exist in set
+                // `add` returns false if key already exist in set
                 if (!seenAcks.add(key)) {
                     Console.log("Duplicate KEY received, discarded.", Constant.PURPLE);
                     continue;
@@ -232,6 +246,13 @@ public final class MulticastDiscoveryService implements AutoCloseable {
         }
     }
 
+    /**
+     * Responds to a join request with a JOIN_ACK.
+     * 
+     * @param senderAddress
+     * @param request       the discovery message (join request)
+     * @throws IOException
+     */
     private void handleJoinRequest(InetAddress senderAddress, DiscoveryMessage request) throws IOException {
         if (request.sender().nodeId().equals(localAddress.nodeId())) {
             return;
@@ -262,9 +283,8 @@ public final class MulticastDiscoveryService implements AutoCloseable {
             socket.send(packet);
         }
 
-        Console.log("Sent JOIN_ACK to " + request.sender()
-                + " for txId=" + request.transactionId()
-                + " with neighbors=" + snapshot.neighbors());
+        Console.log("Sent JOIN_ACK to " + request.sender() + " for txId=" + request.transactionId() + " with neighbors="
+                + snapshot.neighbors());
     }
 
     @Override
