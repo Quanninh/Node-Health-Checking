@@ -14,6 +14,9 @@ import com.monitoring.agent.util.Console;
 /**
  * Manages the neighbors of one node. Can add or remove neighbors, and also
  * provide functions for dealing with new joining nodes.
+ * 
+ * Networks are classified into two types: Small networks (when there are less
+ * than k+1 nodes) and Scaled networks (when there are k+1 nodes or more).
  */
 public final class ConnectionManager {
 
@@ -28,7 +31,7 @@ public final class ConnectionManager {
     private long version = 0;
 
     /**
-     * Constructor for Connection Manager
+     * Constructor for Connection Manager.
      * 
      * @param localAddress the local address of the node
      * @param maxNeighbors the maximum number of neighbors, must be a positive even
@@ -222,33 +225,36 @@ public final class ConnectionManager {
         }
     }
 
-    // JAVADOC for Phuc: handles cases where only the joining node gets the target node only(1-way relationship)
-    // Small Join because for scaled network, we have VICTIM and TARGET commit + ACK commit
-    CommitResult applySmallJoinCommit(
-        String txId,
-        NodeAddress joiningNode
-    ) {
+    /**
+     * Applies a small join commit. This function is called by the node that is in
+     * the network already and will add the joining node into the neighbor list.
+     * 
+     * @param txId        transaction ID
+     * @param joiningNode the joining node
+     * @return
+     */
+    CommitResult applySmallJoinCommit(String txId, NodeAddress joiningNode) {
         lock.lock();
 
         try {
             if (!processedTransactions.add("SMALL_JOIN:" + txId)) {
-                return new CommitResult(true, "duplicate small join commit ignored");
+                return new CommitResult(true, "Duplicate small join commit ignored");
             }
 
             if (joiningNode == null) {
-                return new CommitResult(false, "joining node is null");
+                return new CommitResult(false, "Joining node is null");
             }
 
             if (joiningNode.nodeId().equals(localAddress.nodeId())) {
-                return new CommitResult(false, "cannot add self");
+                return new CommitResult(false, "Cannot add self");
             }
 
             if (neighborsById.containsKey(joiningNode.nodeId())) {
-                return new CommitResult(true, "joining node already exists");
+                return new CommitResult(true, "Joining node already exists");
             }
 
             if (neighborsById.size() >= maxNeighbors) {
-                return new CommitResult(false, "small join target has no free neighbor slot");
+                return new CommitResult(false, "Small join target has no free neighbor slot");
             }
 
             neighborsById.put(joiningNode.nodeId(), joiningNode);
@@ -262,7 +268,7 @@ public final class ConnectionManager {
         } finally {
             lock.unlock();
         }
-}
+    }
 
     /**
      * Gets the size of the neighbors list.
