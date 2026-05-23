@@ -66,6 +66,7 @@ public final class MembershipControlService implements AutoCloseable {
                 txId,
                 1,
                 joiningNode,
+                false,
                 0,
                 0,
                 List.of(),
@@ -90,6 +91,7 @@ public final class MembershipControlService implements AutoCloseable {
                 txId,
                 1,
                 joiningNode,
+                false,
                 0,
                 0,
                 List.of(),
@@ -162,6 +164,7 @@ public final class MembershipControlService implements AutoCloseable {
                 txId,
                 1,
                 joiningNode,
+                false,
                 0,
                 0,
                 List.of(),
@@ -243,6 +246,7 @@ public final class MembershipControlService implements AutoCloseable {
                 txId,
                 1,
                 localAddress,
+                true,
                 0,
                 0,
                 List.of(),
@@ -251,11 +255,7 @@ public final class MembershipControlService implements AutoCloseable {
 
         byte[] bytes = ack.encode().getBytes(StandardCharsets.UTF_8);
 
-        DatagramPacket packet = new DatagramPacket(
-                bytes,
-                bytes.length,
-                address,
-                port);
+        DatagramPacket packet = new DatagramPacket(bytes, bytes.length, address, port);
 
         serverSocket.send(packet);
     }

@@ -162,8 +162,8 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                     continue;
                 }
 
-                JoinAck ack = new JoinAck(message.transactionId(), message.sender(), message.neighborVersion(),
-                        message.neighbors());
+                JoinAck ack = new JoinAck(message.transactionId(), message.sender(), message.isInNetwork(),
+                        message.neighborVersion(), message.neighbors());
 
                 repliesByNodeId.putIfAbsent(ack.responder().nodeId(), ack);
 
@@ -181,7 +181,7 @@ public final class MulticastDiscoveryService implements AutoCloseable {
     }
 
     /**
-     * Send JOIN_REQUEST multicase message to the port.
+     * Send JOIN_REQUEST multicast message to the port.
      * 
      * @param txId      transaction ID
      * @param sequence  sequence ID
@@ -194,6 +194,7 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                 txId,
                 sequence,
                 localAddress,
+                false,
                 replyPort,
                 0,
                 List.of(),
@@ -260,18 +261,19 @@ public final class MulticastDiscoveryService implements AutoCloseable {
 
         Snapshot snapshot = connectionManager.takeSnapshot();
 
-        DiscoveryMessage ack = new DiscoveryMessage(
+        DiscoveryMessage joinAck = new DiscoveryMessage(
                 DiscoveryMessageType.JOIN_ACK,
                 request.transactionId(),
                 request.sequence(),
                 localAddress,
+                connectionManager.isInNetwork(),
                 0,
                 snapshot.version(),
                 snapshot.neighbors(),
                 null,
                 null);
 
-        byte[] bytes = ack.encode().getBytes(StandardCharsets.UTF_8);
+        byte[] bytes = joinAck.encode().getBytes(StandardCharsets.UTF_8);
 
         DatagramPacket packet = new DatagramPacket(
                 bytes,

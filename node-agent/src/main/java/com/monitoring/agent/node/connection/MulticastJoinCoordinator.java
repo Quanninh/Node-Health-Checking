@@ -1,12 +1,11 @@
 package com.monitoring.agent.node.connection;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 import com.monitoring.agent.node.JoinAck;
-import com.monitoring.agent.node.JoinPlan;
-import com.monitoring.agent.node.JoinPlanner;
 import com.monitoring.agent.node.NodeAddress;
 import com.monitoring.agent.util.Console;
 
@@ -39,6 +38,7 @@ public final class MulticastJoinCoordinator {
 
             if (acks.isEmpty()) {
                 Console.log("No peers discovered. Node starts as the first node.");
+                connectionManager.setInNetwork(true);
                 return;
             }
 
@@ -55,7 +55,7 @@ public final class MulticastJoinCoordinator {
             }
 
             joinScaledNetwork(plan);
-        } catch (Exception exception) {
+        } catch (IOException exception) {
             Console.log("Join failed: " + exception.getMessage());
         }
     }
@@ -71,8 +71,7 @@ public final class MulticastJoinCoordinator {
             boolean committed = membershipControlService.commitSmallJoinTarget(
                     peer,
                     localAddress,
-                    txId + ":small:" + peer.nodeId()
-            );
+                    txId + ":small:" + peer.nodeId());
 
             if (!committed) {
                 Console.log("Small-network commit failed for " + peer
@@ -89,7 +88,8 @@ public final class MulticastJoinCoordinator {
         }
 
         Console.log("Small-network join complete. Current neighbors="
-                + connectionManager.addresses());
+                + connectionManager.neighborAddresses());
+        connectionManager.setInNetwork(!connectionManager.neighborAddresses().isEmpty());
     }
 
     // NOTE: remember to handle node failures
@@ -132,15 +132,16 @@ public final class MulticastJoinCoordinator {
         }
 
         // for (NodeAddress directTarget : plan.directTargets()) {
-        //     if (connectionManager.size() >= maxNeighbors) {
-        //         break;
-        //     }
+        // if (connectionManager.size() >= maxNeighbors) {
+        // break;
+        // }
 
-        //     connectionManager.addIfSpace(directTarget, "fallback direct target");
+        // connectionManager.addIfSpace(directTarget, "fallback direct target");
         // }
 
         Console.log("Scaled join complete. Current neighbors="
-                + connectionManager.addresses());
+                + connectionManager.neighborAddresses());
+        connectionManager.setInNetwork(!connectionManager.neighborAddresses().isEmpty());
     }
 
 }

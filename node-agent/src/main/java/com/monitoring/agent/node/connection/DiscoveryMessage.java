@@ -19,6 +19,7 @@ public record DiscoveryMessage(
         String transactionId,
         long sequence,
         NodeAddress sender,
+        boolean isInNetwork,
         int replyPort,
         long neighborVersion,
         List<NodeAddress> neighbors,
@@ -43,6 +44,7 @@ public record DiscoveryMessage(
         values.put("nodeId", sender.nodeId());
         values.put("host", sender.host());
         values.put("port", Integer.toString(sender.port()));
+        values.put("isInNetwork", String.valueOf(isInNetwork));
         values.put("replyPort", Integer.toString(replyPort));
         values.put("neighborVersion", Long.toString(neighborVersion));
         values.put("directTargetId", nullToEmpty(directTargetId));
@@ -96,6 +98,7 @@ public record DiscoveryMessage(
                 required(values, "txId"),
                 Long.parseLong(required(values, "sequence")),
                 sender,
+                Boolean.getBoolean(required(values, "isInNetwork")),
                 Integer.parseInt(values.getOrDefault("replyPort", "0")),
                 Long.parseLong(values.getOrDefault("neighborVersion", "0")),
                 decodeNeighbors(values.getOrDefault("neighbors", "")),
@@ -202,6 +205,22 @@ public record DiscoveryMessage(
      */
     private static String emptyToNull(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    @Override
+    public String toString() {
+        return "DiscoveryMessage[" +
+                "type=" + type +
+                ", transactionId=" + transactionId +
+                ", sequence=" + sequence +
+                ", sender=" + sender +
+                ", isInNetwork=" + isInNetwork +
+                ", replyPort=" + replyPort +
+                ", neighborVersion=" + neighborVersion +
+                ", neighbors=" + neighbors +
+                ", directTargetId=" + directTargetId +
+                ", evictedNodeId=" + evictedNodeId +
+                ']';
     }
 
 }

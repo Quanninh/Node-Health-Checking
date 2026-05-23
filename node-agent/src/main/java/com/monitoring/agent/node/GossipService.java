@@ -195,7 +195,7 @@ public class GossipService {
                 + ", subjectNodeId=" + message.subjectNodeId()
                 + ", ttl=" + message.ttl());
 
-        for (NodeAddress neighborNode : connectionManager.addresses()) {
+        for (NodeAddress neighborNode : connectionManager.neighborAddresses()) {
             if (neighborNode.nodeId().equals(senderNodeId) || neighborNode.nodeId().equals(localNodeId)) {
                 continue;
             }

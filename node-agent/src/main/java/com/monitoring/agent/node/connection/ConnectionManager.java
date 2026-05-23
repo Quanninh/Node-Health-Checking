@@ -23,6 +23,7 @@ public final class ConnectionManager {
     private final NodeAddress localAddress;
     private final int maxNeighbors;
 
+    private boolean isInNetwork = false;
     private final ReentrantLock lock = new ReentrantLock();
     private final Map<String, NodeAddress> neighborsById = new LinkedHashMap<>();
     private final Set<String> processedTransactions = ConcurrentHashMap.newKeySet();
@@ -298,13 +299,21 @@ public final class ConnectionManager {
      * 
      * @return list of addresses
      */
-    public List<NodeAddress> addresses() {
+    public List<NodeAddress> neighborAddresses() {
         lock.lock();
         try {
             return new ArrayList<>(neighborsById.values());
         } finally {
             lock.unlock();
         }
+    }
+
+    public boolean isInNetwork() {
+        return isInNetwork;
+    }
+
+    public void setInNetwork(boolean isInNetwork) {
+        this.isInNetwork = isInNetwork;
     }
 
 }

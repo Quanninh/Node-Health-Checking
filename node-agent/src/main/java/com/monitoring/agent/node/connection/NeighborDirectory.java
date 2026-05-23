@@ -78,7 +78,7 @@ public class NeighborDirectory {
      * @return the list of helper nodes
      */
     public List<NodeAddress> selectHelperNodes(NodeAddress targetNode) {
-        List<NodeAddress> helperNodes = new ArrayList<>(connectionManager.addresses().stream()
+        List<NodeAddress> helperNodes = new ArrayList<>(connectionManager.neighborAddresses().stream()
                 .filter(node -> (getStatus(node.nodeId()) != NodeStatus.UNREACHABLE)
                         && (!node.nodeId().equals(targetNode.nodeId())))
                 .toList());
@@ -114,7 +114,7 @@ public class NeighborDirectory {
      */
     public synchronized List<NodeAddress> addresses() {
         syncStatesWithConnections();
-        return connectionManager.addresses();
+        return connectionManager.neighborAddresses();
     }
 
     /**
@@ -221,7 +221,7 @@ public class NeighborDirectory {
      */
     public Optional<NodeAddress> getAddress(String targetNodeId) {
         syncStatesWithConnections();
-        return connectionManager.addresses().stream()
+        return connectionManager.neighborAddresses().stream()
                 .filter(node -> node.nodeId().equals(targetNodeId))
                 .findFirst();
     }
@@ -233,7 +233,7 @@ public class NeighborDirectory {
      */
     private List<NodeAddress> reachableNeighbors() {
         syncStatesWithConnections();
-        return connectionManager.addresses().stream()
+        return connectionManager.neighborAddresses().stream()
                 .filter(node -> getStatusWithoutSync(node.nodeId()) != NodeStatus.UNREACHABLE)
                 .collect(Collectors.toCollection(ArrayList::new));
     }
@@ -253,7 +253,7 @@ public class NeighborDirectory {
      * Syncs the neighbor states with the connection manager.
      */
     private void syncStatesWithConnections() {
-        List<NodeAddress> currentNeighbors = connectionManager.addresses();
+        List<NodeAddress> currentNeighbors = connectionManager.neighborAddresses();
         Set<String> currentIds = new HashSet<>();
 
         for (NodeAddress address : currentNeighbors) {

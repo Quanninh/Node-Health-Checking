@@ -8,6 +8,7 @@ import java.util.List;
 public record JoinAck(
         String txId,
         NodeAddress responder,
+        boolean isInNetwork,
         long neighborVersion,
         List<NodeAddress> responderNeighbors) {
 }

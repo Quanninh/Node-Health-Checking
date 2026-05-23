@@ -12,8 +12,8 @@ public record DiscoveryConfig(
         int retryCount,
         Duration retryInterval,
         Duration collectionWindow,
-        int packetBufferSize
-) {
+        int packetBufferSize) {
+
     public DiscoveryConfig {
         if (!multicastGroup.isMulticastAddress()) {
             throw new IllegalArgumentException("multicastGroup must be a multicast address.");
@@ -30,8 +30,7 @@ public record DiscoveryConfig(
 
     public static DiscoveryConfig defaultLanConfig(
             int maxNeighbors,
-            NetworkInterface networkInterface
-    ) throws Exception {
+            NetworkInterface networkInterface) throws Exception {
         return new DiscoveryConfig(
                 InetAddress.getByName("239.10.20.30"),
                 50505,
@@ -40,7 +39,6 @@ public record DiscoveryConfig(
                 3,
                 Duration.ofMillis(400),
                 Duration.ofSeconds(3),
-                8192
-        );
+                8192);
     }
 }
