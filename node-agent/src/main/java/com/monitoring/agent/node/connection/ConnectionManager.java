@@ -1,6 +1,5 @@
 package com.monitoring.agent.node.connection;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -9,8 +8,13 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.NodeAddress;
 
+/**
+ * Manages the neighbors of one node. Can add or remove neighbors, and also
+ * provide functions for dealing with new joining nodes.
+ */
 public final class ConnectionManager {
 
     private final NodeAddress localAddress;
@@ -127,14 +131,15 @@ public final class ConnectionManager {
         }
     }
 
-    // TODO: What is txID?
     /**
-     * Adds a new node to the neighbor list, while "evicting" another node.
+     * This function is called by the node that is randomly chosen by the joining
+     * node. This node will add the joining node as a new neighbor, as well as
+     * remove a neighbor which is determined by the joining node.
      * 
-     * @param txId          transaction ID?
-     * @param joiningNode   the new node
+     * @param txId          transaction ID
+     * @param joiningNode   the joining node
      * @param evictedNodeId the evicted node
-     * @return
+     * @return the result of the transaction
      */
     public CommitResult applyDirectTargetCommit(String txId, NodeAddress joiningNode, String evictedNodeId) {
         lock.lock();
@@ -177,14 +182,14 @@ public final class ConnectionManager {
         }
     }
 
-    // TODO: Javadoc
     /**
-     * I don't really understand this
+     * This function is called by the evicted node. The evictec node will add the
+     * joining node as a neighbor and remove its old neighbor.
      * 
-     * @param txId
-     * @param joiningNode
-     * @param oldDirectTargetId
-     * @return
+     * @param txId              transaction ID
+     * @param joiningNode       the joining node
+     * @param oldDirectTargetId the old neighbor
+     * @return the result of the transaction
      */
     public CommitResult applyEvictedNodeCommit(String txId, NodeAddress joiningNode, String oldDirectTargetId) {
         lock.lock();
@@ -205,14 +210,6 @@ public final class ConnectionManager {
             if (!joiningNode.nodeId().equals(localAddress.nodeId())) {
                 neighborsById.put(joiningNode.nodeId(), joiningNode);
             }
-
-            // while (neighborsById.size() > maxNeighbors) {
-            //     String firstKey = neighborsById.keySet().iterator().next();
-            //     if (firstKey.equals(joiningNode.nodeId())) {
-            //         break;
-            //     }
-            //     neighborsById.remove(firstKey);
-            // }
 
             version++;
             log("Node " + localAddress.nodeId()
@@ -263,7 +260,7 @@ public final class ConnectionManager {
     }
 
     private void log(String message) {
-        System.out.println("[" + LocalDateTime.now() + "] " + message);
+        System.out.println("[" + Constant.NOW() + "] " + message);
     }
 
 }
