@@ -62,14 +62,11 @@ public final class MulticastDiscoveryService implements AutoCloseable {
 
         receiverExecutor.submit(this::receiveLoop);
 
-        Console.log("Joined multicast discovery group "
-                + config.multicastGroup().getHostAddress()
-                + ":" + config.multicastPort()
-                + " on interface "
-                + config.networkInterface().getName());
+        Console.log("Joined multicast discovery group " + config.multicastGroup().getHostAddress() + ":"
+                + config.multicastPort() + " on interface " + config.networkInterface().getName(), Constant.YELLOW);
     }
 
-    List<JoinAck> discoverPeers() throws IOException {
+    public List<JoinAck> discoverPeers() throws IOException {
         String txId = UUID.randomUUID().toString();
 
         try (DatagramSocket replySocket = new DatagramSocket(0)) {
@@ -86,17 +83,23 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                 Thread.sleep(2000);
             }
 
-            // return collectReplies(replySocket, txId, config.collectionWindow());
         } catch (InterruptedException e) {
-            Console.log(Constant.RED + "Thred sleep interrupted" + Constant.RESET);
+            Console.log("Thred sleep interrupted", Constant.RED);
         }
         return new ArrayList<>();
     }
 
-    private List<JoinAck> collectReplies(
-            DatagramSocket replySocket,
-            String txId,
-            Duration window) {
+    /**
+     * Collects replies from the socket until the timing window ends or the socket
+     * timed out.
+     * 
+     * @param replySocket the datagram socket
+     * @param txId        transaction id
+     * @param window      timing window
+     * @return list of replies (ACKs)
+     * @see JoinAck
+     */
+    private List<JoinAck> collectReplies(DatagramSocket replySocket, String txId, Duration window) {
         long deadline = System.nanoTime() + window.toNanos();
         Map<String, JoinAck> repliesByNodeId = new LinkedHashMap<>();
 
@@ -117,16 +120,17 @@ public final class MulticastDiscoveryService implements AutoCloseable {
 
                 Console.log(message.txId() + message.type());
                 if (!"JOIN_ACK".equals(message.type())) {
-                    Console.log("Join ACK received");
+                    Console.log("Not JOIN_ACK received, discarded.", Constant.PURPLE);
                     continue;
                 }
 
                 if (!txId.equals(message.txId())) {
-                    Console.log("wrong txId received");
+                    Console.log("Wrong txId received, discarded.", Constant.PURPLE);
                     continue;
                 }
 
                 if (message.sender().nodeId().equals(localAddress.nodeId())) {
+                    Console.log("Sender = Myself, discarded.", Constant.PURPLE);
                     continue;
                 }
 
@@ -134,14 +138,11 @@ public final class MulticastDiscoveryService implements AutoCloseable {
 
                 // add returns false if key already exist in set
                 if (!seenAcks.add(key)) {
-                    Console.log("Duplicate KEY received");
+                    Console.log("Duplicate KEY received, discarded.", Constant.PURPLE);
                     continue;
                 }
 
-                JoinAck ack = new JoinAck(
-                        message.txId(),
-                        message.sender(),
-                        message.neighborVersion(),
+                JoinAck ack = new JoinAck(message.txId(), message.sender(), message.neighborVersion(),
                         message.neighbors());
 
                 repliesByNodeId.putIfAbsent(ack.responder().nodeId(), ack);
@@ -149,21 +150,25 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                 Console.log("Received JOIN_ACK from " + ack.responder()
                         + " with neighbors=" + ack.responderNeighbors());
             } catch (SocketTimeoutException ignored) {
-                Console.log("Socket timeout");
+                Console.log("Socket timeout.", Constant.BLUE);
                 break;
-                // return new ArrayList<>(repliesByNodeId.values());
             } catch (IOException exception) {
-                Console.log("Ignored invalid discovery reply: " + exception.getMessage());
+                Console.log("Ignored invalid discovery reply: " + exception.getMessage(), Constant.RED);
             }
         }
 
         return new ArrayList<>(repliesByNodeId.values());
     }
 
-    private void sendJoinRequest(
-            String txId,
-            long sequence,
-            int replyPort) throws IOException {
+    /**
+     * Send JOIN_REQUEST multicase message to the port.
+     * 
+     * @param txId      transaction ID
+     * @param sequence
+     * @param replyPort
+     * @throws IOException
+     */
+    private void sendJoinRequest(String txId, long sequence, int replyPort) throws IOException {
         DiscoveryMessage message = new DiscoveryMessage(
                 "JOIN_REQUEST",
                 txId,
@@ -185,7 +190,8 @@ public final class MulticastDiscoveryService implements AutoCloseable {
 
         multicastSocket.send(packet);
 
-        Console.log("Sent multicast JOIN_REQUEST txId=" + txId + ", sequence=" + sequence);
+        Console.log("Sent multicast JOIN_REQUEST txId=" + txId + ", sequence=" + sequence,
+                Constant.CYAN + Constant.BLINK);
     }
 
     private void receiveLoop() {
@@ -217,9 +223,7 @@ public final class MulticastDiscoveryService implements AutoCloseable {
         }
     }
 
-    private void handleJoinRequest(
-            InetAddress senderAddress,
-            DiscoveryMessage request) throws IOException {
+    private void handleJoinRequest(InetAddress senderAddress, DiscoveryMessage request) throws IOException {
         if (request.sender().nodeId().equals(localAddress.nodeId())) {
             return;
         }

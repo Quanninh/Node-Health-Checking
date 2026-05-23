@@ -28,6 +28,11 @@ public class NodeAgent {
     private final NodeServer nodeServer;
     private final GossipService gossipService;
     private final FailureDetector failureDetector;
+    private final NetworkInterface multicastInterface;
+    private final DiscoveryConfig discoveryConfig;
+    private final MulticastDiscoveryService discoveryService;
+    private final MembershipControlService membershipControlService;
+    private final MulticastJoinCoordinator joinCoordinator;
 
     /**
      * Constructor for NodeAgent from command line arguments.
@@ -85,9 +90,9 @@ public class NodeAgent {
                 config.probeIntervalSeconds(),
                 config.unreachableThreshold());
 
-        NetworkInterface multicastInterface = resolveMulticastInterface();
+        multicastInterface = resolveMulticastInterface();
 
-        DiscoveryConfig discoveryConfig = new DiscoveryConfig(
+        discoveryConfig = new DiscoveryConfig(
                 InetAddress.getByName(config.multicastGroup()),
                 config.multicastPort(),
                 multicastInterface,
@@ -97,18 +102,18 @@ public class NodeAgent {
                 Duration.ofMillis(config.discoveryCollectionWindowMillis()),
                 8192);
 
-        MulticastDiscoveryService discoveryService = new MulticastDiscoveryService(
+        discoveryService = new MulticastDiscoveryService(
                 localAddress,
                 discoveryConfig,
                 connectionManager);
 
-        MembershipControlService membershipControlService = new MembershipControlService(
+        membershipControlService = new MembershipControlService(
                 localAddress,
                 connectionManager,
                 config.p2pPort(),
                 discoveryConfig.packetBufferSize());
 
-        MulticastJoinCoordinator joinCoordinator = new MulticastJoinCoordinator(
+        joinCoordinator = new MulticastJoinCoordinator(
                 localAddress,
                 Constant.DEFAULT_MAX_NEIGHBORS,
                 connectionManager,
@@ -168,8 +173,8 @@ public class NodeAgent {
         Console.println("Multicast Interface        : "
                 + (config.multicastInterfaceName().isBlank() ? "auto" : config.multicastInterfaceName()));
         Console.println("Current neighbors          : " + neighborDirectory.addresses());
-        Console.println("Current neighbor count     : " + neighborDirectory.size());
-        Console.println("Max neighbors n            : " + Constant.DEFAULT_MAX_NEIGHBORS);
+        Console.println("Current neighbor count     : " + connectionManager.size());
+        Console.println("Max neighbors n            : " + connectionManager.getMaxNeighbors());
         Console.println("Discovery retry count      : " + config.discoveryRetryCount());
         Console.println("Discovery retry interval   : " + config.discoveryRetryIntervalMillis() + " ms");
         Console.println("Discovery collection window: " + config.discoveryCollectionWindowMillis() + " ms");
