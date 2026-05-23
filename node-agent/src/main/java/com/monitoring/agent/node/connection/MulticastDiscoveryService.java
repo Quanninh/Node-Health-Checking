@@ -69,6 +69,8 @@ public final class MulticastDiscoveryService implements AutoCloseable {
     public List<JoinAck> discoverPeers() throws IOException {
         String txId = UUID.randomUUID().toString();
 
+        List<JoinAck> totalCollected = new ArrayList<>();
+
         try (DatagramSocket replySocket = new DatagramSocket(0)) {
             replySocket.setSoTimeout((int) config.retryInterval().toMillis());
 
@@ -77,12 +79,14 @@ public final class MulticastDiscoveryService implements AutoCloseable {
             for (int attempt = 1; attempt <= config.retryCount(); attempt++) {
                 sendJoinRequest(txId, attempt, replyPort);
                 List<JoinAck> collected = collectReplies(replySocket, txId, config.retryInterval());
-                if (!collected.isEmpty()) {
-                    return collected;
-                }
-                Thread.sleep(2000);
+                // if (!collected.isEmpty()) {
+                //     return collected;
+                // }
+                totalCollected.addAll(collected);
+                Thread.sleep(2000); // waits in case the network is crowded
             }
 
+            return totalCollected;
         } catch (InterruptedException e) {
             Console.log("Thred sleep interrupted", Constant.RED);
         }
@@ -120,7 +124,7 @@ public final class MulticastDiscoveryService implements AutoCloseable {
 
                 Console.log(message.txId() + message.type());
                 if (!"JOIN_ACK".equals(message.type())) {
-                    Console.log("Not JOIN_ACK received, discarded.", Constant.PURPLE);
+                    Console.log("Not Not JOIN_ACK received, discarded.", Constant.PURPLE);
                     continue;
                 }
 
