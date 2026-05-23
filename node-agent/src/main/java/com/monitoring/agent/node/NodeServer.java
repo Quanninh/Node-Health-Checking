@@ -5,11 +5,13 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.monitoring.agent.constant.Constant;
+import com.monitoring.agent.util.Console;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
@@ -42,7 +44,7 @@ class NodeServer {
     void start() {
         server.start();
 
-        System.out.println("\n[" + Constant.NOW() + "] " + "Node server listening on " + bindHost + ":" + port);
+        Console.log("Node server listening on " + bindHost + ":" + port, Constant.GREEN);
     }
 
     private void handlePing(HttpExchange exchange) throws IOException {
@@ -57,7 +59,7 @@ class NodeServer {
                   "receiverNodeId": "%s",
                   "timestamp": "%s"
                 }
-                """.formatted(nodeId, Constant.NOW());
+                """.formatted(nodeId, LocalDateTime.now());
 
         sendResponse(exchange, 200, responseJson);
     }
@@ -90,7 +92,7 @@ class NodeServer {
                 nodeId,
                 targetNodeId,
                 ackReceived,
-                Constant.NOW());
+                LocalDateTime.now());
 
         sendResponse(exchange, 200, responseJson);
     }

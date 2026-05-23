@@ -1,8 +1,7 @@
 package com.monitoring.agent.node;
 
+import java.time.LocalDateTime;
 import java.util.Locale;
-
-import com.monitoring.agent.constant.Constant;
 
 /**
  * Represents one failure detection event.
@@ -39,7 +38,7 @@ public record FailureEvent(
             double phi,
             double threshold) {
 
-        String now = Constant.NOW();
+        String now = LocalDateTime.now().toString();
 
         String eventId = reporterNodeId
                 + "->"

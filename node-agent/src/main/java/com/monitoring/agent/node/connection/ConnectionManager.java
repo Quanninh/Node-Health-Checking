@@ -8,8 +8,8 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.NodeAddress;
+import com.monitoring.agent.util.Console;
 
 /**
  * Manages the neighbors of one node. Can add or remove neighbors, and also
@@ -100,7 +100,7 @@ public final class ConnectionManager {
             neighborsById.put(peer.nodeId(), peer);
             version++;
 
-            log("Added neighbor " + peer + " because " + reason + ". neighbors=" + neighborsById.values());
+            Console.log("Added neighbor " + peer + " because " + reason + ". neighbors=" + neighborsById.values());
             return true;
         } finally {
             lock.unlock();
@@ -123,7 +123,7 @@ public final class ConnectionManager {
             }
 
             version++;
-            log("Removed neighbor " + removed + " because " + reason
+            Console.log("Removed neighbor " + removed + " because " + reason
                     + ". neighbors=" + neighborsById.values());
             return true;
         } finally {
@@ -172,7 +172,7 @@ public final class ConnectionManager {
             neighborsById.put(joiningNode.nodeId(), joiningNode);
             version++;
 
-            log("Node " + localAddress.nodeId()
+            Console.log("Node " + localAddress.nodeId()
                     + " accepted joining node " + joiningNode
                     + (evicted == null ? "" : " and evicted " + evicted)
                     + ". neighbors=" + neighborsById.values());
@@ -212,7 +212,7 @@ public final class ConnectionManager {
             }
 
             version++;
-            log("Node " + localAddress.nodeId()
+            Console.log("Node " + localAddress.nodeId()
                     + " replaced old direct target " + removed
                     + " with joining node " + joiningNode
                     + ". neighbors=" + neighborsById.values());
@@ -257,10 +257,6 @@ public final class ConnectionManager {
         } finally {
             lock.unlock();
         }
-    }
-
-    private void log(String message) {
-        System.out.println("[" + Constant.NOW() + "] " + message);
     }
 
 }

@@ -4,9 +4,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.connection.ConnectionManager;
 import com.monitoring.agent.node.connection.NeighborDirectory;
+import com.monitoring.agent.util.Console;
 
 /**
  * Gossips or receives gossips about the status of a target node.
@@ -37,8 +37,7 @@ public class GossipService {
      */
     public void gossipSuspect(NodeAddress targetNode) {
         GossipMessage message = createSuspectMessage(targetNode);
-        System.out.println("\n[" + Constant.NOW() + "] "
-                + "Created gossip message: type=SUSPECT, subjectNodeId="
+        Console.log("Created gossip message: type=SUSPECT, subjectNodeId="
                 + targetNode.nodeId()
                 + ", sourceNodeId=" + localNodeId);
         receiveGossip(message, localNodeId);
@@ -51,8 +50,7 @@ public class GossipService {
      */
     public void gossipUnreachable(NodeAddress targetNode) {
         GossipMessage message = createUnreachableMessage(targetNode);
-        System.out.println("\n[" + Constant.NOW() + "] "
-                + "Created gossip message: type=UNREACHABLE, subjectNodeId="
+        Console.log("Created gossip message: type=UNREACHABLE, subjectNodeId="
                 + targetNode.nodeId()
                 + ", sourceNodeId=" + localNodeId);
         receiveGossip(message, localNodeId);
@@ -163,16 +161,13 @@ public class GossipService {
         }
 
         if (seenMessages.contains(message.messageId())) {
-            System.out.println(
-                    "\n[" + Constant.NOW() + "] "
-                            + "Duplicate gossip message ignored: " + message.messageId());
+            Console.log("Duplicate gossip message ignored: " + message.messageId());
             return;
         }
 
         seenMessages.add(message.messageId());
 
-        System.out.println("\n[" + Constant.NOW() + "] "
-                + "Received gossip message type=" + message.messageType()
+        Console.log("Received gossip message type=" + message.messageType()
                 + ", subjectNodeId=" + message.subjectNodeId()
                 + ", sourceNodeId=" + message.sourceNodeId()
                 + ", senderNodeId=" + senderNodeId
@@ -196,8 +191,7 @@ public class GossipService {
             return;
         }
 
-        System.out.println("\n[" + Constant.NOW() + "] "
-                + "Forwarding gossip message type=" + message.messageType()
+        Console.log("Forwarding gossip message type=" + message.messageType()
                 + ", subjectNodeId=" + message.subjectNodeId()
                 + ", ttl=" + message.ttl());
 
@@ -235,8 +229,7 @@ public class GossipService {
      * @param message         the gossip message
      */
     private void sendGossipMessage(NodeAddress destinationNode, GossipMessage message) {
-        System.out.println("\n[" + Constant.NOW() + "] "
-                + "Sending gossip message type=" + message.messageType()
+        Console.log("Sending gossip message type=" + message.messageType()
                 + ", subjectNodeId=" + message.subjectNodeId()
                 + " to " + destinationNode.nodeId());
         nodeClient.sendGossipMessage(destinationNode, message);

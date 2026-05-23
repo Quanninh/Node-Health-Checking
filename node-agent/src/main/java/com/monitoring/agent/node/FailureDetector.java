@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.connection.NeighborDirectory;
+import com.monitoring.agent.util.Console;
 
 /**
  * Periodically sends out ping to this node's neighbors to detect if any node
@@ -69,8 +70,8 @@ public class FailureDetector {
         try {
             runOneProbe();
         } catch (Exception exception) {
-            System.out.println("\n[" + Constant.NOW() + "] " + Constant.RED + "Failure detector error: "
-                    + exception.getMessage() + Constant.RESET);
+            Console.log("Failure detector error: "
+                    + exception.getMessage(), Constant.RED);
         }
     }
 
@@ -81,8 +82,7 @@ public class FailureDetector {
         Optional<NodeAddress> selectedTarget = neighborDirectory.nextTargetNode();
 
         if (selectedTarget.isEmpty()) {
-            System.out.println("\n[" + Constant.NOW() + "] " + Constant.PURPLE
-                    + "No reachable neighbor nodes configured. Nothing to ping." + Constant.RESET);
+            Console.log("No reachable neighbor nodes configured. Nothing to ping.", Constant.PURPLE);
             return;
         }
 
@@ -90,9 +90,8 @@ public class FailureDetector {
 
         long pingSendTime = System.currentTimeMillis();
 
-        System.out.println(
-                "\n[" + Constant.NOW() + "] " + Constant.CYAN + "Node " + localNodeId + " directly pings targetNode "
-                        + targetNode.nodeId() + " at " + targetNode.host() + ":" + targetNode.port() + Constant.RESET);
+        Console.log("Node " + localNodeId + " directly pings targetNode "
+                + targetNode.nodeId() + " at " + targetNode.host() + ":" + targetNode.port(), Constant.CYAN);
 
         nodeClient.ping(targetNode).thenAccept(ackReceived -> {
             if (ackReceived) {
@@ -116,8 +115,8 @@ public class FailureDetector {
 
         long pingSendTime = System.currentTimeMillis();
 
-        System.out.println("\n[" + Constant.NOW() + "] " + Constant.RED + "Direct ping failed for targetNode "
-                + targetNode.nodeId() + ". helperNodes selected from neighborList: " + helperNodes + Constant.RESET);
+        Console.log("Direct ping failed for targetNode " + targetNode.nodeId()
+                + ". helperNodes selected from neighborList: " + helperNodes, Constant.RED);
 
         if (helperNodes.isEmpty()) {
             handleNoAckAfterDirectAndIndirect(targetNode);
@@ -154,17 +153,16 @@ public class FailureDetector {
         NodeStatus previousStatus = neighborDirectory.getStatus(targetNode.nodeId());
 
         if (previousStatus == NodeStatus.UNREACHABLE) {
-            System.out.println("\n[" + Constant.NOW() + "] " + Constant.YELLOW + "ACK received from Node "
-                    + targetNode.nodeId() + " through " + source
-                    + ", but local state is UNREACHABLE. This node must send JOIN and re-enter as a new node instance."
-                    + Constant.RESET);
+            Console.log("ACK received from Node " + targetNode.nodeId() + " through " + source
+                    + ", but local state is UNREACHABLE. This node must send JOIN and re-enter as a new node instance.",
+                    Constant.YELLOW);
             return;
         }
 
         neighborDirectory.markAlive(targetNode.nodeId(), phiDetector, pingSendTime);
 
-        System.out.println("\n[" + Constant.NOW() + "] " + Constant.CYAN + "ACK received from Node "
-                + targetNode.nodeId() + " through " + source + ". Status becomes ALIVE." + Constant.RESET);
+        Console.log("ACK received from Node " + targetNode.nodeId() + " through " + source + ". Status becomes ALIVE.",
+                Constant.CYAN);
 
         if (previousStatus == NodeStatus.SUSPECTED
                 || previousStatus == NodeStatus.WARNING
@@ -211,12 +209,11 @@ public class FailureDetector {
             gossipService.gossipSuspect(targetNode);
         }
 
-        System.out.println("\n[" + Constant.NOW() + "] " + Constant.YELLOW
-                + "targetNode " + targetNode.nodeId()
+        Console.log("targetNode " + targetNode.nodeId()
                 + " has no direct/indirect ACK. phi="
                 + String.format("%.4f", phi)
                 + ", status=" + neighborDirectory.getStatus(targetNode.nodeId())
-                + ". It is not declared unreachable yet." + Constant.RESET);
+                + ". It is not declared unreachable yet.", Constant.YELLOW);
     }
 
     /**
@@ -231,8 +228,7 @@ public class FailureDetector {
 
         neighborDirectory.markUnreachable(targetNode.nodeId(), phi);
 
-        System.out.println("\n[" + Constant.NOW() + "] "
-                + "Node " + localNodeId
+        Console.log("Node " + localNodeId
                 + " marks targetNode " + targetNode.nodeId()
                 + " as UNREACHABLE. phi="
                 + String.format("%.4f", phi)
@@ -248,12 +244,12 @@ public class FailureDetector {
      * Prints the states of this node's neighbor.
      */
     private void printLocalNodeStates() {
-        System.out.println("----- Local Neighbor Node States at Node " + localNodeId + " -----");
+        Console.log("\n----- Local Neighbor Node States at Node " + localNodeId + " -----");
 
         for (NodeState state : neighborDirectory.states()) {
-            System.out.println(state + "\n");
+            Console.println(state + "\n");
         }
 
-        System.out.println("---------------------------------------------------------------");
+        Console.println("---------------------------------------------------------------");
     }
 }

@@ -10,6 +10,7 @@ import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 
 import com.monitoring.agent.constant.Constant;
+import com.monitoring.agent.util.Console;
 
 /**
  * Reports the status of the node to the dashboard.
@@ -54,12 +55,10 @@ public class DashboardReporter {
 
         return httpClient
                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenAccept(response -> System.out.println("[" + Constant.NOW() + "] " + Constant.CYAN
-                        + "Registered self with dashboard. Status: " + response.statusCode() + Constant.RESET))
+                .thenAccept(response -> Console.log("Registered self with dashboard. Status: " + response.statusCode(),
+                        Constant.CYAN))
                 .exceptionally(error -> {
-                    System.out.println(
-                            "[" + Constant.NOW() + "] " + Constant.RED + "Could not register with dashboard: "
-                                    + error.getMessage() + Constant.RESET);
+                    Console.log("Could not register with dashboard: " + error.getMessage(), Constant.RED);
                     return null;
                 });
     }
@@ -106,13 +105,10 @@ public class DashboardReporter {
 
         return httpClient
                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenAccept(response -> System.out.println("\n[" + Constant.NOW() + "] " + Constant.PURPLE
-                        + "UNREACHABLE report sent to dashboard. Status: " + response.statusCode() + Constant.RESET))
+                .thenAccept(response -> Console
+                        .log("UNREACHABLE report sent to dashboard. Status: " + response.statusCode(), Constant.PURPLE))
                 .exceptionally(error -> {
-                    System.out.println(
-                            "\n[" + Constant.NOW() + "] " + Constant.RED
-                                    + "Could not report unreachable node to dashboard: "
-                                    + error.getMessage() + Constant.RESET);
+                    Console.log("Could not report unreachable node to dashboard: " + error.getMessage(), Constant.RED);
                     return null;
                 });
     }

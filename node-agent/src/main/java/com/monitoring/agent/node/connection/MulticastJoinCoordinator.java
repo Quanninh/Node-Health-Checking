@@ -1,6 +1,5 @@
 package com.monitoring.agent.node.connection;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -9,6 +8,7 @@ import com.monitoring.agent.node.JoinAck;
 import com.monitoring.agent.node.JoinPlan;
 import com.monitoring.agent.node.JoinPlanner;
 import com.monitoring.agent.node.NodeAddress;
+import com.monitoring.agent.util.Console;
 
 public final class MulticastJoinCoordinator {
 
@@ -38,14 +38,14 @@ public final class MulticastJoinCoordinator {
             List<JoinAck> acks = discoveryService.discoverPeers();
 
             if (acks.isEmpty()) {
-                log("No peers discovered. Node starts as the first node.");
+                Console.log("No peers discovered. Node starts as the first node.");
                 return;
             }
 
             JoinPlan plan = joinPlanner.createPlan(acks);
 
             if (plan.directTargets().isEmpty()) {
-                log("No valid join plan. Node remains alone temporarily.");
+                Console.log("No valid join plan. Node remains alone temporarily.");
                 return;
             }
 
@@ -56,7 +56,7 @@ public final class MulticastJoinCoordinator {
 
             joinScaledNetwork(plan);
         } catch (Exception exception) {
-            log("Join failed: " + exception.getMessage());
+            Console.log("Join failed: " + exception.getMessage());
         }
     }
 
@@ -65,7 +65,7 @@ public final class MulticastJoinCoordinator {
             connectionManager.addIfSpace(peer, "small-network multicast join");
         }
 
-        log("Small-network join complete. Current neighbors="
+        Console.log("Small-network join complete. Current neighbors="
                 + connectionManager.addresses());
     }
 
@@ -84,7 +84,7 @@ public final class MulticastJoinCoordinator {
                     txId + ":direct:" + directTarget.nodeId());
 
             if (!directCommitted) {
-                log("Direct target commit failed for " + directTarget);
+                Console.log("Direct target commit failed for " + directTarget);
                 continue;
             }
 
@@ -95,7 +95,7 @@ public final class MulticastJoinCoordinator {
                     txId + ":victim:" + victim.nodeId());
 
             if (!victimCommitted) {
-                log("Victim commit failed for " + victim
+                Console.log("Victim commit failed for " + victim
                         + ". Failure detector/repair should fix this later.");
                 continue;
             }
@@ -103,7 +103,7 @@ public final class MulticastJoinCoordinator {
             connectionManager.addIfSpace(directTarget, "scaled join direct target");
             connectionManager.addIfSpace(victim, "scaled join evicted handover");
 
-            log("Node " + localAddress.nodeId()
+            Console.log("Node " + localAddress.nodeId()
                     + " successfully connected with direct target " + directTarget
                     + " and handed over evicted node " + victim);
         }
@@ -116,11 +116,8 @@ public final class MulticastJoinCoordinator {
             connectionManager.addIfSpace(directTarget, "fallback direct target");
         }
 
-        log("Scaled join complete. Current neighbors="
+        Console.log("Scaled join complete. Current neighbors="
                 + connectionManager.addresses());
     }
 
-    private static void log(String message) {
-        System.out.println("[" + LocalDateTime.now() + "] " + message);
-    }
 }

@@ -10,7 +10,6 @@ import java.net.SocketException;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,9 +20,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.DiscoveryConfig;
 import com.monitoring.agent.node.JoinAck;
 import com.monitoring.agent.node.NodeAddress;
+import com.monitoring.agent.util.Console;
 
 public final class MulticastDiscoveryService implements AutoCloseable {
 
@@ -61,7 +62,7 @@ public final class MulticastDiscoveryService implements AutoCloseable {
 
         receiverExecutor.submit(this::receiveLoop);
 
-        log("Joined multicast discovery group "
+        Console.log("Joined multicast discovery group "
                 + config.multicastGroup().getHostAddress()
                 + ":" + config.multicastPort()
                 + " on interface "
@@ -87,10 +88,9 @@ public final class MulticastDiscoveryService implements AutoCloseable {
 
             // return collectReplies(replySocket, txId, config.collectionWindow());
         } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            Console.log(Constant.RED + "Thred sleep interrupted" + Constant.RESET);
         }
-        return new ArrayList<JoinAck>();
+        return new ArrayList<>();
     }
 
     private List<JoinAck> collectReplies(
@@ -115,14 +115,14 @@ public final class MulticastDiscoveryService implements AutoCloseable {
 
                 DiscoveryMessage message = DiscoveryMessage.decode(raw);
 
-                log(message.txId() + message.type());
+                Console.log(message.txId() + message.type());
                 if (!"JOIN_ACK".equals(message.type())) {
-                    log("Join ACK received");
+                    Console.log("Join ACK received");
                     continue;
                 }
 
                 if (!txId.equals(message.txId())) {
-                    log("wrong txId received");
+                    Console.log("wrong txId received");
                     continue;
                 }
 
@@ -134,7 +134,7 @@ public final class MulticastDiscoveryService implements AutoCloseable {
 
                 // add returns false if key already exist in set
                 if (!seenAcks.add(key)) {
-                    log("Duplicate KEY received");
+                    Console.log("Duplicate KEY received");
                     continue;
                 }
 
@@ -146,14 +146,14 @@ public final class MulticastDiscoveryService implements AutoCloseable {
 
                 repliesByNodeId.putIfAbsent(ack.responder().nodeId(), ack);
 
-                log("Received JOIN_ACK from " + ack.responder()
+                Console.log("Received JOIN_ACK from " + ack.responder()
                         + " with neighbors=" + ack.responderNeighbors());
             } catch (SocketTimeoutException ignored) {
-                log("Socket timeout");
+                Console.log("Socket timeout");
                 break;
                 // return new ArrayList<>(repliesByNodeId.values());
-            } catch (Exception exception) {
-                log("Ignored invalid discovery reply: " + exception.getMessage());
+            } catch (IOException exception) {
+                Console.log("Ignored invalid discovery reply: " + exception.getMessage());
             }
         }
 
@@ -185,7 +185,7 @@ public final class MulticastDiscoveryService implements AutoCloseable {
 
         multicastSocket.send(packet);
 
-        log("Sent multicast JOIN_REQUEST txId=" + txId + ", sequence=" + sequence);
+        Console.log("Sent multicast JOIN_REQUEST txId=" + txId + ", sequence=" + sequence);
     }
 
     private void receiveLoop() {
@@ -209,10 +209,10 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                 }
             } catch (SocketException exception) {
                 if (running) {
-                    log("Discovery socket error: " + exception.getMessage());
+                    Console.log("Discovery socket error: " + exception.getMessage());
                 }
-            } catch (Exception exception) {
-                log("Discovery receive error: " + exception.getMessage());
+            } catch (IOException exception) {
+                Console.log("Discovery receive error: " + exception.getMessage());
             }
         }
     }
@@ -249,7 +249,7 @@ public final class MulticastDiscoveryService implements AutoCloseable {
             socket.send(packet);
         }
 
-        log("Sent JOIN_ACK to " + request.sender()
+        Console.log("Sent JOIN_ACK to " + request.sender()
                 + " for txId=" + request.txId()
                 + " with neighbors=" + snapshot.neighbors());
     }
@@ -265,7 +265,4 @@ public final class MulticastDiscoveryService implements AutoCloseable {
         receiverExecutor.shutdownNow();
     }
 
-    private static void log(String message) {
-        System.out.println("[" + LocalDateTime.now() + "] " + message);
-    }
 }

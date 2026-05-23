@@ -6,6 +6,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.monitoring.agent.constant.Constant;
+import com.monitoring.agent.util.Console;
 
 /**
  * Represents the state of a node.
@@ -39,11 +40,9 @@ public class NodeState {
      */
     public synchronized void markAlive(PhiAccrualFailure phiDetector, long pingSendTime) {
         if (status == NodeStatus.UNREACHABLE) {
-            System.out.println(
-                    "\n[" + Constant.NOW() + "] "
-                            + "ACK received from " + nodeAddress.nodeId()
-                            + ", but it is already UNREACHABLE locally. "
-                            + "It must rejoin as a new node instance.");
+            Console.log("ACK received from " + nodeAddress.nodeId()
+                    + ", but it is already UNREACHABLE locally. "
+                    + "It must rejoin as a new node instance.", Constant.PURPLE);
             return;
         }
 
@@ -54,13 +53,11 @@ public class NodeState {
             phiDetector.updateSlidingWindow(slidingWindowSeconds, intervalSeconds);
             // Just for make sure the elapse time is correct
 
-            System.out.println(
-                    "[" + LocalDateTime.now() + "] "
-                            + "ACK received from node " + nodeAddress.nodeId()
-                            + " | pingSendTimeMillis=" + pingSendTime
-                            + " | ackReceiveTimeMillis=" + now
-                            + " | elapsed=" + String.format("%.4f", intervalSeconds) + " seconds"
-                            + " | slidingWindow=" + slidingWindowSeconds);
+            Console.log("ACK received from node " + nodeAddress.nodeId()
+                    + " | pingSendTimeMillis=" + pingSendTime
+                    + " | ackReceiveTimeMillis=" + now
+                    + " | elapsed=" + String.format("%.4f", intervalSeconds) + " seconds"
+                    + " | slidingWindow=" + slidingWindowSeconds, Constant.YELLOW);
         }
 
         this.status = NodeStatus.ALIVE;
@@ -83,9 +80,9 @@ public class NodeState {
         }
 
         if (status == NodeStatus.UNREACHABLE) {
-            System.out.println("\n[" + Constant.NOW() + "] "
-                    + "ALIVE gossip for " + nodeAddress.nodeId()
-                    + " is newer, but local state is UNREACHABLE. Treat this as requiring JOIN/rejoin, not simple recovery.");
+            Console.log("ALIVE gossip for " + nodeAddress.nodeId()
+                    + " is newer, but local state is UNREACHABLE. Treat this as requiring JOIN/rejoin, not simple recovery.",
+                    Constant.PURPLE);
             return;
         }
 

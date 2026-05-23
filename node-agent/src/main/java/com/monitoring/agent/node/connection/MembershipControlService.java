@@ -6,12 +6,12 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import com.monitoring.agent.node.NodeAddress;
+import com.monitoring.agent.util.Console;
 
 public final class MembershipControlService implements AutoCloseable {
 
@@ -41,7 +41,7 @@ public final class MembershipControlService implements AutoCloseable {
         running = true;
         serverExecutor.submit(this::serverLoop);
 
-        log("Membership UDP control server listening on UDP port " + controlPort);
+        Console.log("Membership UDP control server listening on UDP port " + controlPort);
     }
 
     boolean commitDirectTarget(
@@ -114,11 +114,11 @@ public final class MembershipControlService implements AutoCloseable {
 
                 if ("COMMIT_ACK".equals(response.type())
                         && command.txId().equals(response.txId())) {
-                    log("Commit ACK from " + target + " for txId=" + command.txId());
+                    Console.log("Commit ACK from " + target + " for txId=" + command.txId());
                     return true;
                 }
             } catch (Exception exception) {
-                log("Commit attempt " + attempt + " failed for " + target
+                Console.log("Commit attempt " + attempt + " failed for " + target
                         + ": " + exception.getMessage());
             }
         }
@@ -161,10 +161,10 @@ public final class MembershipControlService implements AutoCloseable {
                 sendCommitAck(packet.getAddress(), packet.getPort(), message.txId(), result.accepted());
             } catch (SocketException exception) {
                 if (running) {
-                    log("Membership socket error: " + exception.getMessage());
+                    Console.log("Membership socket error: " + exception.getMessage());
                 }
             } catch (Exception exception) {
-                log("Membership control error: " + exception.getMessage());
+                Console.log("Membership control error: " + exception.getMessage());
             }
         }
     }
@@ -207,7 +207,4 @@ public final class MembershipControlService implements AutoCloseable {
         serverExecutor.shutdownNow();
     }
 
-    private static void log(String message) {
-        System.out.println("[" + LocalDateTime.now() + "] " + message);
-    }
 }

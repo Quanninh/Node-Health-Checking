@@ -1,6 +1,5 @@
 package com.monitoring.agent.node;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -9,6 +8,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import com.monitoring.agent.util.Console;
 
 public final class JoinPlanner {
 
@@ -80,14 +81,10 @@ public final class JoinPlanner {
                 .map(JoinAck::responder)
                 .toList();
 
-        log("Join plan created. directTargets=" + directTargets
+        Console.log("Join plan created. directTargets=" + directTargets
                 + ", evictions=" + evictionByDirectTarget);
 
         return new JoinPlan(directTargets, evictionByDirectTarget);
-    }
-
-    private static void log(String message) {
-        System.out.println("[" + LocalDateTime.now() + "] " + message);
     }
 
 }

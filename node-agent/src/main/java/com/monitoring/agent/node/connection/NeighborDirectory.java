@@ -1,6 +1,5 @@
 package com.monitoring.agent.node.connection;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -11,12 +10,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.GossipMessageType;
 import com.monitoring.agent.node.NodeAddress;
 import com.monitoring.agent.node.NodeState;
 import com.monitoring.agent.node.NodeStatus;
 import com.monitoring.agent.node.PhiAccrualFailure;
+import com.monitoring.agent.util.Console;
 
 /**
  * A directory to keep track of all neighbors of a given node and their states.
@@ -54,7 +53,7 @@ public class NeighborDirectory {
         if (nextIndex >= neighbors.size()) {
             Collections.shuffle(neighbors);
             nextIndex = 0;
-            log("Completed one full neighbor cycle. Shuffled reachable neighbors: " + neighbors);
+            Console.log("Completed one full neighbor cycle. Shuffled reachable neighbors: " + neighbors);
         }
 
         NodeAddress selected = neighbors.get(nextIndex);
@@ -245,10 +244,6 @@ public class NeighborDirectory {
         nodeStates.keySet().removeIf(nodeId -> !currentIds.contains(nodeId));
     }
 
-    private static void log(String message) {
-        System.out.println("[" + LocalDateTime.now() + "] " + message);
-    }
-
     // TODO: Javadoc
     /**
      * 
@@ -276,10 +271,8 @@ public class NeighborDirectory {
         NodeState state = nodeStates.get(subjectNodeId);
 
         if (state == null) {
-            System.out.println(
-                    "\n[" + Constant.NOW() + "] "
-                            + "Gossip subjectNodeId " + subjectNodeId
-                            + " is not in this node's neighborList. Message is recorded but not added.");
+            Console.log("Gossip subjectNodeId " + subjectNodeId
+                    + " is not in this node's neighborList. Message is recorded but not added.");
             return;
         }
 
@@ -307,4 +300,5 @@ public class NeighborDirectory {
         states.sort(Comparator.comparing(state -> state.getNodeAddress().nodeId()));
         return states;
     }
+
 }

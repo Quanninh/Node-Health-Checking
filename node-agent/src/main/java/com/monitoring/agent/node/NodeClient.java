@@ -4,10 +4,12 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import com.monitoring.agent.constant.Constant;
+import com.monitoring.agent.util.Console;
 
 public class NodeClient {
 
@@ -31,7 +33,7 @@ public class NodeClient {
                   "targetNodeId": "%s",
                   "timestamp": "%s"
                 }
-                """.formatted(localNodeId, targetNode.nodeId(), Constant.NOW());
+                """.formatted(localNodeId, targetNode.nodeId(), LocalDateTime.now());
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(targetNode.pingUri())
@@ -64,7 +66,7 @@ public class NodeClient {
                 targetNode.nodeId(),
                 targetNode.host(),
                 targetNode.port(),
-                Constant.NOW());
+                LocalDateTime.now());
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(helperNode.pingReqUri())
@@ -120,16 +122,11 @@ public class NodeClient {
         return httpClient
                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .orTimeout(ackTimeoutSeconds * 2L, TimeUnit.SECONDS)
-                .thenAccept(response -> System.out.println(
-                        "\n[" + Constant.NOW() + "] "
-                                + "Gossip sent to " + destinationNode.nodeId()
-                                + ". statusCode=" + response.statusCode()))
+                .thenAccept(response -> Console.log("Gossip sent to " + destinationNode.nodeId()
+                        + ". statusCode=" + response.statusCode(), Constant.YELLOW))
                 .exceptionally(error -> {
-                    System.out.println(
-                            "\n[" + Constant.NOW() + "] " + Constant.RED
-                                    + "Could not send gossip to "
-                                    + destinationNode.nodeId() + ": "
-                                    + error.getMessage() + Constant.RESET);
+                    Console.log("Could not send gossip to " + destinationNode.nodeId() + ": " + error.getMessage(),
+                            Constant.RED);
                     return null;
                 });
     }
