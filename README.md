@@ -202,14 +202,11 @@ For Window
 ```bash
 java -cp target/classes com.monitoring.agent.App `
   --node-id node-a `
-  --bind-host 127.0.0.1 `
-  --advertise-host 127.0.0.1 `
+  --bind-host 0.0.0.0 `
+  --advertise-host [ip addr of Internet] `
   --p2p-port 9001 `
-  --neighbors node-b@127.0.0.1:9002,node-c@127.0.0.1:9003 `
-  --phi-window-size 5 `
-  --phi-warning-threshold 1.0 `
-  --phi-suspected-threshold 3.0 `
-  --phi-unreachable-threshold 5.0
+  --max-neighbors 4 `
+  --multicast-interface en0
 ```
 
 ### Step 2: Start Node B
@@ -227,15 +224,11 @@ For Window
 ```bash
 java -cp target/classes com.monitoring.agent.App `
   --node-id node-b `
-  --bind-host 127.0.0.1 `
-  --advertise-host 127.0.0.1 `
+  --bind-host 0.0.0.0 `
+  --advertise-host [ip addr of Internet] `
   --p2p-port 9002 `
-  --neighbors node-a@127.0.0.1:9001,node-d@127.0.0.1:9004 `
-  --bootstrap-peers node-a@127.0.0.1:9001 `
-  --phi-window-size 5 `
-  --phi-warning-threshold 1.0 `
-  --phi-suspected-threshold 3.0 `
-  --phi-unreachable-threshold 5.0
+  --max-neighbors 4 `
+  --multicast-interface en0
 ```
 
 ### Step 3: Start Node C
@@ -253,15 +246,11 @@ For Window
 ```bash
 java -cp target/classes com.monitoring.agent.App `
   --node-id node-c `
-  --bind-host 127.0.0.1 `
-  --advertise-host 127.0.0.1 `
+  --bind-host 0.0.0.0 `
+  --advertise-host [ip addr of Internet] `
   --p2p-port 9003 `
-  --neighbors node-a@127.0.0.1:9001,node-d@127.0.0.1:9004 `
-  --bootstrap-peers node-a@127.0.0.1:9001,node-b@127.0.0.1:9002 `
-  --phi-window-size 5 `
-  --phi-warning-threshold 1.0 `
-  --phi-suspected-threshold 3.0 `
-  --phi-unreachable-threshold 5.0
+  --max-neighbors 4 `
+  --multicast-interface en0
 ```
 
 ### Step 4: Start Node D
@@ -279,15 +268,11 @@ For Window
 ```bash
 java -cp target/classes com.monitoring.agent.App `
   --node-id node-d `
-  --bind-host 127.0.0.1 `
-  --advertise-host 127.0.0.1 `
+  --bind-host 0.0.0.0 `
+  --advertise-host [ip addr of Internet] `
   --p2p-port 9004 `
-  --neighbors node-b@127.0.0.1:9002,node-c@127.0.0.1:9003 `
-  --bootstrap-peers node-a@127.0.0.1:9001,node-b@127.0.0.1:9002 `
-  --phi-window-size 5 `
-  --phi-warning-threshold 1.0 `
-  --phi-suspected-threshold 3.0 `
-  --phi-unreachable-threshold 5.0
+  --max-neighbors 4 `
+  --multicast-interface en0
 ```
 
 ### Step 5: Observe failure_report table
