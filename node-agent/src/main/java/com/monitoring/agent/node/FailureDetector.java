@@ -62,10 +62,10 @@ public class FailureDetector {
                 TimeUnit.SECONDS);
 
         scheduler.scheduleAtFixedRate(
-        neighborDirectory::removeUnreachableNeighbors,
-        UNREACHABLE_CLEANUP_INTERVAL_SECONDS,
-        UNREACHABLE_CLEANUP_INTERVAL_SECONDS,
-        TimeUnit.SECONDS);
+                neighborDirectory::removeUnreachableNeighbors,
+                UNREACHABLE_CLEANUP_INTERVAL_SECONDS,
+                UNREACHABLE_CLEANUP_INTERVAL_SECONDS,
+                TimeUnit.SECONDS);
     }
 
     /**
@@ -209,18 +209,46 @@ public class FailureDetector {
             return;
         }
 
-        if (phiStatus == NodeStatus.WARNING) {
-            neighborDirectory.markWarning(targetNode.nodeId(), phi);
-        } else {
-            neighborDirectory.markSuspected(targetNode.nodeId(), phi);
+        long now = System.currentTimeMillis();
+
+        double elapsedSeconds = (now - state.getLastAckTimeMs()) / 1000.0;
+
+        if (state.getLastAckTimeMs() <= 0) {
+            neighborDirectory.markSuspected(targetNode.nodeId(), 0.0);
             gossipService.gossipSuspect(targetNode);
+
+            System.out.println("targetNode " + targetNode.nodeId()
+                    + " has never replied. Mark SUSPECTED first.");
+
+            return;
         }
 
-        Console.log("targetNode " + targetNode.nodeId()
-                + " has no direct/indirect ACK. phi="
-                + String.format("%.4f", phi)
-                + ", status=" + neighborDirectory.getStatus(targetNode.nodeId())
-                + ". It is not declared unreachable yet.", Constant.YELLOW);
+        if (state.getSlidingWindowSeconds() == null
+                || state.getSlidingWindowSeconds().size() < 2) {
+
+            double coldStartTimeoutSeconds = probeIntervalSeconds * 3.0;
+
+            if (elapsedSeconds >= coldStartTimeoutSeconds) {
+                handleUnreachableNode(
+                        targetNode,
+                        unreachableThreshold,
+                        unreachableThreshold);
+                return;
+            }
+
+            if (phiStatus == NodeStatus.WARNING) {
+                neighborDirectory.markWarning(targetNode.nodeId(), phi);
+            } else {
+                neighborDirectory.markSuspected(targetNode.nodeId(), phi);
+                gossipService.gossipSuspect(targetNode);
+            }
+
+            Console.log("targetNode " + targetNode.nodeId()
+                    + " has no direct/indirect ACK. phi="
+                    + String.format("%.4f", phi)
+                    + ", status=" + neighborDirectory.getStatus(targetNode.nodeId())
+                    + ". It is not declared unreachable yet.", Constant.YELLOW);
+        }
     }
 
     /**
