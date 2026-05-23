@@ -61,8 +61,31 @@ public final class MulticastJoinCoordinator {
     }
 
     private void joinSmallNetwork(JoinPlan plan) {
+        String txId = UUID.randomUUID().toString();
+
         for (NodeAddress peer : plan.directTargets()) {
-            connectionManager.addIfSpace(peer, "small-network multicast join");
+            if (connectionManager.size() >= maxNeighbors) {
+                break;
+            }
+
+            boolean committed = membershipControlService.commitSmallJoinTarget(
+                    peer,
+                    localAddress,
+                    txId + ":small:" + peer.nodeId()
+            );
+
+            if (!committed) {
+                log("Small-network commit failed for " + peer
+                        + ". Not adding it locally to avoid one-way neighbor state.");
+                continue;
+            }
+
+            connectionManager.addIfSpace(peer, "small-network committed join");
+
+            log("Small-network bidirectional join established between "
+                    + localAddress.nodeId()
+                    + " and "
+                    + peer.nodeId());
         }
 
         Console.log("Small-network join complete. Current neighbors="

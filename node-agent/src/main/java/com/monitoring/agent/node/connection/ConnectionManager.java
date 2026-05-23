@@ -222,6 +222,48 @@ public final class ConnectionManager {
         }
     }
 
+    // JAVADOC for Phuc: handles cases where only the joining node gets the target node only(1-way relationship)
+    // Small Join because for scaled network, we have VICTIM and TARGET commit + ACK commit
+    CommitResult applySmallJoinCommit(
+        String txId,
+        NodeAddress joiningNode
+    ) {
+        lock.lock();
+
+        try {
+            if (!processedTransactions.add("SMALL_JOIN:" + txId)) {
+                return new CommitResult(true, "duplicate small join commit ignored");
+            }
+
+            if (joiningNode == null) {
+                return new CommitResult(false, "joining node is null");
+            }
+
+            if (joiningNode.nodeId().equals(localAddress.nodeId())) {
+                return new CommitResult(false, "cannot add self");
+            }
+
+            if (neighborsById.containsKey(joiningNode.nodeId())) {
+                return new CommitResult(true, "joining node already exists");
+            }
+
+            if (neighborsById.size() >= maxNeighbors) {
+                return new CommitResult(false, "small join target has no free neighbor slot");
+            }
+
+            neighborsById.put(joiningNode.nodeId(), joiningNode);
+            version++;
+
+            log("Node " + localAddress.nodeId()
+                    + " accepted small-network joining node " + joiningNode
+                    + ". neighbors=" + neighborsById.values());
+
+            return new CommitResult(true, "small join commit accepted");
+        } finally {
+            lock.unlock();
+        }
+}
+
     /**
      * Gets the size of the neighbors list.
      * 
