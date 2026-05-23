@@ -126,6 +126,26 @@ public final class MembershipControlService implements AutoCloseable {
         return false;
     }
 
+    boolean commitSmallJoinTarget(
+        NodeAddress target,
+        NodeAddress joiningNode,
+        String txId
+    ) {
+        DiscoveryMessage command = new DiscoveryMessage(
+                "COMMIT_SMALL_JOIN",
+                txId,
+                1,
+                joiningNode,
+                0,
+                0,
+                List.of(),
+                target.nodeId(),
+                null
+        );
+
+        return sendReliableCommand(target, command);
+    }
+
     private void serverLoop() {
         while (running) {
             try {
@@ -144,16 +164,23 @@ public final class MembershipControlService implements AutoCloseable {
 
                 CommitResult result;
 
-                if ("COMMIT_DIRECT".equals(message.type())) {
+                if ("COMMIT_SMALL_JOIN".equals(message.type())) {
+                    result = connectionManager.applySmallJoinCommit(
+                            message.txId(),
+                            message.sender()
+                    );
+                } else if ("COMMIT_DIRECT".equals(message.type())) {
                     result = connectionManager.applyDirectTargetCommit(
                             message.txId(),
                             message.sender(),
-                            message.evictedNodeId());
+                            message.evictedNodeId()
+                    );
                 } else if ("COMMIT_VICTIM".equals(message.type())) {
                     result = connectionManager.applyEvictedNodeCommit(
                             message.txId(),
                             message.sender(),
-                            message.directTargetId());
+                            message.directTargetId()
+                    );
                 } else {
                     continue;
                 }

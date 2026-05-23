@@ -82,21 +82,21 @@ public class NeighborDirectory {
         return helperNodes;
     }
 
-    // synchronized void removeUnreachableNeighbors() {
-    // List<String> unreachableNodeIds = nodeStates.values().stream()
-    // .filter(state -> state.getStatus() == NodeStatus.UNREACHABLE)
-    // .map(state -> state.getNodeAddress().nodeId())
-    // .toList();
+    public synchronized void removeUnreachableNeighbors() {
+        List<String> unreachableNodeIds = nodeStates.values().stream()
+                .filter(state -> state.getStatus() == NodeStatus.UNREACHABLE)
+                .map(state -> state.getNodeAddress().nodeId())
+                .toList();
 
-    // for (String nodeId : unreachableNodeIds) {
-    // connectionManager.remove(nodeId, "failure detector marked node unreachable");
-    // nodeStates.remove(nodeId);
-    // }
+        for (String nodeId : unreachableNodeIds) {
+            connectionManager.remove(nodeId, "failure detector marked node unreachable");
+            nodeStates.remove(nodeId);
+        }
 
-    // if (nextIndex > connectionManager.size()) {
-    // nextIndex = 0;
-    // }
-    // }
+        if (nextIndex > connectionManager.size()) {
+            nextIndex = 0;
+        }
+    }
 
     public synchronized List<NodeAddress> addresses() {
         syncStatesWithConnections();
