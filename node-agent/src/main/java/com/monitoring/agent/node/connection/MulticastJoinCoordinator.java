@@ -49,7 +49,7 @@ public final class MulticastJoinCoordinator {
                 return;
             }
 
-            if (acks.size() < maxNeighbors) {
+            if (acks.size() <= maxNeighbors) {
                 joinSmallNetwork(plan);
                 return;
             }

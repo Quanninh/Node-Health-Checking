@@ -253,7 +253,7 @@ java -cp target/classes com.monitoring.agent.App `
 ```
 
 ### Step 4: Start Node D
-Node D will listen on port 9004 and attempt to connect with Node A and Node B.
+Node D will listen on port 9004.
 ```bash
 java -cp target/classes com.monitoring.agent.App \
   --node-id node-d \
@@ -274,7 +274,32 @@ java -cp target/classes com.monitoring.agent.App `
   --multicast-interface en0
 ```
 
-### Step 5: Observe failure_report table
+### Step 5: Start Node E
+Node E will listen on port 9005.
+```bash
+java -cp target/classes com.monitoring.agent.App \
+  --node-id node-e \
+  --bind-host 0.0.0.0 \
+  --advertise-host [ip addr of Internet] \
+  --p2p-port 9005 \
+  --max-neighbors 4 \
+  --multicast-interface en0
+```
+
+
+### Step 6: Start Node F
+Node F will listen on port 9006.
+```bash
+java -cp target/classes com.monitoring.agent.App \
+  --node-id node-f \
+  --bind-host 0.0.0.0 \
+  --advertise-host [ip addr of Internet] \
+  --p2p-port 9006 \
+  --max-neighbors 4 \
+  --multicast-interface en0
+```
+
+### Step 7: Observe failure_report table
 If nothing is observed, consider Ctrl-C for one node and wait for a short period of time before running it again.
 
 ---
