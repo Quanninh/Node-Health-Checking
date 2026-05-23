@@ -88,13 +88,15 @@ public class FailureDetector {
 
         NodeAddress targetNode = selectedTarget.get();
 
+        long pingSendTime = System.currentTimeMillis();
+
         System.out.println(
                 "\n[" + Constant.NOW() + "] " + Constant.CYAN + "Node " + localNodeId + " directly pings targetNode "
                         + targetNode.nodeId() + " at " + targetNode.host() + ":" + targetNode.port() + Constant.RESET);
 
         nodeClient.ping(targetNode).thenAccept(ackReceived -> {
             if (ackReceived) {
-                handleAckReceived(targetNode, "direct ping");
+                handleAckReceived(targetNode, "direct ping", pingSendTime);
                 printLocalNodeStates();
                 return;
             }
@@ -111,6 +113,8 @@ public class FailureDetector {
      */
     private void handleDirectPingFailure(NodeAddress targetNode) {
         List<NodeAddress> helperNodes = neighborDirectory.selectHelperNodes(targetNode);
+
+        long pingSendTime = System.currentTimeMillis();
 
         System.out.println("\n[" + Constant.NOW() + "] " + Constant.RED + "Direct ping failed for targetNode "
                 + targetNode.nodeId() + ". helperNodes selected from neighborList: " + helperNodes + Constant.RESET);
@@ -131,7 +135,7 @@ public class FailureDetector {
                             .anyMatch(CompletableFuture::join);
 
                     if (anyHelperReceivedAck) {
-                        handleAckReceived(targetNode, "indirect ping-req by helperNodes");
+                        handleAckReceived(targetNode, "indirect ping-req by helperNodes", pingSendTime);
                     } else {
                         handleNoAckAfterDirectAndIndirect(targetNode);
                     }
@@ -146,7 +150,7 @@ public class FailureDetector {
      * @param targetNode the target node
      * @param source     the source of the ACK (direct, indirect...)
      */
-    private void handleAckReceived(NodeAddress targetNode, String source) {
+    private void handleAckReceived(NodeAddress targetNode, String source, long pingSendTime) {
         NodeStatus previousStatus = neighborDirectory.getStatus(targetNode.nodeId());
 
         if (previousStatus == NodeStatus.UNREACHABLE) {
@@ -157,7 +161,7 @@ public class FailureDetector {
             return;
         }
 
-        neighborDirectory.markAlive(targetNode.nodeId(), phiDetector);
+        neighborDirectory.markAlive(targetNode.nodeId(), phiDetector, pingSendTime);
 
         System.out.println("\n[" + Constant.NOW() + "] " + Constant.CYAN + "ACK received from Node "
                 + targetNode.nodeId() + " through " + source + ". Status becomes ALIVE." + Constant.RESET);

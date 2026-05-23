@@ -119,12 +119,12 @@ public class NeighborDirectory {
      * @param phiDetector phi accrual failure
      * @see PhiAccrualFailure
      */
-    public void markAlive(String nodeId, PhiAccrualFailure phiDetector) {
+    public void markAlive(String nodeId, PhiAccrualFailure phiDetector, long pingSendTime) {
         syncStatesWithConnections();
         NodeState state = nodeStates.get(nodeId);
 
         if (state != null) {
-            state.markAlive(phiDetector);
+            state.markAlive(phiDetector, pingSendTime);
         }
     }
 

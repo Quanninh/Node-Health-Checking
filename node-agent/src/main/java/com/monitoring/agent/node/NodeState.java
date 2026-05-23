@@ -37,7 +37,7 @@ public class NodeState {
      * 
      * @param phiDetector the phi accrual failure detector
      */
-    public synchronized void markAlive(PhiAccrualFailure phiDetector) {
+    public synchronized void markAlive(PhiAccrualFailure phiDetector, long pingSendTime) {
         if (status == NodeStatus.UNREACHABLE) {
             System.out.println(
                     "\n[" + Constant.NOW() + "] "
@@ -50,8 +50,17 @@ public class NodeState {
         long now = System.currentTimeMillis();
 
         if (lastAckTimeMs > 0) {
-            double intervalSeconds = (now - lastAckTimeMs) / 1000.0;
+            double intervalSeconds = (now - pingSendTime) / 1000.0;
             phiDetector.updateSlidingWindow(slidingWindowSeconds, intervalSeconds);
+            // Just for make sure the elapse time is correct
+
+            System.out.println(
+                    "[" + LocalDateTime.now() + "] "
+                            + "ACK received from node " + nodeAddress.nodeId()
+                            + " | pingSendTimeMillis=" + pingSendTime
+                            + " | ackReceiveTimeMillis=" + now
+                            + " | elapsed=" + String.format("%.4f", intervalSeconds) + " seconds"
+                            + " | slidingWindow=" + slidingWindowSeconds);
         }
 
         this.status = NodeStatus.ALIVE;
