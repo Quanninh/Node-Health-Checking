@@ -4,20 +4,23 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
+@Table(name = "nodes")
 public class Node {
 
     @Id
     private String id;
 
-    private double cpuUsage;
-    private double memoryUsage;
     private String ipAddress;
 
     private LocalDateTime lastHeartbeat;
 
     private String status;
+
+    public Node() {
+    }
 
     public String getId() {
         return id;
@@ -25,22 +28,6 @@ public class Node {
 
     public void setId(String id) {
         this.id = id;
-    }
-
-    public double getCpuUsage() {
-        return cpuUsage;
-    }
-
-    public void setCpuUsage(double cpuUsage) {
-        this.cpuUsage = cpuUsage;
-    }
-
-    public double getMemoryUsage() {
-        return memoryUsage;
-    }
-
-    public void setMemoryUsage(double memoryUsage) {
-        this.memoryUsage = memoryUsage;
     }
 
     public String getIpAddress() {
@@ -66,5 +53,4 @@ public class Node {
     public void setStatus(String status) {
         this.status = status;
     }
-
 }

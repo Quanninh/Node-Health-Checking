@@ -9,9 +9,7 @@ import org.springframework.stereotype.Service;
 
 import com.monitoring.model.FailureReport;
 import com.monitoring.model.Node;
-import com.monitoring.model.NodeHistory;
 import com.monitoring.repository.FailureReportRepository;
-import com.monitoring.repository.HistoryRepository;
 import com.monitoring.repository.NodeRepository;
 
 @Service
@@ -23,92 +21,147 @@ public class NodeService {
     private NodeRepository nodeRepository;
 
     @Autowired
-    private HistoryRepository historyRepository;
-
-    @Autowired
     private FailureReportRepository failureReportRepository;
 
-    public void processHeartbeat(Node node) {
-        node.setLastHeartbeat(LocalDateTime.now());
+    /**
+     * Process heartbeat from node.
+     */
+    public void processHeartbeat(Node incomingNode) {
+
+        Node node = nodeRepository
+                .findById(incomingNode.getId())
+                .orElse(new Node());
+
+        node.setId(incomingNode.getId());
+
+        node.setIpAddress(incomingNode.getIpAddress());
+
         node.setStatus("UP");
+
+        node.setLastHeartbeat(LocalDateTime.now());
 
         nodeRepository.save(node);
 
-        NodeHistory history = new NodeHistory();
-        history.setNodeId(node.getId());
-        history.setCpuUsage(node.getCpuUsage());
-        history.setMemoryUsage(node.getMemoryUsage());
-        history.setTimestamp(LocalDateTime.now());
-
-        historyRepository.save(history);
+        System.out.println(
+                "[" + LocalDateTime.now() + "] "
+                        + "Heartbeat received from "
+                        + node.getId()
+        );
     }
 
-    public List<Node> getAllNodes() {
-        return nodeRepository.findAll();
-    }
-
-    public Node getNodeById(String id) {
-        return nodeRepository.findById(id).orElse(null);
-    }
-
-    public List<NodeHistory> getNodeHistory(String id) {
-        return historyRepository.findByNodeId(id);
-    }
-
-    // TODO: This code was commented by someone
+    /**
+     * Detect nodes that stopped sending heartbeats.
+     */
     @Scheduled(fixedRate = 5000)
     public void checkNodeStatus() {
+
         try {
-            LocalDateTime cutoffTime = LocalDateTime.now().minusSeconds(NODE_TIMEOUT_SECONDS);
-            List<Node> nodes = nodeRepository.findAll();
+
+            LocalDateTime cutoffTime =
+                    LocalDateTime.now()
+                            .minusSeconds(NODE_TIMEOUT_SECONDS);
+
+            List<Node> nodes =
+                    nodeRepository.findAll();
 
             for (Node node : nodes) {
-                LocalDateTime lastHeartbeat = node.getLastHeartbeat();
 
-                if (lastHeartbeat != null && lastHeartbeat.isBefore(cutoffTime) && !node.getStatus().equals("DOWN")) {
+                LocalDateTime lastHeartbeat =
+                        node.getLastHeartbeat();
+
+                if (lastHeartbeat != null
+                        && lastHeartbeat.isBefore(cutoffTime)
+                        && !"DOWN".equals(node.getStatus())
+                        && !"FAILED".equals(node.getStatus())) {
+
                     node.setStatus("DOWN");
+
                     nodeRepository.save(node);
+
+                    System.out.println(
+                            "[" + LocalDateTime.now() + "] "
+                                    + node.getId()
+                                    + " marked as DOWN"
+                    );
                 }
             }
+
         } catch (Exception e) {
-            System.out.println("\n[" + LocalDateTime.now() + "] Scheduler skipped: " +
-    e.getMessage());
+
+            System.out.println(
+                    "[" + LocalDateTime.now() + "] "
+                            + "Scheduler skipped: "
+                            + e.getMessage()
+            );
         }
     }
 
+    /**
+     * Process distributed failure report.
+     */
     public void processFailureReport(FailureReport report) {
+
         if (report.getTimestamp() == null) {
+
             report.setTimestamp(LocalDateTime.now());
         }
 
-        if (report.getMessage() == null || report.getMessage().isBlank()) {
+        if (report.getStatus() == null
+                || report.getStatus().isBlank()) {
+
+            report.setStatus("UNREACHABLE");
+        }
+
+        if (report.getMessage() == null
+                || report.getMessage().isBlank()) {
+
             report.setMessage(
-                    "Node " + report.getReporterNodeId()
-                            + " finds out Node " + report.getFailedNodeId()
-                            + " has failed");
+                    "Node "
+                            + report.getReporterNodeId()
+                            + " detected "
+                            + report.getFailedNodeId()
+                            + " as unreachable"
+            );
         }
 
         failureReportRepository.save(report);
 
-        Node failedNode = nodeRepository
-                .findById(report.getFailedNodeId())
-                .orElseGet(() -> {
-                    Node node = new Node();
-                    node.setId(report.getFailedNodeId());
-                    return node;
-                });
+        Node failedNode =
+                nodeRepository
+                        .findById(report.getFailedNodeId())
+                        .orElseGet(() -> {
+
+                            Node node = new Node();
+
+                            node.setId(report.getFailedNodeId());
+
+                            return node;
+                        });
 
         failedNode.setStatus("FAILED");
-        failedNode.setLastHeartbeat(LocalDateTime.now());
 
         nodeRepository.save(failedNode);
 
         System.out.println(
-                "\n[" + LocalDateTime.now() + "] "
-                        + report.getMessage());
+                "[" + LocalDateTime.now() + "] "
+                        + report.getMessage()
+        );
+    }
+
+    public List<Node> getAllNodes() {
+
+        return nodeRepository.findAll();
+    }
+
+    public Node getNodeById(String id) {
+
+        return nodeRepository
+                .findById(id)
+                .orElse(null);
     }
 
     public List<FailureReport> getFailureReports() {
+
         return failureReportRepository.findAll();
     }
 }
