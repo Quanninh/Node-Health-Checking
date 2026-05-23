@@ -19,6 +19,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
 
 import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.DiscoveryConfig;
@@ -83,7 +84,8 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                 //     return collected;
                 // }
                 totalCollected.addAll(collected);
-                Thread.sleep(2000); // waits in case the network is crowded
+                int randomNum = ThreadLocalRandom.current().nextInt(1000, 5001);
+                Thread.sleep(randomNum); // waits in case the network is crowded
             }
 
             return totalCollected;
