@@ -62,10 +62,10 @@ public class FailureDetector {
                 TimeUnit.SECONDS);
 
         scheduler.scheduleAtFixedRate(
-        neighborDirectory::removeUnreachableNeighbors,
-        UNREACHABLE_CLEANUP_INTERVAL_SECONDS,
-        UNREACHABLE_CLEANUP_INTERVAL_SECONDS,
-        TimeUnit.SECONDS);
+                neighborDirectory::removeUnreachableNeighbors,
+                UNREACHABLE_CLEANUP_INTERVAL_SECONDS,
+                UNREACHABLE_CLEANUP_INTERVAL_SECONDS,
+                TimeUnit.SECONDS);
     }
 
     /**
@@ -79,6 +79,7 @@ public class FailureDetector {
         } catch (Exception exception) {
             Console.log("Failure detector error: "
                     + exception.getMessage(), Constant.RED);
+            exception.printStackTrace();
         }
     }
 
