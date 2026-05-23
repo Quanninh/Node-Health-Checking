@@ -164,7 +164,7 @@ public final class MulticastDiscoveryService implements AutoCloseable {
      * Send JOIN_REQUEST multicase message to the port.
      * 
      * @param txId      transaction ID
-     * @param sequence
+     * @param sequence  sequence ID
      * @param replyPort
      * @throws IOException
      */
@@ -194,6 +194,9 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                 Constant.CYAN + Constant.BLINK);
     }
 
+    /**
+     * Continuously receiving packets for discovery message.
+     */
     private void receiveLoop() {
         while (running) {
             try {
