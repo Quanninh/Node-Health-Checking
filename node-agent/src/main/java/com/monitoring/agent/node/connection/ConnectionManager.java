@@ -206,13 +206,13 @@ public final class ConnectionManager {
                 neighborsById.put(joiningNode.nodeId(), joiningNode);
             }
 
-            while (neighborsById.size() > maxNeighbors) {
-                String firstKey = neighborsById.keySet().iterator().next();
-                if (firstKey.equals(joiningNode.nodeId())) {
-                    break;
-                }
-                neighborsById.remove(firstKey);
-            }
+            // while (neighborsById.size() > maxNeighbors) {
+            //     String firstKey = neighborsById.keySet().iterator().next();
+            //     if (firstKey.equals(joiningNode.nodeId())) {
+            //         break;
+            //     }
+            //     neighborsById.remove(firstKey);
+            // }
 
             version++;
             log("Node " + localAddress.nodeId()
