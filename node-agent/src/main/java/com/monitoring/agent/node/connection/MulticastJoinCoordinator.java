@@ -131,13 +131,13 @@ public final class MulticastJoinCoordinator {
                     + " and handed over evicted node " + victim);
         }
 
-        for (NodeAddress directTarget : plan.directTargets()) {
-            if (connectionManager.size() >= maxNeighbors) {
-                break;
-            }
+        // for (NodeAddress directTarget : plan.directTargets()) {
+        //     if (connectionManager.size() >= maxNeighbors) {
+        //         break;
+        //     }
 
-            connectionManager.addIfSpace(directTarget, "fallback direct target");
-        }
+        //     connectionManager.addIfSpace(directTarget, "fallback direct target");
+        // }
 
         Console.log("Scaled join complete. Current neighbors="
                 + connectionManager.addresses());
