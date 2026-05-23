@@ -13,9 +13,6 @@ const API = "http://localhost:6789/api/nodes";
 const FAILURE_REPORTS_API = "http://localhost:6789/api/failure-reports";
 const REFRESH_INTERVAL_MS = 2000;
 
-let chart;
-let selectedNodeId = null;
-let isLoadingHistory = false;
 
 async function refreshDashboard() {
     try {
@@ -27,10 +24,6 @@ async function refreshDashboard() {
         updateNodeTable(nodes);
         updateFailureReportTable(failureReports);
         updateAlert(nodes, failureReports);
-
-        if (selectedNodeId) {
-            loadHistory(selectedNodeId);
-        }
     } catch (error) {
         updateConnectionStatus(
             "Cannot connect to Spring Boot API. Start ServerApplication first.",
@@ -103,7 +96,7 @@ function updateNodeTable(nodes) {
     if (nodes.length === 0) {
         const row = document.createElement("tr");
         row.innerHTML = `
-            <td colspan="6" class="empty-table">
+            <td colspan="4" class="empty-table">
                 No nodes received yet.
             </td>
         `;
@@ -121,17 +114,11 @@ function updateNodeTable(nodes) {
         row.innerHTML = `
             <td>${safeText(node.id)}</td>
             <td>${safeText(node.ipAddress)}</td>
-            <td>${formatNumber(node.cpuUsage)}%</td>
-            <td>${formatNumber(node.memoryUsage)}%</td>
-            <td class="${statusClass(node.status)}">${safeText(node.status)}</td>
+            <td class="${statusClass(node.status)}">
+                ${safeText(node.status)}
+            </td>
             <td>${formatTimestamp(node.lastHeartbeat)}</td>
         `;
-
-        row.onclick = () => {
-            selectedNodeId = node.id;
-            highlightSelectedRow(node.id);
-            loadHistory(node.id);
-        };
 
         table.appendChild(row);
     }
@@ -212,108 +199,108 @@ function updateAlert(nodes, failureReports) {
         `Reports received: ${failureReports.length}.`;
 }
 
-async function loadHistory(nodeId) {
-    if (isLoadingHistory) {
-        return;
-    }
+// async function loadHistory(nodeId) {
+//     if (isLoadingHistory) {
+//         return;
+//     }
 
-    selectedNodeId = nodeId;
-    isLoadingHistory = true;
+//     selectedNodeId = nodeId;
+//     isLoadingHistory = true;
 
-    document.getElementById("chartTitle").innerText =
-        "CPU / Memory History for " + nodeId;
+//     document.getElementById("chartTitle").innerText =
+//         "CPU / Memory History for " + nodeId;
 
-    try {
-        const response = await fetch(`${API}/${nodeId}/history`);
+//     try {
+//         const response = await fetch(`${API}/${nodeId}/history`);
 
-        if (!response.ok) {
-            throw new Error(
-                `GET /api/nodes/${nodeId}/history returned HTTP ${response.status}`,
-            );
-        }
+//         if (!response.ok) {
+//             throw new Error(
+//                 `GET /api/nodes/${nodeId}/history returned HTTP ${response.status}`,
+//             );
+//         }
 
-        const data = await response.json();
+//         const data = await response.json();
 
-        const labels = data.map((entry) =>
-            new Date(entry.timestamp).toLocaleTimeString(),
-        );
+//         const labels = data.map((entry) =>
+//             new Date(entry.timestamp).toLocaleTimeString(),
+//         );
 
-        const cpu = data.map((entry) => Number(entry.cpuUsage || 0));
-        const memory = data.map((entry) => Number(entry.memoryUsage || 0));
+//         const cpu = data.map((entry) => Number(entry.cpuUsage || 0));
+//         const memory = data.map((entry) => Number(entry.memoryUsage || 0));
 
-        drawChart(labels, cpu, memory);
-    } catch (error) {
-        console.error(error);
-    } finally {
-        isLoadingHistory = false;
-    }
-}
+//         drawChart(labels, cpu, memory);
+//     } catch (error) {
+//         console.error(error);
+//     } finally {
+//         isLoadingHistory = false;
+//     }
+// }
 
-function drawChart(labels, cpuData, memoryData) {
-    const canvas = document.getElementById("cpuMemoryChart");
+// function drawChart(labels, cpuData, memoryData) {
+//     const canvas = document.getElementById("cpuMemoryChart");
 
-    if (!canvas) {
-        return;
-    }
+//     if (!canvas) {
+//         return;
+//     }
 
-    const ctx = canvas.getContext("2d");
+//     const ctx = canvas.getContext("2d");
 
-    if (chart) {
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = cpuData;
-        chart.data.datasets[1].data = memoryData;
-        chart.update("none");
-        return;
-    }
+//     if (chart) {
+//         chart.data.labels = labels;
+//         chart.data.datasets[0].data = cpuData;
+//         chart.data.datasets[1].data = memoryData;
+//         chart.update("none");
+//         return;
+//     }
 
-    chart = new Chart(ctx, {
-        type: "line",
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: "CPU %",
-                    data: cpuData,
-                    borderColor: "#22c55e",
-                    fill: false,
-                    tension: 0.2,
-                },
-                {
-                    label: "Memory %",
-                    data: memoryData,
-                    borderColor: "#3b82f6",
-                    fill: false,
-                    tension: 0.2,
-                },
-            ],
-        },
-        options: {
-            responsive: true,
-            interaction: {
-                mode: "index",
-                intersect: false,
-            },
-            scales: {
-                y: {
-                    min: 0,
-                    max: 100,
-                },
-            },
-        },
-    });
-}
+//     chart = new Chart(ctx, {
+//         type: "line",
+//         data: {
+//             labels: labels,
+//             datasets: [
+//                 {
+//                     label: "CPU %",
+//                     data: cpuData,
+//                     borderColor: "#22c55e",
+//                     fill: false,
+//                     tension: 0.2,
+//                 },
+//                 {
+//                     label: "Memory %",
+//                     data: memoryData,
+//                     borderColor: "#3b82f6",
+//                     fill: false,
+//                     tension: 0.2,
+//                 },
+//             ],
+//         },
+//         options: {
+//             responsive: true,
+//             interaction: {
+//                 mode: "index",
+//                 intersect: false,
+//             },
+//             scales: {
+//                 y: {
+//                     min: 0,
+//                     max: 100,
+//                 },
+//             },
+//         },
+//     });
+// }
 
-function highlightSelectedRow(nodeId) {
-    document.querySelectorAll("#nodeTable tr").forEach((row) => {
-        row.classList.remove("selected-row");
-    });
+// function highlightSelectedRow(nodeId) {
+//     document.querySelectorAll("#nodeTable tr").forEach((row) => {
+//         row.classList.remove("selected-row");
+//     });
 
-    document.querySelectorAll("#nodeTable tr").forEach((row) => {
-        if (row.children.length > 0 && row.children[0].innerText === nodeId) {
-            row.classList.add("selected-row");
-        }
-    });
-}
+//     document.querySelectorAll("#nodeTable tr").forEach((row) => {
+//         if (row.children.length > 0 && row.children[0].innerText === nodeId) {
+//             row.classList.add("selected-row");
+//         }
+//     });
+// }
 
 function updateConnectionStatus(message, isConnected) {
     const status = document.getElementById("connectionStatus");

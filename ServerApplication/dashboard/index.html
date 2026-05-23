@@ -5,9 +5,6 @@
     <meta charset="UTF-8">
     <title>Node Health Checking Dashboard</title>
     <link rel="stylesheet" href="style.css">
-
-    <!-- Chart.js is used for CPU and memory history line chart. -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -64,12 +61,12 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Node ID</th>
-                        <th>IP Address</th>
-                        <th>CPU %</th>
-                        <th>Memory %</th>
-                        <th>Status</th>
-                        <th>Last Heartbeat</th>
+                        <tr>
+                            <th>Node ID</th>
+                            <th>IP Address</th>
+                            <th>Status</th>
+                            <th>Last Heartbeat</th>
+                        </tr>
                     </tr>
                 </thead>
 
@@ -100,17 +97,6 @@
 
                 <tbody id="failureReportTable"></tbody>
             </table>
-        </section>
-
-        <section class="panel">
-            <div class="panel-header">
-                <h2 id="chartTitle">CPU / Memory History</h2>
-                <p>
-                    Click a node row to load its stored CPU and memory history.
-                </p>
-            </div>
-
-            <canvas id="cpuMemoryChart"></canvas>
         </section>
 
     </div>

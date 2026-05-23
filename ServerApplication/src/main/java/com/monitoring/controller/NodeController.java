@@ -3,20 +3,12 @@ package com.monitoring.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import com.monitoring.model.FailureReport;
 import com.monitoring.model.Node;
-import com.monitoring.model.NodeHistory;
 import com.monitoring.service.NodeService;
-
-import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api")
@@ -26,41 +18,60 @@ public class NodeController {
     @Autowired
     private NodeService nodeService;
 
-    // Hearbeat endpoint
     @PostMapping("/heartbeat")
-    public String receiveHeartbeat(@RequestBody Node node, HttpServletRequest request) {
-        String ipAddress = request.getRemoteAddr();
-        node.setIpAddress(ipAddress);
+    public ResponseEntity<String> receiveHeartbeat(
+            @RequestBody Node node
+    ) {
 
         nodeService.processHeartbeat(node);
 
-        return "Heartbeat received from " + ipAddress;
-    }
-
-    @GetMapping("/nodes")
-    public List<Node> getAllNodes() {
-        return nodeService.getAllNodes();
-    }
-
-    @GetMapping("/nodes/{id}")
-    public Node getNodeById(@PathVariable String id) {
-        return nodeService.getNodeById(id);
-    }
-
-    @GetMapping("/nodes/{id}/history")
-    public List<NodeHistory> getNodeHistory(@PathVariable String id) {
-        return nodeService.getNodeHistory(id);
+        return ResponseEntity.ok(
+                "Heartbeat received from " + node.getId()
+        );
     }
 
     @PostMapping("/failure-report")
-    public String receiveFailureReport(@RequestBody FailureReport report) {
+    public ResponseEntity<String> receiveFailureReport(
+            @RequestBody FailureReport report
+    ) {
+
         nodeService.processFailureReport(report);
-        return "Failure report received: " + report.getMessage();
+
+        return ResponseEntity.ok(
+                "Failure report received"
+        );
+    }
+
+    @GetMapping("/nodes")
+    public ResponseEntity<List<Node>> getAllNodes() {
+
+        return ResponseEntity.ok(
+                nodeService.getAllNodes()
+        );
+    }
+
+    @GetMapping("/nodes/{id}")
+    public ResponseEntity<Node> getNodeById(
+            @PathVariable String id
+    ) {
+
+        Node node =
+                nodeService.getNodeById(id);
+
+        if (node == null) {
+
+            return ResponseEntity.notFound()
+                    .build();
+        }
+
+        return ResponseEntity.ok(node);
     }
 
     @GetMapping("/failure-reports")
-    public List<FailureReport> getFailureReports() {
-        return nodeService.getFailureReports();
-    }
+    public ResponseEntity<List<FailureReport>> getFailureReports() {
 
+        return ResponseEntity.ok(
+                nodeService.getFailureReports()
+        );
+    }
 }
