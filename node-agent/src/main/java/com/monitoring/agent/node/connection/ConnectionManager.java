@@ -254,7 +254,7 @@ public final class ConnectionManager {
             neighborsById.put(joiningNode.nodeId(), joiningNode);
             version++;
 
-            log("Node " + localAddress.nodeId()
+            Console.log("Node " + localAddress.nodeId()
                     + " accepted small-network joining node " + joiningNode
                     + ". neighbors=" + neighborsById.values());
 

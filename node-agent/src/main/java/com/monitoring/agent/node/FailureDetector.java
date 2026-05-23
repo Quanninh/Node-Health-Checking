@@ -8,6 +8,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import com.monitoring.agent.constant.Constant;
+import static com.monitoring.agent.constant.Constant.UNREACHABLE_CLEANUP_INTERVAL_SECONDS;
 import com.monitoring.agent.node.connection.NeighborDirectory;
 import com.monitoring.agent.util.Console;
 
@@ -59,6 +60,12 @@ public class FailureDetector {
                 probeIntervalSeconds,
                 probeIntervalSeconds,
                 TimeUnit.SECONDS);
+
+        scheduler.scheduleAtFixedRate(
+        neighborDirectory::removeUnreachableNeighbors,
+        UNREACHABLE_CLEANUP_INTERVAL_SECONDS,
+        UNREACHABLE_CLEANUP_INTERVAL_SECONDS,
+        TimeUnit.SECONDS);
     }
 
     /**

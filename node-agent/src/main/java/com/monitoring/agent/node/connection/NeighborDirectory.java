@@ -78,7 +78,7 @@ public class NeighborDirectory {
         return helperNodes;
     }
 
-    synchronized void removeUnreachableNeighbors() {
+    public synchronized void removeUnreachableNeighbors() {
         List<String> unreachableNodeIds = nodeStates.values().stream()
                 .filter(state -> state.getStatus() == NodeStatus.UNREACHABLE)
                 .map(state -> state.getNodeAddress().nodeId())

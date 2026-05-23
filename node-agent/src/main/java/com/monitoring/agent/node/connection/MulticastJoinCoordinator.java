@@ -75,14 +75,14 @@ public final class MulticastJoinCoordinator {
             );
 
             if (!committed) {
-                log("Small-network commit failed for " + peer
+                Console.log("Small-network commit failed for " + peer
                         + ". Not adding it locally to avoid one-way neighbor state.");
                 continue;
             }
 
             connectionManager.addIfSpace(peer, "small-network committed join");
 
-            log("Small-network bidirectional join established between "
+            Console.log("Small-network bidirectional join established between "
                     + localAddress.nodeId()
                     + " and "
                     + peer.nodeId());
