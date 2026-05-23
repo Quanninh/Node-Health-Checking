@@ -79,7 +79,6 @@ public class FailureDetector {
         } catch (Exception exception) {
             Console.log("Failure detector error: "
                     + exception.getMessage(), Constant.RED);
-            exception.printStackTrace();
         }
     }
 

@@ -87,6 +87,9 @@ public class NeighborDirectory {
         return helperNodes;
     }
 
+    /**
+     * Removes unreachable neighbors from the list of neighbors.
+     */
     public synchronized void removeUnreachableNeighbors() {
         List<String> unreachableNodeIds = nodeStates.values().stream()
                 .filter(state -> state.getStatus() == NodeStatus.UNREACHABLE)
@@ -94,7 +97,7 @@ public class NeighborDirectory {
                 .toList();
 
         for (String nodeId : unreachableNodeIds) {
-            connectionManager.remove(nodeId, "failure detector marked node unreachable");
+            connectionManager.remove(nodeId, "Failure detector marked node UNREACHABLE.");
             nodeStates.remove(nodeId);
         }
 
@@ -103,6 +106,12 @@ public class NeighborDirectory {
         }
     }
 
+    /**
+     * Syncs with the connection manager and gets the list of all addresses.
+     * 
+     * @return list of addresses
+     * @see NodeAddress
+     */
     public synchronized List<NodeAddress> addresses() {
         syncStatesWithConnections();
         return connectionManager.addresses();
@@ -217,6 +226,11 @@ public class NeighborDirectory {
                 .findFirst();
     }
 
+    /**
+     * Gets a list of reachable neighbors.
+     * 
+     * @return list of reachable neighbors
+     */
     private List<NodeAddress> reachableNeighbors() {
         syncStatesWithConnections();
         return connectionManager.addresses().stream()
@@ -224,11 +238,20 @@ public class NeighborDirectory {
                 .collect(Collectors.toCollection(ArrayList::new));
     }
 
+    /**
+     * Gets the status of a node without syncing with the connection manager.
+     * 
+     * @param nodeId
+     * @return
+     */
     private NodeStatus getStatusWithoutSync(String nodeId) {
         NodeState state = nodeStates.get(nodeId);
         return state == null ? NodeStatus.UNKNOWN : state.getStatus();
     }
 
+    /**
+     * Syncs the neighbor states with the connection manager.
+     */
     private void syncStatesWithConnections() {
         List<NodeAddress> currentNeighbors = connectionManager.addresses();
         Set<String> currentIds = new HashSet<>();
@@ -241,11 +264,11 @@ public class NeighborDirectory {
         nodeStates.keySet().removeIf(nodeId -> !currentIds.contains(nodeId));
     }
 
-    // TODO: Javadoc
     /**
+     * Gets the incarnation number of the node state.
      * 
-     * @param nodeId
-     * @return
+     * @param nodeId the node ID
+     * @return the incarnation number
      */
     public int incarnationNumber(String nodeId) {
         NodeState state = nodeStates.get(nodeId);
