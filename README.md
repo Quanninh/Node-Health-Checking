@@ -201,12 +201,11 @@ java -cp target/classes com.monitoring.agent.App \
 For Window
 ```bash
 java -cp target/classes com.monitoring.agent.App `
-  --node-id node-a `
   --bind-host 0.0.0.0 `
-  --advertise-host [ip addr of Internet] `
-  --p2p-port 9001 `
+  --advertise-host 192.168.1.4 `
   --max-neighbors 4 `
-  --multicast-interface en0
+  --multicast-interface en0 `
+  --p2p-port 9001 
 ```
 
 ### Step 2: Start Node B
@@ -225,7 +224,7 @@ For Window
 java -cp target/classes com.monitoring.agent.App `
   --node-id node-b `
   --bind-host 0.0.0.0 `
-  --advertise-host [ip addr of Internet] `
+  --advertise-host 192.168.1.4 `
   --p2p-port 9002 `
   --max-neighbors 4 `
   --multicast-interface en0
@@ -247,7 +246,7 @@ For Window
 java -cp target/classes com.monitoring.agent.App `
   --node-id node-c `
   --bind-host 0.0.0.0 `
-  --advertise-host [ip addr of Internet] `
+  --advertise-host 192.168.1.4 `
   --p2p-port 9003 `
   --max-neighbors 4 `
   --multicast-interface en0

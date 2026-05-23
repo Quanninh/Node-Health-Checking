@@ -4,7 +4,6 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.time.Duration;
 
-import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.agent.AgentConfig;
 import com.monitoring.agent.node.connection.ConnectionManager;
 import com.monitoring.agent.node.connection.MembershipControlService;
@@ -50,7 +49,7 @@ public class NodeAgent {
 
         connectionManager = new ConnectionManager(
                 localAddress,
-                Constant.DEFAULT_MAX_NEIGHBORS);
+                config.maxNeighbors());
 
         neighborDirectory = new NeighborDirectory(connectionManager);
 
@@ -96,7 +95,7 @@ public class NodeAgent {
                 InetAddress.getByName(config.multicastGroup()),
                 config.multicastPort(),
                 multicastInterface,
-                Constant.DEFAULT_MAX_NEIGHBORS,
+                config.maxNeighbors(),
                 config.discoveryRetryCount(),
                 Duration.ofMillis(config.discoveryRetryIntervalMillis()),
                 Duration.ofMillis(config.discoveryCollectionWindowMillis()),
@@ -115,7 +114,7 @@ public class NodeAgent {
 
         joinCoordinator = new MulticastJoinCoordinator(
                 localAddress,
-                Constant.DEFAULT_MAX_NEIGHBORS,
+                config.maxNeighbors(),
                 connectionManager,
                 discoveryService,
                 membershipControlService);

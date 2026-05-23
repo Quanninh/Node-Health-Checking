@@ -4,6 +4,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.monitoring.agent.constant.Constant;
 import static com.monitoring.agent.constant.Constant.DEFAULT_ACK_TIMEOUT_SECONDS;
 import static com.monitoring.agent.constant.Constant.DEFAULT_GOSSIP_INTERVAL_SECONDS;
 import static com.monitoring.agent.constant.Constant.DEFAULT_GOSSIP_TTL;
@@ -66,6 +67,7 @@ public record AgentConfig(
         String dashboardUrl,
         String multicastGroup,
         int multicastPort,
+        int maxNeighbors,
         String multicastInterfaceName,
         int discoveryRetryCount,
         int discoveryRetryIntervalMillis,
@@ -110,6 +112,10 @@ public record AgentConfig(
         int multicastPort = Integer.parseInt(values.getOrDefault(
                 "--multicast-port",
                 "50505"));
+
+        int maxNeighbors = Integer.parseInt(values.getOrDefault(
+                "--max-neighbors",
+                String.valueOf(Constant.DEFAULT_MAX_NEIGHBORS)));
 
         String multicastInterfaceName = values.getOrDefault(
                 "--multicast-interface",
@@ -171,6 +177,7 @@ public record AgentConfig(
                 dashboardUrl,
                 multicastGroup,
                 multicastPort,
+                maxNeighbors,
                 multicastInterfaceName,
                 discoveryRetryCount,
                 discoveryRetryIntervalMillis,
