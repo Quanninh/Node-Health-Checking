@@ -192,9 +192,11 @@ Node A will listen on port `9001` and attempt to connect with Node B and Node C.
 ```bash
 java -cp target/classes com.monitoring.agent.App \
   --node-id node-a \
-  --bind-host 127.0.0.1 \
-  --advertise-host 127.0.0.1 \
+  --bind-host 0.0.0.0 \
+  --advertise-host [ip addr of Internet] \
   --p2p-port 9001 \
+  --max-neighbors 4 \
+  --multicast-interface en0
 ```
 For Window
 ```bash
@@ -215,10 +217,11 @@ Node B will listen on port `9002` and attempt to connect with Node A and Node C.
 ```bash
 java -cp target/classes com.monitoring.agent.App \
   --node-id node-b \
-  --bind-host 127.0.0.1 \
-  --advertise-host 127.0.0.1 \
+  --bind-host 0.0.0.0 \
+  --advertise-host [ip addr of Internet] \
   --p2p-port 9002 \
-  --bootstrap-peers node-a@127.0.0.1:9001
+  --max-neighbors 4 \
+  --multicast-interface en0
 ```
 For Window
 ```bash
@@ -240,10 +243,11 @@ Node C will listen on port 9003 and attempt to connect with Node A and Node B.
 ```bash
 java -cp target/classes com.monitoring.agent.App \
   --node-id node-c \
-  --bind-host 127.0.0.1 \
-  --advertise-host 127.0.0.1 \
+  --bind-host 0.0.0.0 \
+  --advertise-host [ip addr of Internet] \
   --p2p-port 9003 \
-  --bootstrap-peers node-a@127.0.0.1:9001,node-b@127.0.0.1:9002
+  --max-neighbors 4 \
+  --multicast-interface en0
 ```
 For Window
 ```bash
@@ -265,10 +269,11 @@ Node D will listen on port 9004 and attempt to connect with Node A and Node B.
 ```bash
 java -cp target/classes com.monitoring.agent.App \
   --node-id node-d \
-  --bind-host 127.0.0.1 \
-  --advertise-host 127.0.0.1 \
+  --bind-host 0.0.0.0 \
+  --advertise-host [ip addr of Internet] \
   --p2p-port 9004 \
-  --bootstrap-peers node-a@127.0.0.1:9001,node-b@127.0.0.1:9002
+  --max-neighbors 4 \
+  --multicast-interface en0
 ```
 For Window
 ```bash
