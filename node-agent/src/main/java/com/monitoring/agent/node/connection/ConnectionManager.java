@@ -186,7 +186,7 @@ public final class ConnectionManager {
     }
 
     /**
-     * This function is called by the evicted node. The evictec node will add the
+     * This function is called by the evicted node. The evicted node will add the
      * joining node as a neighbor and remove its old neighbor.
      * 
      * @param txId              transaction ID

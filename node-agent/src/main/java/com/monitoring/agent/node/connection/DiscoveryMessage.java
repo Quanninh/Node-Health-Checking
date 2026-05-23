@@ -15,8 +15,8 @@ import com.monitoring.agent.node.NodeAddress;
  * Represents a discovery message.
  */
 public record DiscoveryMessage(
-        String type,
-        String txId,
+        DiscoveryMessageType type,
+        String transactionId,
         long sequence,
         NodeAddress sender,
         int replyPort,
@@ -37,8 +37,8 @@ public record DiscoveryMessage(
     public String encode() {
         Map<String, String> values = new LinkedHashMap<>();
 
-        values.put("type", type);
-        values.put("txId", txId);
+        values.put("type", type.toString());
+        values.put("txId", transactionId);
         values.put("sequence", Long.toString(sequence));
         values.put("nodeId", sender.nodeId());
         values.put("host", sender.host());
@@ -92,7 +92,7 @@ public record DiscoveryMessage(
                 Integer.parseInt(required(values, "port")));
 
         return new DiscoveryMessage(
-                required(values, "type"),
+                DiscoveryMessageType.valueOf(required(values, "type")),
                 required(values, "txId"),
                 Long.parseLong(required(values, "sequence")),
                 sender,

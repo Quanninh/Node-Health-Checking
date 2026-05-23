@@ -13,6 +13,9 @@ import java.util.concurrent.Executors;
 import com.monitoring.agent.node.NodeAddress;
 import com.monitoring.agent.util.Console;
 
+/**
+ * Receives and sends ACKs for Discovery Messages.
+ */
 public final class MembershipControlService implements AutoCloseable {
 
     private final NodeAddress localAddress;
@@ -25,10 +28,7 @@ public final class MembershipControlService implements AutoCloseable {
     private volatile boolean running;
     private DatagramSocket serverSocket;
 
-    public MembershipControlService(
-            NodeAddress localAddress,
-            ConnectionManager connectionManager,
-            int controlPort,
+    public MembershipControlService(NodeAddress localAddress, ConnectionManager connectionManager, int controlPort,
             int bufferSize) {
         this.localAddress = localAddress;
         this.connectionManager = connectionManager;
@@ -36,6 +36,11 @@ public final class MembershipControlService implements AutoCloseable {
         this.bufferSize = bufferSize;
     }
 
+    /**
+     * Starts the membership UDP control server.
+     * 
+     * @throws SocketException
+     */
     public void start() throws SocketException {
         serverSocket = new DatagramSocket(controlPort);
         running = true;
@@ -44,13 +49,20 @@ public final class MembershipControlService implements AutoCloseable {
         Console.log("Membership UDP control server listening on UDP port " + controlPort);
     }
 
-    boolean commitDirectTarget(
-            NodeAddress directTarget,
-            NodeAddress joiningNode,
-            NodeAddress evictedNode,
+    /**
+     * Sends a COMMIT_DIRECT discovery message.
+     * 
+     * @param directTarget the target node
+     * @param joiningNode  the joining node
+     * @param evictedNode  the evicted node
+     * @param txId         transaction ID
+     * @return the commit result
+     * @see ConnectionManager#applyDirectTargetCommit(String, NodeAddress, String)
+     */
+    public boolean commitDirectTarget(NodeAddress directTarget, NodeAddress joiningNode, NodeAddress evictedNode,
             String txId) {
         DiscoveryMessage command = new DiscoveryMessage(
-                "COMMIT_DIRECT",
+                DiscoveryMessageType.COMMIT_DIRECT,
                 txId,
                 1,
                 joiningNode,
@@ -63,13 +75,18 @@ public final class MembershipControlService implements AutoCloseable {
         return sendReliableCommand(directTarget, command);
     }
 
-    boolean commitVictim(
-            NodeAddress victim,
-            NodeAddress joiningNode,
-            NodeAddress oldDirectTarget,
-            String txId) {
+    /**
+     * Sends a COMMIT_VICTIM message.
+     * 
+     * @param victim          the evicted node
+     * @param joiningNode     the joining node
+     * @param oldDirectTarget the old direct target node
+     * @param txId            transaction ID
+     * @return the commit result
+     */
+    public boolean commitVictim(NodeAddress victim, NodeAddress joiningNode, NodeAddress oldDirectTarget, String txId) {
         DiscoveryMessage command = new DiscoveryMessage(
-                "COMMIT_VICTIM",
+                DiscoveryMessageType.COMMIT_VICTIM,
                 txId,
                 1,
                 joiningNode,
@@ -82,14 +99,19 @@ public final class MembershipControlService implements AutoCloseable {
         return sendReliableCommand(victim, command);
     }
 
-    private boolean sendReliableCommand(
-            NodeAddress target,
-            DiscoveryMessage command) {
+    /**
+     * Sends a discovery message reliably to the target node.
+     * 
+     * @param target           the target node address
+     * @param discoveryMessage the discovery message
+     * @return
+     */
+    private boolean sendReliableCommand(NodeAddress target, DiscoveryMessage discoveryMessage) {
         for (int attempt = 1; attempt <= 3; attempt++) {
             try (DatagramSocket socket = new DatagramSocket()) {
                 socket.setSoTimeout(700);
 
-                byte[] bytes = command.encode().getBytes(StandardCharsets.UTF_8);
+                byte[] bytes = discoveryMessage.encode().getBytes(StandardCharsets.UTF_8);
 
                 DatagramPacket packet = new DatagramPacket(
                         bytes,
@@ -112,9 +134,9 @@ public final class MembershipControlService implements AutoCloseable {
 
                 DiscoveryMessage response = DiscoveryMessage.decode(raw);
 
-                if ("COMMIT_ACK".equals(response.type())
-                        && command.txId().equals(response.txId())) {
-                    Console.log("Commit ACK from " + target + " for txId=" + command.txId());
+                if (response.type() == DiscoveryMessageType.COMMIT_ACK
+                        && discoveryMessage.transactionId().equals(response.transactionId())) {
+                    Console.log("Commit ACK from " + target + " for txId=" + discoveryMessage.transactionId());
                     return true;
                 }
             } catch (Exception exception) {
@@ -126,12 +148,17 @@ public final class MembershipControlService implements AutoCloseable {
         return false;
     }
 
-     boolean commitSmallJoinTarget(
-            NodeAddress target,
-            NodeAddress joiningNode,
-            String txId) {
+    /**
+     * Commits a SMALL_JOIN message.
+     * 
+     * @param target
+     * @param joiningNode
+     * @param txId
+     * @return
+     */
+    public boolean commitSmallJoinTarget(NodeAddress target, NodeAddress joiningNode, String txId) {
         DiscoveryMessage command = new DiscoveryMessage(
-                "COMMIT_SMALL_JOIN",
+                DiscoveryMessageType.COMMIT_SMALL_JOIN,
                 txId,
                 1,
                 joiningNode,
@@ -144,6 +171,14 @@ public final class MembershipControlService implements AutoCloseable {
         return sendReliableCommand(target, command);
     }
 
+    /**
+     * Server loop.
+     * 
+     * 1. Receives a packet.
+     * 2. Converts the packet into a discovery message.
+     * 3. Check the type of the message and handle accordingly.
+     * 4. Sends a COMMIT_ACK message back to the sender.
+     */
     private void serverLoop() {
         while (running) {
             try {
@@ -162,42 +197,49 @@ public final class MembershipControlService implements AutoCloseable {
 
                 CommitResult result;
 
-                if ("COMMIT_SMALL_JOIN".equals(message.type())) {
-                    result = connectionManager.applySmallJoinCommit(
-                            message.txId(),
-                            message.sender());
-                } else if ("COMMIT_DIRECT".equals(message.type())) {
-                    result = connectionManager.applyDirectTargetCommit(
-                            message.txId(),
-                            message.sender(),
-                            message.evictedNodeId());
-                } else if ("COMMIT_VICTIM".equals(message.type())) {
-                    result = connectionManager.applyEvictedNodeCommit(
-                            message.txId(),
-                            message.sender(),
-                            message.directTargetId());
-                } else {
+                if (null == message.type()) {
                     continue;
-                }
+                } else
+                    switch (message.type()) {
+                        case COMMIT_SMALL_JOIN -> result = connectionManager.applySmallJoinCommit(
+                                message.transactionId(),
+                                message.sender());
+                        case COMMIT_DIRECT -> result = connectionManager.applyDirectTargetCommit(
+                                message.transactionId(),
+                                message.sender(),
+                                message.evictedNodeId());
+                        case COMMIT_VICTIM -> result = connectionManager.applyEvictedNodeCommit(
+                                message.transactionId(),
+                                message.sender(),
+                                message.directTargetId());
+                        default -> {
+                            continue;
+                        }
+                    }
 
-                sendCommitAck(packet.getAddress(), packet.getPort(), message.txId(), result.accepted());
+                sendCommitAck(packet.getAddress(), packet.getPort(), message.transactionId(), result.accepted());
             } catch (SocketException exception) {
                 if (running) {
                     Console.log("Membership socket error: " + exception.getMessage());
                 }
-            } catch (Exception exception) {
+            } catch (IOException exception) {
                 Console.log("Membership control error: " + exception.getMessage());
             }
         }
     }
 
-    private void sendCommitAck(
-            InetAddress address,
-            int port,
-            String txId,
-            boolean accepted) throws IOException {
+    /**
+     * Sends COMMIT_ACK discovery message.
+     * 
+     * @param address
+     * @param port
+     * @param txId     transaction ID
+     * @param accepted whether the commit is accepted or not
+     * @throws IOException
+     */
+    private void sendCommitAck(InetAddress address, int port, String txId, boolean accepted) throws IOException {
         DiscoveryMessage ack = new DiscoveryMessage(
-                "COMMIT_ACK",
+                DiscoveryMessageType.COMMIT_ACK,
                 txId,
                 1,
                 localAddress,

@@ -81,7 +81,7 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                 sendJoinRequest(txId, attempt, replyPort);
                 List<JoinAck> collected = collectReplies(replySocket, txId, config.retryInterval());
                 // if (!collected.isEmpty()) {
-                //     return collected;
+                // return collected;
                 // }
                 totalCollected.addAll(collected);
                 int randomNum = ThreadLocalRandom.current().nextInt(1000, 5001);
@@ -124,13 +124,13 @@ public final class MulticastDiscoveryService implements AutoCloseable {
 
                 DiscoveryMessage message = DiscoveryMessage.decode(raw);
 
-                Console.log(message.txId() + message.type());
+                Console.log(message.transactionId() + message.type());
                 if (!"JOIN_ACK".equals(message.type())) {
                     Console.log("Not Not JOIN_ACK received, discarded.", Constant.PURPLE);
                     continue;
                 }
 
-                if (!txId.equals(message.txId())) {
+                if (!txId.equals(message.transactionId())) {
                     Console.log("Wrong txId received, discarded.", Constant.PURPLE);
                     continue;
                 }
@@ -140,7 +140,7 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                     continue;
                 }
 
-                String key = message.txId() + ":" + message.sender().nodeId();
+                String key = message.transactionId() + ":" + message.sender().nodeId();
 
                 // add returns false if key already exist in set
                 if (!seenAcks.add(key)) {
@@ -148,7 +148,7 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                     continue;
                 }
 
-                JoinAck ack = new JoinAck(message.txId(), message.sender(), message.neighborVersion(),
+                JoinAck ack = new JoinAck(message.transactionId(), message.sender(), message.neighborVersion(),
                         message.neighbors());
 
                 repliesByNodeId.putIfAbsent(ack.responder().nodeId(), ack);
@@ -176,7 +176,7 @@ public final class MulticastDiscoveryService implements AutoCloseable {
      */
     private void sendJoinRequest(String txId, long sequence, int replyPort) throws IOException {
         DiscoveryMessage message = new DiscoveryMessage(
-                "JOIN_REQUEST",
+                DiscoveryMessageType.JOIN_REQUEST,
                 txId,
                 sequence,
                 localAddress,
@@ -219,7 +219,7 @@ public final class MulticastDiscoveryService implements AutoCloseable {
 
                 DiscoveryMessage message = DiscoveryMessage.decode(raw);
 
-                if ("JOIN_REQUEST".equals(message.type())) {
+                if (message.type() == DiscoveryMessageType.JOIN_REQUEST) {
                     handleJoinRequest(packet.getAddress(), message);
                 }
             } catch (SocketException exception) {
@@ -240,8 +240,8 @@ public final class MulticastDiscoveryService implements AutoCloseable {
         Snapshot snapshot = connectionManager.takeSnapshot();
 
         DiscoveryMessage ack = new DiscoveryMessage(
-                "JOIN_ACK",
-                request.txId(),
+                DiscoveryMessageType.JOIN_ACK,
+                request.transactionId(),
                 request.sequence(),
                 localAddress,
                 0,
@@ -263,7 +263,7 @@ public final class MulticastDiscoveryService implements AutoCloseable {
         }
 
         Console.log("Sent JOIN_ACK to " + request.sender()
-                + " for txId=" + request.txId()
+                + " for txId=" + request.transactionId()
                 + " with neighbors=" + snapshot.neighbors());
     }
 
