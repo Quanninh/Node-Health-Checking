@@ -11,6 +11,9 @@ import java.util.concurrent.TimeUnit;
 import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.util.Console;
 
+/**
+ * Sends messages to other nodes. Includes: Ping, Ping request, Gossip.
+ */
 public class NodeClient {
 
     private final String localNodeId;
@@ -55,6 +58,14 @@ public class NodeClient {
                 .exceptionally(error -> false);
     }
 
+    /**
+     * Sends a PING_REQ using HTTP to the helper node to ask the helper node to ping
+     * the target node and waits for the response.
+     * 
+     * @param helperNode the helper node
+     * @param targetNode the target node
+     * @return when the response arrives, true if status code is success
+     */
     public CompletableFuture<Boolean> pingReq(NodeAddress helperNode, NodeAddress targetNode) {
         String json = """
                 {
@@ -90,7 +101,14 @@ public class NodeClient {
                 .exceptionally(error -> false);
     }
 
-    public CompletableFuture<Void> sendGossipMessage(NodeAddress destinationNode, GossipMessage message) {
+    /**
+     * Sends a gossip message to the target node.
+     * 
+     * @param targetNode the target node
+     * @param message    the gossip message
+     * @return nothing
+     */
+    public CompletableFuture<Void> sendGossipMessage(NodeAddress targetNode, GossipMessage message) {
         String safeDetails = message.details() == null
                 ? ""
                 : message.details().replace("\\", "\\\\").replace("\"", "\\\"");
@@ -119,7 +137,7 @@ public class NodeClient {
                 safeDetails);
 
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(destinationNode.gossipUri())
+                .uri(targetNode.gossipUri())
                 .timeout(Duration.ofSeconds(ackTimeoutSeconds * 2L))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(json))
@@ -128,10 +146,10 @@ public class NodeClient {
         return httpClient
                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .orTimeout(ackTimeoutSeconds * 2L, TimeUnit.SECONDS)
-                .thenAccept(response -> Console.log("Gossip sent to " + destinationNode.nodeId()
+                .thenAccept(response -> Console.log("Gossip sent to " + targetNode.nodeId()
                         + ". statusCode=" + response.statusCode(), Constant.YELLOW))
                 .exceptionally(error -> {
-                    Console.log("Could not send gossip to " + destinationNode.nodeId() + ": " + error.getMessage(),
+                    Console.log("Could not send gossip to " + targetNode.nodeId() + ": " + error.getMessage(),
                             Constant.RED);
                     return null;
                 });
