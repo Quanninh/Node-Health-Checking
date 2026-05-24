@@ -4,6 +4,9 @@ import java.time.Instant;
 
 import com.monitoring.agent.node.NodeAddress;
 
+/**
+ * Represents a deficient node, i.e. not having enough neighbors.
+ */
 public record DeficientNodeRecord(
         NodeAddress node,
         int degree,
@@ -14,4 +17,5 @@ public record DeficientNodeRecord(
     public String nodeId() {
         return node.nodeId();
     }
+
 }

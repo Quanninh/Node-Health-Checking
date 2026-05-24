@@ -1,7 +1,5 @@
 package com.monitoring.agent.node.recovery;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 import com.monitoring.agent.node.NodeAddress;
@@ -11,35 +9,31 @@ public class DirectRepairCoordinator {
     private final RepairCache repairCache;
     private final RepairLockManager lockManager;
 
-    public DirectRepairCoordinator(
-            RepairCache repairCache,
-            RepairLockManager lockManager) {
-
+    public DirectRepairCoordinator(RepairCache repairCache, RepairLockManager lockManager) {
         this.repairCache = repairCache;
         this.lockManager = lockManager;
     }
 
-    public NodeAddress findDirectCandidate(
-            NodeAddress localNode,
-            List<NodeAddress> deficientNodes) {
-
-        List<NodeAddress> sorted =
-                new ArrayList<>(deficientNodes);
-
-        sorted.sort(Comparator.comparing(NodeAddress::nodeId));
-
-        for (NodeAddress candidate : sorted) {
-
+    /**
+     * Finds a candidate to add as a new neighbor.
+     * 
+     * @param localNode
+     * @param deficientNodes
+     * @return a deficient candidate node
+     */
+    public NodeAddress findDirectCandidate(NodeAddress localNode, List<NodeAddress> deficientNodes) {
+        for (NodeAddress candidate : deficientNodes) {
+            // If the node is equal to self, skip
             if (candidate.nodeId().equals(localNode.nodeId())) {
                 continue;
             }
 
-            if (repairCache.areAdjacent(
-                    localNode.nodeId(),
-                    candidate.nodeId())) {
+            // If the node is already a neighbor, skip
+            if (repairCache.areAdjacent(localNode.nodeId(), candidate.nodeId())) {
                 continue;
             }
 
+            // If the node is locked, skip
             if (lockManager.isLocked(candidate.nodeId())) {
                 continue;
             }
@@ -49,4 +43,5 @@ public class DirectRepairCoordinator {
 
         return null;
     }
+
 }
