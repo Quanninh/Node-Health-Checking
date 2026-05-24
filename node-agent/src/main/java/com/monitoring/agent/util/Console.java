@@ -4,6 +4,13 @@ import com.monitoring.agent.constant.Constant;
 
 public class Console {
 
+    private static String nodeId;
+
+    public static void setNodeId(String nodeId) {
+        // not working
+        this.nodeId = nodeId;
+    }
+
     public static void log(String message, String color) {
         System.out.println("[" + Constant.NOW() + "] " + color + message + Constant.RESET);
     }

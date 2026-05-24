@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.NodeAddress;
 import com.monitoring.agent.util.Console;
 
@@ -102,7 +103,7 @@ public final class MembershipControlService implements AutoCloseable {
     }
 
     /**
-     * Sends a discovery message reliably to the target node.
+     * Sends a discovery message reliably to the target node AND rceeives an ACK.
      * 
      * @param target           the target node address
      * @param discoveryMessage the discovery message
@@ -133,6 +134,8 @@ public final class MembershipControlService implements AutoCloseable {
                         responsePacket.getOffset(),
                         responsePacket.getLength(),
                         StandardCharsets.UTF_8);
+
+                Console.log("Received by Membership Control Service. Raw message: " + raw, Constant.BG_PURPLE);
 
                 DiscoveryMessage response = DiscoveryMessage.decode(raw);
 
@@ -196,6 +199,9 @@ public final class MembershipControlService implements AutoCloseable {
                         packet.getOffset(),
                         packet.getLength(),
                         StandardCharsets.UTF_8);
+
+                Console.log("Received by Membership Control Service (serverLoop). Raw message: " + raw,
+                        Constant.BG_PURPLE);
 
                 DiscoveryMessage message = DiscoveryMessage.decode(raw);
 

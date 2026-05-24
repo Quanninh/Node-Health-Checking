@@ -136,6 +136,8 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                         packet.getLength(),
                         StandardCharsets.UTF_8);
 
+                Console.log("Received by Multicast Discovery Service. Raw message: " + raw, Constant.BG_PURPLE);
+
                 DiscoveryMessage message = DiscoveryMessage.decode(raw);
 
                 Console.log(message.transactionId() + message.type());
@@ -231,6 +233,8 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                         packet.getOffset(),
                         packet.getLength(),
                         StandardCharsets.UTF_8);
+
+                Console.log("Received by Multicast Discovery Service. Raw message: " + raw, Constant.BG_PURPLE);
 
                 DiscoveryMessage message = DiscoveryMessage.decode(raw);
 

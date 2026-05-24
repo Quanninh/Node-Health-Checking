@@ -54,7 +54,7 @@ public class NetworkTopologyCache {
      * 
      * @param nodeId the deficient node
      */
-    private void markDeficient(String nodeId) {
+    public void markDeficient(String nodeId) {
         deficientNodes.add(nodeId);
     }
 

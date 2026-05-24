@@ -118,11 +118,12 @@ public class NodeAgent {
                 discoveryService,
                 membershipControlService);
 
-        recoveryUdpService = new RecoveryUDPService();
+        repairCache = new NetworkTopologyCache();
+
+        recoveryUdpService = new RecoveryUDPService(localAddress, repairCache, connectionManager,
+                config.p2pPort(), discoveryConfig.packetBufferSize());
 
         recoveryControlService = new RecoveryControlService(localAddress, connectionManager, recoveryUdpService);
-
-        repairCache = new NetworkTopologyCache();
 
         directRepairCoordinator = new DirectRepairCoordinator(repairCache);
 
@@ -136,6 +137,7 @@ public class NodeAgent {
                 repairCache, directRepairCoordinator, rewiringCoordinator, convergenceMonitor);
 
         failureRecoveryManager = new FailureRecoveryManager(connectionManager, recoveryCoordinator);
+
         neighborDirectory = new NeighborDirectory(connectionManager, failureRecoveryManager);
 
         gossipService = new GossipService(

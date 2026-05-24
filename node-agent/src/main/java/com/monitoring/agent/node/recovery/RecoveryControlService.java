@@ -1,7 +1,6 @@
 package com.monitoring.agent.node.recovery;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.UUID;
 
 import com.monitoring.agent.constant.Constant;
@@ -43,7 +42,7 @@ public class RecoveryControlService {
                 localAddress,
                 localAddress,
                 null,
-                List.of(),
+                connectionManager.neighborAddresses(),
                 ttl,
                 System.currentTimeMillis(),
                 0);
@@ -57,7 +56,7 @@ public class RecoveryControlService {
      * @param message the recovery message
      * @see RecoveryUDPService#send(NodeAddress, RecoveryMessage)
      */
-    private void broadcast(RecoveryMessage message) {
+    public void broadcast(RecoveryMessage message) {
         for (NodeAddress neighbor : connectionManager.neighborAddresses()) {
             try {
                 udpService.send(neighbor, message);
