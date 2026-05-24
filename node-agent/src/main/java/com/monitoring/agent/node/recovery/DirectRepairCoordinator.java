@@ -3,120 +3,50 @@ package com.monitoring.agent.node.recovery;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 
 import com.monitoring.agent.node.NodeAddress;
-import com.monitoring.agent.node.connection.ConnectionManager;
 
-public final class DirectRepairCoordinator {
-    private final NodeAddress localAddress;
-
-    private final ConnectionManager connectionManager;
+public class DirectRepairCoordinator {
 
     private final RepairCache repairCache;
-
     private final RepairLockManager lockManager;
 
-    private final RecoveryControlService controlService;
-
     public DirectRepairCoordinator(
-            NodeAddress localAddress,
-            ConnectionManager connectionManager,
             RepairCache repairCache,
-            RepairLockManager lockManager,
-            RecoveryControlService controlService) {
+            RepairLockManager lockManager) {
 
-        this.localAddress = localAddress;
-        this.connectionManager = connectionManager;
         this.repairCache = repairCache;
         this.lockManager = lockManager;
-        this.controlService = controlService;
     }
 
-    public void attemptRepair(String repairEpoch) {
+    public NodeAddress findDirectCandidate(
+            NodeAddress localNode,
+            List<NodeAddress> deficientNodes) {
 
-        Optional<NodeAddress> candidate = selectCandidate();
+        List<NodeAddress> sorted =
+                new ArrayList<>(deficientNodes);
 
-        if (candidate.isEmpty()) {
-            return;
-        }
+        sorted.sort(Comparator.comparing(NodeAddress::nodeId));
 
-        executeRepair(candidate.get(), repairEpoch);
-    }
+        for (NodeAddress candidate : sorted) {
 
-    private Optional<NodeAddress> selectCandidate() {
-
-        List<DeficientNodeRecord> candidates =
-                new ArrayList<>(
-                        repairCache.deficientNodes().values());
-
-        candidates.sort(
-                Comparator.comparing(DeficientNodeRecord::nodeId));
-
-        for (DeficientNodeRecord record : candidates) {
-
-            NodeAddress candidate = record.node();
-
-            if (candidate.nodeId()
-                    .equals(localAddress.nodeId())) {
+            if (candidate.nodeId().equals(localNode.nodeId())) {
                 continue;
             }
 
-            if (connectionManager.containsNode(
+            if (repairCache.areAdjacent(
+                    localNode.nodeId(),
                     candidate.nodeId())) {
                 continue;
             }
 
-            if (lockManager.isLocked(
-                    candidate.nodeId())) {
+            if (lockManager.isLocked(candidate.nodeId())) {
                 continue;
             }
 
-            if (localAddress.nodeId()
-                    .compareTo(candidate.nodeId()) > 0) {
-                continue;
-            }
-
-            return Optional.of(candidate);
+            return candidate;
         }
 
-        return Optional.empty();
-    }
-
-    private void executeRepair(
-            NodeAddress target,
-            String repairEpoch) {
-
-        boolean locked =
-                controlService.requestNodeLock(target);
-
-        if (!locked) {
-            return;
-        }
-
-        try {
-
-            boolean accepted =
-                    controlService.requestDirectRepair(
-                            target,
-                            repairEpoch);
-
-            if (!accepted) {
-                return;
-            }
-
-            connectionManager.addIfSpace(
-                    target,
-                    "direct repair");
-
-            controlService.broadcastRepairSuccess(
-                    localAddress,
-                    target,
-                    repairEpoch);
-
-        } finally {
-            controlService.releaseNodeLock(target);
-        }
+        return null;
     }
 }
-    

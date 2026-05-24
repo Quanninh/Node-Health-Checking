@@ -1,24 +1,24 @@
 package com.monitoring.agent.node.recovery;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-public final class RepairLockManager {
-    private static final long LOCK_TIMEOUT_MS = 10_000;
+public class RepairLockManager {
 
     private final Map<String, LockRecord> locks =
             new ConcurrentHashMap<>();
 
-    public boolean tryLock(String nodeId) {
+    public boolean tryLock(
+            String nodeId,
+            String owner,
+            String repairEpoch) {
 
-        cleanupExpiredLocks();
-
-        LockRecord record = new LockRecord(
+        return locks.putIfAbsent(
                 nodeId,
-                System.currentTimeMillis() + LOCK_TIMEOUT_MS);
-
-        return locks.putIfAbsent(nodeId, record) == null;
+                new LockRecord(
+                        owner,
+                        System.currentTimeMillis(),
+                        repairEpoch)) == null;
     }
 
     public void unlock(String nodeId) {
@@ -26,13 +26,6 @@ public final class RepairLockManager {
     }
 
     public boolean isLocked(String nodeId) {
-
-        cleanupExpiredLocks();
-
         return locks.containsKey(nodeId);
-    }
-
-    public void cleanupExpiredLocks() {
-        locks.values().removeIf(LockRecord::expired);
     }
 }

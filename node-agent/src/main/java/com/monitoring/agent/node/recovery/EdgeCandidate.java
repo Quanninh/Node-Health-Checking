@@ -3,7 +3,7 @@ package com.monitoring.agent.node.recovery;
 import com.monitoring.agent.node.NodeAddress;
 
 public record EdgeCandidate(
-        NodeAddress nodeA,
-        NodeAddress nodeB) {
+        NodeAddress left,
+        NodeAddress right) {
 }    
 

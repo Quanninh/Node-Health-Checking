@@ -1,55 +1,71 @@
 package com.monitoring.agent.node.recovery;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
 
 import com.monitoring.agent.node.NodeAddress;
-import com.monitoring.agent.util.Console;
-import com.monitoring.agent.node.connection.*;
+import com.monitoring.agent.node.connection.ConnectionManager;
 
-public final class RecoveryCoordinator {
+public class RecoveryCoordinator {
+
     private final NodeAddress localAddress;
-
     private final ConnectionManager connectionManager;
 
+    private final RecoveryControlService controlService;
     private final RepairCache repairCache;
 
-    private final RecoveryControlService controlService;
-
     private final DirectRepairCoordinator directRepairCoordinator;
+    private final RewiringCoordinator rewiringCoordinator;
+
+    private final ConvergenceMonitor convergenceMonitor;
 
     public RecoveryCoordinator(
             NodeAddress localAddress,
             ConnectionManager connectionManager,
-            RepairCache repairCache,
             RecoveryControlService controlService,
-            DirectRepairCoordinator directRepairCoordinator) {
+            RepairCache repairCache,
+            DirectRepairCoordinator directRepairCoordinator,
+            RewiringCoordinator rewiringCoordinator,
+            ConvergenceMonitor convergenceMonitor) {
 
         this.localAddress = localAddress;
         this.connectionManager = connectionManager;
-        this.repairCache = repairCache;
         this.controlService = controlService;
+        this.repairCache = repairCache;
         this.directRepairCoordinator = directRepairCoordinator;
+        this.rewiringCoordinator = rewiringCoordinator;
+        this.convergenceMonitor = convergenceMonitor;
     }
 
-    public void beginRecovery(String removedNodeId) {
+    public void startRecovery(String repairEpoch) {
 
-        connectionManager.remove(
-                removedNodeId,
-                "failure recovery");
+        controlService.gossipDeficientNode(
+                repairEpoch,
+                2);
 
-        if (connectionManager.size()
-                >= connectionManager.getMaxNeighbors()) {
+        List<NodeAddress> deficientNodes =
+                new ArrayList<>(
+                        connectionManager.neighborAddresses());
+
+        NodeAddress candidate =
+                directRepairCoordinator.findDirectCandidate(
+                        localAddress,
+                        deficientNodes);
+
+        if (candidate != null) {
+
+            connectionManager.addIfSpace(
+                    candidate,
+                    "direct repair");
+
             return;
         }
 
-        String epoch = UUID.randomUUID().toString();
+        rewiringCoordinator.attemptRewiring(
+                localAddress,
+                localAddress,
+                deficientNodes);
 
-        controlService.gossipDeficientNode(epoch, 2);
-
-        directRepairCoordinator.attemptRepair(epoch);
+        convergenceMonitor.converged();
     }
 }

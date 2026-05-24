@@ -6,34 +6,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.monitoring.agent.node.NodeAddress;
 
-public final class RepairCache {
-
-    private final Map<String, DeficientNodeRecord> deficientNodes =
-            new ConcurrentHashMap<>();
+public class RepairCache {
 
     private final Map<String, Set<NodeAddress>> adjacencyCache =
             new ConcurrentHashMap<>();
 
-    private final Set<String> processedMessages =
+    private final Set<String> deficientNodes =
             ConcurrentHashMap.newKeySet();
-
-    public boolean markProcessed(String id) {
-        return processedMessages.add(id);
-    }
-
-    public void storeDeficientNode(
-            DeficientNodeRecord record) {
-
-        deficientNodes.put(record.nodeId(), record);
-    }
-
-    public void removeDeficientNode(String nodeId) {
-        deficientNodes.remove(nodeId);
-    }
-
-    public Map<String, DeficientNodeRecord> deficientNodes() {
-        return deficientNodes;
-    }
 
     public void storeNeighbors(
             String nodeId,
@@ -42,7 +21,28 @@ public final class RepairCache {
         adjacencyCache.put(nodeId, neighbors);
     }
 
-    public Set<NodeAddress> neighbors(String nodeId) {
+    public Set<NodeAddress> neighborsOf(String nodeId) {
         return adjacencyCache.getOrDefault(nodeId, Set.of());
+    }
+
+    public boolean areAdjacent(
+            String a,
+            String b) {
+
+        return neighborsOf(a)
+                .stream()
+                .anyMatch(n -> n.nodeId().equals(b));
+    }
+
+    public void markDeficient(String nodeId) {
+        deficientNodes.add(nodeId);
+    }
+
+    public void clearDeficient(String nodeId) {
+        deficientNodes.remove(nodeId);
+    }
+
+    public Set<String> deficientNodes() {
+        return deficientNodes;
     }
 }
