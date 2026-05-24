@@ -59,6 +59,9 @@ public final class MulticastJoinCoordinator {
 
             // joinScaledNetwork(plan);
         } catch (IOException exception) {
+            joinScaledNetwork(plan);
+        } catch (Exception exception) {
+            exception.printStackTrace();;
             Console.log("Join failed: " + exception.getMessage());
         }
     }
