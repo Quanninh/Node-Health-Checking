@@ -6,10 +6,10 @@ import com.monitoring.agent.node.NodeAddress;
 
 public class DirectRepairCoordinator {
 
-    private final RepairCache repairCache;
+    private final NetworkTopologyCache repairCache;
     private final RepairLockManager lockManager;
 
-    public DirectRepairCoordinator(RepairCache repairCache, RepairLockManager lockManager) {
+    public DirectRepairCoordinator(NetworkTopologyCache repairCache, RepairLockManager lockManager) {
         this.repairCache = repairCache;
         this.lockManager = lockManager;
     }

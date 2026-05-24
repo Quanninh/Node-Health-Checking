@@ -12,7 +12,7 @@ public class RecoveryCoordinator {
     private final ConnectionManager connectionManager;
 
     private final RecoveryControlService controlService;
-    private final RepairCache repairCache;
+    private final NetworkTopologyCache repairCache;
 
     private final DirectRepairCoordinator directRepairCoordinator;
     private final RewiringCoordinator rewiringCoordinator;
@@ -23,7 +23,7 @@ public class RecoveryCoordinator {
             NodeAddress localAddress,
             ConnectionManager connectionManager,
             RecoveryControlService controlService,
-            RepairCache repairCache,
+            NetworkTopologyCache repairCache,
             DirectRepairCoordinator directRepairCoordinator,
             RewiringCoordinator rewiringCoordinator,
             ConvergenceMonitor convergenceMonitor) {

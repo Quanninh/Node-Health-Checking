@@ -9,12 +9,12 @@ import com.monitoring.agent.node.connection.ConnectionManager;
 
 public class RewiringCoordinator {
     private final ConnectionManager connectionManager;
-    private final RepairCache repairCache;
+    private final NetworkTopologyCache repairCache;
     private final EdgeLockManager edgeLockManager;
 
     public RewiringCoordinator(
             ConnectionManager connectionManager,
-            RepairCache repairCache,
+            NetworkTopologyCache repairCache,
             EdgeLockManager edgeLockManager) {
 
         this.connectionManager = connectionManager;
@@ -27,13 +27,11 @@ public class RewiringCoordinator {
             NodeAddress deficientB,
             List<NodeAddress> localNodes) {
 
-        List<EdgeCandidate> candidates =
-                new ArrayList<>();
+        List<EdgeCandidate> candidates = new ArrayList<>();
 
         for (NodeAddress c : localNodes) {
 
-            for (NodeAddress d :
-                    repairCache.neighborsOf(c.nodeId())) {
+            for (NodeAddress d : repairCache.neighborsOf(c.nodeId())) {
 
                 candidates.add(
                         new EdgeCandidate(c, d));
@@ -46,10 +44,9 @@ public class RewiringCoordinator {
             NodeAddress c = edge.left();
             NodeAddress d = edge.right();
 
-            boolean reserved =
-                    edgeLockManager.reserve(
-                            c.nodeId(),
-                            d.nodeId());
+            boolean reserved = edgeLockManager.reserve(
+                    c.nodeId(),
+                    d.nodeId());
 
             if (!reserved) {
                 continue;
@@ -57,10 +54,9 @@ public class RewiringCoordinator {
 
             try {
 
-                boolean orientation1 =
-                        !repairCache.areAdjacent(
-                                deficientA.nodeId(),
-                                d.nodeId())
+                boolean orientation1 = !repairCache.areAdjacent(
+                        deficientA.nodeId(),
+                        d.nodeId())
                         &&
                         !repairCache.areAdjacent(
                                 deficientB.nodeId(),
