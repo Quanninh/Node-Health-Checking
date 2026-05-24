@@ -1,144 +1,128 @@
 package com.monitoring.agent.node.recovery;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.SocketException;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.NodeAddress;
 import com.monitoring.agent.node.connection.ConnectionManager;
+import com.monitoring.agent.node.transport.UdpCoordinator;
+import com.monitoring.agent.node.transport.UdpEnvelope;
+import com.monitoring.agent.node.transport.UdpPacketType;
 import com.monitoring.agent.util.Console;
 
 /**
- * Sends the recovery message to the target node using UDP.
+ * Sends and receives recovery messages using UDP through the UdpCoordinator.
+ * 
+ * This service registers a consumer callback with the UdpCoordinator and processes
+ * incoming recovery packets. It delegates all socket operations to UdpCoordinator.
  */
-public class RecoveryUDPService {
+public class RecoveryUDPService implements AutoCloseable {
 
-    private final int port;
-    private final int bufferSize;
     private final NodeAddress localAddress;
     private final ConnectionManager connectionManager;
     private final NetworkTopologyCache networkTopologyCache;
-
-    private volatile boolean running;
-    private DatagramSocket serverSocket;
-
-    private final ExecutorService serverExecutor = Executors.newSingleThreadExecutor();
+    private final UdpCoordinator udpCoordinator;
 
     public RecoveryUDPService(NodeAddress localAddress, NetworkTopologyCache networkTopologyCache,
-            ConnectionManager connectionManager,
-            int port, int bufferSize) {
-        this.port = port;
-        this.bufferSize = bufferSize;
+            ConnectionManager connectionManager, UdpCoordinator udpCoordinator) {
         this.localAddress = localAddress;
         this.connectionManager = connectionManager;
         this.networkTopologyCache = networkTopologyCache;
+        this.udpCoordinator = udpCoordinator;
     }
 
-    public void start() throws SocketException {
-        serverSocket = new DatagramSocket(port);
-        running = true;
-        serverExecutor.submit(this::receiveLoop);
-
-        Console.log("Recovery UDP Service server listening on UDP port " + port);
+    /**
+     * Registers the recovery message consumer with the UdpCoordinator.
+     */
+    public void start() {
+        udpCoordinator.registerRecoveryConsumer(this::handleRecoveryPacket);
+        Console.log("Recovery UDP Service started");
     }
 
-    private void receiveLoop() {
-        while (running) {
+    /**
+     * Handles incoming recovery packets from the UdpCoordinator.
+     * 
+     * @param envelope the UDP envelope containing the recovery message
+     */
+    private void handleRecoveryPacket(UdpEnvelope envelope) {
+        try {
+            RecoveryMessage message = RecoveryMessage.decode(envelope.payload());
+
+            if (message.type() == null) {
+                return;
+            }
+
+            switch (message.type()) {
+                case DEFICIENT -> handleDeficient(message);
+                case DEFICIENT_ACK -> Console.log("Received DEFICIENT_ACK. Doing nothing with it.");
+                default -> throw new AssertionError();
+            }
+        } catch (Exception ex) {
+            System.getLogger(RecoveryUDPService.class.getName())
+                    .log(System.Logger.Level.ERROR, "Error handling recovery packet: " + ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * Handles DEFICIENT message type.
+     * 
+     * @param message the recovery message
+     */
+    private void handleDeficient(RecoveryMessage message) {
+        networkTopologyCache.markDeficient(message.subject().nodeId());
+        
+        // Send DEFICIENT_ACK
+        try {
+            send(message.sender(),
+                    new RecoveryMessage(RecoveryMessageType.DEFICIENT_ACK, message.messageId(),
+                            message.repairEpoch(), localAddress, message.subject(), message.target(),
+                            message.neighbors(), Constant.DEFAULT_GOSSIP_TTL,
+                            System.currentTimeMillis(), 0));
+        } catch (IOException e) {
+            Console.log("Failed to send DEFICIENT_ACK to " + message.sender() + ": " + e.getMessage(), Constant.RED);
+        }
+
+        // Gossip to neighbors
+        for (NodeAddress neighbor : connectionManager.neighborAddresses()) {
             try {
-                RecoveryMessage message = receive(port, bufferSize);
+                send(neighbor,
+                        new RecoveryMessage(message.type(), message.messageId(),
+                                message.repairEpoch(), message.sender(), message.subject(),
+                                message.target(), message.neighbors(),
+                                Math.max(message.ttl() - 1, 0),
+                                System.currentTimeMillis(), message.incarnation()));
 
-                if (message.type() == null) {
-                    continue;
-                } else {
-                    switch (message.type()) {
-                        case DEFICIENT -> {
-                            networkTopologyCache.markDeficient(message.subject().nodeId());
-                            send(message.sender(),
-                                    new RecoveryMessage(RecoveryMessageType.DEFICIENT_ACK, message.messageId(),
-                                            message.repairEpoch(), localAddress, message.subject(), message.target(),
-                                            message.neighbors(), Constant.DEFAULT_GOSSIP_TTL,
-                                            System.currentTimeMillis(), 0));
-                            for (NodeAddress neighbor : connectionManager.neighborAddresses()) {
-                                try {
-                                    send(neighbor,
-                                            new RecoveryMessage(message.type(), message.messageId(),
-                                                    message.repairEpoch(), message.sender(), message.subject(),
-                                                    message.target(), message.neighbors(),
-                                                    Math.max(message.ttl() - 1, 0),
-                                                    System.currentTimeMillis(), message.incarnation()));
-
-                                    Console.log(
-                                            "Gossiping DEFICIENT message [" + message + "] to " + neighbor + " success",
-                                            Constant.BG_CYAN + Constant.BOLD);
-                                } catch (IOException e) {
-                                    Console.log(
-                                            "Failed to gossip message [" + message + "] to " + neighbor + " because "
-                                                    + e.getMessage(),
-                                            Constant.RED);
-                                }
-                            }
-                        }
-                        case DEFICIENT_ACK -> {
-                            Console.log("Received DEFICIENT_ACK. Doing nothing with it.");
-                        }
-                        default -> throw new AssertionError();
-                    }
-                }
-            } catch (IOException ex) {
-                System.getLogger(RecoveryUDPService.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+                Console.log(
+                        "Gossiping DEFICIENT message [" + message + "] to " + neighbor + " success",
+                        Constant.BG_CYAN + Constant.BOLD);
+            } catch (IOException e) {
+                Console.log(
+                        "Failed to gossip message [" + message + "] to " + neighbor + " because "
+                                + e.getMessage(),
+                        Constant.RED);
             }
         }
     }
 
     /**
-     * Sends the recovery message to the target node using UDP.
+     * Sends a recovery message to the target node using the UdpCoordinator.
      * 
      * @param target  the target node
      * @param message the recovery message
-     * @throws IOException
+     * @throws IOException if sending fails
      */
     public void send(NodeAddress target, RecoveryMessage message) throws IOException {
         Console.log("Before sending: " + message + " to " + target.toString(), Constant.BG_GREEN);
-        byte[] bytes = message.encode()
-                .getBytes(StandardCharsets.UTF_8);
-
-        DatagramPacket packet = new DatagramPacket(
-                bytes,
-                bytes.length,
-                InetAddress.getByName(target.host()),
-                target.port());
-
-        // serverSocket.send(packet);
-        try (DatagramSocket socket = new DatagramSocket()) {
-            socket.send(packet);
-        }
+        
+        String encodedMessage = message.encode();
+        udpCoordinator.send(target.host(), target.port(), UdpPacketType.RECOVERY, encodedMessage);
+        
         Console.log("After sending: " + message + " to " + target.toString(), Constant.BG_GREEN);
     }
 
-    public RecoveryMessage receive(int port, int bufferSize) throws IOException {
-        byte[] buffer = new byte[bufferSize];
-
-        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-
-        try (DatagramSocket socket = new DatagramSocket(port)) {
-            socket.receive(packet);
-
-            String raw = new String(
-                    packet.getData(),
-                    packet.getOffset(),
-                    packet.getLength(),
-                    StandardCharsets.UTF_8);
-
-            Console.log("Received by Recovery UDP Service. Raw message: " + raw, Constant.BG_PURPLE);
-
-            return RecoveryMessage.decode(raw);
-        }
+    @Override
+    public void close() throws Exception {
+        // Cleanup is handled by UdpCoordinator
     }
 
 }
