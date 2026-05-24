@@ -43,14 +43,12 @@ public class RecoveryCoordinator {
                 repairEpoch,
                 2);
 
-        List<NodeAddress> deficientNodes =
-                new ArrayList<>(
-                        connectionManager.neighborAddresses());
+        List<NodeAddress> deficientNodes = new ArrayList<>(
+                connectionManager.neighborAddresses());
 
-        NodeAddress candidate =
-                directRepairCoordinator.findDirectCandidate(
-                        localAddress,
-                        deficientNodes);
+        NodeAddress candidate = directRepairCoordinator.findDirectCandidate(
+                localAddress,
+                deficientNodes);
 
         if (candidate != null) {
 
@@ -66,6 +64,6 @@ public class RecoveryCoordinator {
                 localAddress,
                 deficientNodes);
 
-        convergenceMonitor.converged();
+        convergenceMonitor.hasConverged();
     }
 }

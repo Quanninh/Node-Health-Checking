@@ -10,6 +10,8 @@ import com.monitoring.agent.node.connection.MembershipControlService;
 import com.monitoring.agent.node.connection.MulticastDiscoveryService;
 import com.monitoring.agent.node.connection.MulticastJoinCoordinator;
 import com.monitoring.agent.node.connection.NeighborDirectory;
+import com.monitoring.agent.node.recovery.FailureRecoveryManager;
+import com.monitoring.agent.node.recovery.RecoveryCoordinator;
 import com.monitoring.agent.util.Console;
 
 /**
@@ -32,6 +34,8 @@ public class NodeAgent {
     private final MulticastDiscoveryService discoveryService;
     private final MembershipControlService membershipControlService;
     private final MulticastJoinCoordinator joinCoordinator;
+    private final RecoveryCoordinator recoveryCoordinator;
+    private final FailureRecoveryManager failureRecoveryManager;
 
     /**
      * Constructor for NodeAgent from command line arguments.
@@ -118,6 +122,10 @@ public class NodeAgent {
                 connectionManager,
                 discoveryService,
                 membershipControlService);
+
+        recoveryCoordinator = new RecoveryCoordinator(localAddress, connectionManager, controlService, repairCache, directRepairCoordinator, rewiringCoordinator, convergenceMonitor)
+
+        failureRecoveryManager = new FailureRecoveryManager(localAddress, connectionManager, recoveryCoordinator);
 
         nodeServer.start();
 

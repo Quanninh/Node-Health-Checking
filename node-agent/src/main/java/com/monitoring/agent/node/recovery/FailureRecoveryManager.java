@@ -27,9 +27,7 @@ public class FailureRecoveryManager {
                 failedNodeId,
                 "failure recovery removal");
 
-        if (connectionManager.size()
-                <
-                connectionManager.getMaxNeighbors()) {
+        if (connectionManager.size() < connectionManager.getMaxNeighbors()) {
 
             recoveryCoordinator.startRecovery(
                     UUID.randomUUID().toString());
