@@ -10,8 +10,15 @@ import com.monitoring.agent.node.connection.MembershipControlService;
 import com.monitoring.agent.node.connection.MulticastDiscoveryService;
 import com.monitoring.agent.node.connection.MulticastJoinCoordinator;
 import com.monitoring.agent.node.connection.NeighborDirectory;
+import com.monitoring.agent.node.recovery.ConvergenceMonitor;
+import com.monitoring.agent.node.recovery.DirectRepairCoordinator;
+import com.monitoring.agent.node.recovery.EdgeLockManager;
 import com.monitoring.agent.node.recovery.FailureRecoveryManager;
+import com.monitoring.agent.node.recovery.NetworkTopologyCache;
+import com.monitoring.agent.node.recovery.RecoveryControlService;
 import com.monitoring.agent.node.recovery.RecoveryCoordinator;
+import com.monitoring.agent.node.recovery.RecoveryUDPService;
+import com.monitoring.agent.node.recovery.RewiringCoordinator;
 import com.monitoring.agent.util.Console;
 
 /**
@@ -34,6 +41,14 @@ public class NodeAgent {
     private final MulticastDiscoveryService discoveryService;
     private final MembershipControlService membershipControlService;
     private final MulticastJoinCoordinator joinCoordinator;
+
+    private final RecoveryUDPService recoveryUdpService;
+    private final RecoveryControlService recoveryControlService;
+    private final NetworkTopologyCache repairCache;
+    private final DirectRepairCoordinator directRepairCoordinator;
+    private final ConvergenceMonitor convergenceMonitor;
+    private final EdgeLockManager edgeLockManager;
+    private final RewiringCoordinator rewiringCoordinator;
     private final RecoveryCoordinator recoveryCoordinator;
     private final FailureRecoveryManager failureRecoveryManager;
 
@@ -55,8 +70,6 @@ public class NodeAgent {
                 localAddress,
                 config.maxNeighbors());
 
-        neighborDirectory = new NeighborDirectory(connectionManager);
-
         dashboardReporter = new DashboardReporter(config.nodeId(), config.dashboardUrl());
 
         phiDetector = new PhiAccrualFailure(
@@ -74,24 +87,6 @@ public class NodeAgent {
                 config.bindHost(),
                 config.p2pPort(),
                 nodeClient);
-
-        gossipService = new GossipService(
-                config.nodeId(),
-                neighborDirectory,
-                nodeClient,
-                config.gossipTtl(), connectionManager);
-
-        nodeServer.setGossipService(gossipService);
-
-        failureDetector = new FailureDetector(
-                config.nodeId(),
-                neighborDirectory,
-                nodeClient,
-                dashboardReporter,
-                phiDetector,
-                gossipService,
-                config.probeIntervalSeconds(),
-                config.unreachableThreshold());
 
         multicastInterface = resolveMulticastInterface();
 
@@ -123,10 +118,43 @@ public class NodeAgent {
                 discoveryService,
                 membershipControlService);
 
-        recoveryCoordinator = new RecoveryCoordinator(localAddress, connectionManager, controlService, repairCache,
-                directRepairCoordinator, rewiringCoordinator, convergenceMonitor);
+        recoveryUdpService = new RecoveryUDPService();
 
-        failureRecoveryManager = new FailureRecoveryManager(localAddress, connectionManager, recoveryCoordinator);
+        recoveryControlService = new RecoveryControlService(localAddress, connectionManager, recoveryUdpService);
+
+        repairCache = new NetworkTopologyCache();
+
+        directRepairCoordinator = new DirectRepairCoordinator(repairCache);
+
+        edgeLockManager = new EdgeLockManager();
+
+        rewiringCoordinator = new RewiringCoordinator(connectionManager, repairCache, edgeLockManager);
+
+        convergenceMonitor = new ConvergenceMonitor(connectionManager);
+
+        recoveryCoordinator = new RecoveryCoordinator(localAddress, connectionManager, recoveryControlService,
+                repairCache, directRepairCoordinator, rewiringCoordinator, convergenceMonitor);
+
+        failureRecoveryManager = new FailureRecoveryManager(connectionManager, recoveryCoordinator);
+        neighborDirectory = new NeighborDirectory(connectionManager, failureRecoveryManager);
+
+        gossipService = new GossipService(
+                config.nodeId(),
+                neighborDirectory,
+                nodeClient,
+                config.gossipTtl(), connectionManager);
+
+        nodeServer.setGossipService(gossipService);
+
+        failureDetector = new FailureDetector(
+                config.nodeId(),
+                neighborDirectory,
+                nodeClient,
+                dashboardReporter,
+                phiDetector,
+                gossipService,
+                config.probeIntervalSeconds(),
+                config.unreachableThreshold());
 
         nodeServer.start();
 

@@ -17,8 +17,8 @@ import com.monitoring.agent.node.NodeAddress;
 import com.monitoring.agent.node.NodeState;
 import com.monitoring.agent.node.NodeStatus;
 import com.monitoring.agent.node.PhiAccrualFailure;
-import com.monitoring.agent.util.Console;
 import com.monitoring.agent.node.recovery.FailureRecoveryManager;
+import com.monitoring.agent.util.Console;
 
 /**
  * A directory to keep track of all neighbors of a given node and their states.
@@ -41,8 +41,9 @@ public class NeighborDirectory {
     /** Index for iterating through neighbors (for failure detection). */
     private int nextIndex = 0;
 
-    public NeighborDirectory(ConnectionManager connectionManager) {
+    public NeighborDirectory(ConnectionManager connectionManager, FailureRecoveryManager failureRecoveryManager) {
         this.connectionManager = connectionManager;
+        this.failureRecoveryManager = failureRecoveryManager;
         syncStatesWithConnections();
     }
 
@@ -101,6 +102,8 @@ public class NeighborDirectory {
         for (String nodeId : unreachableNodeIds) {
             connectionManager.remove(nodeId, "Failure detector marked node UNREACHABLE.");
             nodeStates.remove(nodeId);
+
+            Console.log("Reached here in the code of neighbor directory", Constant.BG_BLUE);
 
             failureRecoveryManager.onNeighborFailure(nodeId);
         }

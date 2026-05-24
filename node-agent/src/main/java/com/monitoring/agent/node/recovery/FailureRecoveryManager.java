@@ -2,7 +2,9 @@ package com.monitoring.agent.node.recovery;
 
 import java.util.UUID;
 
+import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.connection.ConnectionManager;
+import com.monitoring.agent.util.Console;
 
 /**
  * Removes a failed (disconnected...) node, then if node is deficient, starts
@@ -25,12 +27,14 @@ public class FailureRecoveryManager {
      * @param failedNodeId the failed node
      */
     public void onNeighborFailure(String failedNodeId) {
+        Console.log(
+                "Reached here in the code of failure recovery manager. Prepare to remove node and start self recovery process.",
+                Constant.BG_BLUE);
         connectionManager.remove(failedNodeId, "failure recovery removal");
 
         if (connectionManager.size() < connectionManager.getMaxNeighbors()) {
-
-            recoveryCoordinator.startSelfRecovery(
-                    UUID.randomUUID().toString());
+            Console.log("Recovery process starting...", Constant.BG_BLUE);
+            recoveryCoordinator.startSelfRecovery(UUID.randomUUID().toString());
         }
     }
 

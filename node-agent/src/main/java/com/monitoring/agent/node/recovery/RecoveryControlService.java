@@ -61,6 +61,8 @@ public class RecoveryControlService {
         for (NodeAddress neighbor : connectionManager.neighborAddresses()) {
             try {
                 udpService.send(neighbor, message);
+                Console.log("Sent DEFICIENT message [" + message + "] to " + neighbor + " success",
+                        Constant.BG_CYAN + Constant.BOLD);
             } catch (IOException e) {
                 Console.log(
                         "Failed to send message [" + message + "] to " + neighbor + " because " + e.getMessage(),
