@@ -19,7 +19,8 @@ import com.monitoring.agent.util.Console;
 /**
  * Receives and sends ACKs for Discovery Messages using UdpCoordinator.
  * 
- * This service manages both incoming commands (via consumer callback) and outgoing
+ * This service manages both incoming commands (via consumer callback) and
+ * outgoing
  * commands with response waiting (via CompletableFutures).
  */
 public final class MembershipControlService implements AutoCloseable {
