@@ -6,6 +6,7 @@ import java.util.List;
 import com.monitoring.agent.node.NodeAddress;
 import com.monitoring.agent.node.connection.ConnectionManager;
 
+// TODO: This seems to be the main class, will return to this later
 public class RecoveryCoordinator {
 
     private final NodeAddress localAddress;
@@ -66,4 +67,5 @@ public class RecoveryCoordinator {
 
         convergenceMonitor.hasConverged();
     }
+
 }

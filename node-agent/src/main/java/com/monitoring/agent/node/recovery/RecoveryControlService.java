@@ -55,6 +55,7 @@ public class RecoveryControlService {
      * Broadcasts a recovery message to its neighbors.
      * 
      * @param message the recovery message
+     * @see RecoveryUDPService#send(NodeAddress, RecoveryMessage)
      */
     private void broadcast(RecoveryMessage message) {
         for (NodeAddress neighbor : connectionManager.neighborAddresses()) {

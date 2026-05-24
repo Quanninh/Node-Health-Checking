@@ -10,6 +10,9 @@ import java.util.Map;
 
 import com.monitoring.agent.node.NodeAddress;
 
+/**
+ * Represents a recovery message.
+ */
 public record RecoveryMessage(
         RecoveryMessageType type,
         String messageId,
@@ -20,11 +23,16 @@ public record RecoveryMessage(
         List<NodeAddress> neighbors,
         int ttl,
         long timestamp,
-        int incarnation
-) {
-        private static final String FIELD_SEPARATOR = "&";
+        int incarnation) {
+
+    private static final String FIELD_SEPARATOR = "&";
     private static final String KEY_VALUE_SEPARATOR = "=";
 
+    /**
+     * Encodes the message into a string.
+     * 
+     * @return the encoded message
+     */
     public String encode() {
         Map<String, String> values = new LinkedHashMap<>();
 
@@ -50,9 +58,15 @@ public record RecoveryMessage(
                     .append(url(entry.getValue()));
         }
 
-             return builder.toString();
+        return builder.toString();
     }
 
+    /**
+     * Decodes a message.
+     * 
+     * @param raw the raw message
+     * @return the discovery message
+     */
     public static RecoveryMessage decode(String raw) {
         Map<String, String> values = new HashMap<>();
 
@@ -82,10 +96,23 @@ public record RecoveryMessage(
                 Integer.parseInt(values.getOrDefault("incarnation", "0")));
     }
 
+    /**
+     * Encode a string into URL format, i.e. no special characters.
+     * 
+     * @param value the normal string
+     * @return the URL-formatted string
+     */
     private static String url(String value) {
         return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }
 
+    /**
+     * Decode a string from URL format, i.e. no special characters, into normal
+     * strings.
+     * 
+     * @param value the string in URL format
+     * @return the normal string
+     */
     private static String decodeUrl(String value) {
         return URLDecoder.decode(value, StandardCharsets.UTF_8);
     }
