@@ -12,227 +12,228 @@ import com.monitoring.agent.util.Console;
 
 public final class MulticastJoinCoordinator {
 
-    private final NodeAddress localAddress;
-    private final int maxNeighbors;
-    private final ConnectionManager connectionManager;
-    private final MulticastDiscoveryService discoveryService;
-    private final MembershipControlService membershipControlService;
-    private final JoinPlanner joinPlanner;
+        private final NodeAddress localAddress;
+        private final int maxNeighbors;
+        private final ConnectionManager connectionManager;
+        private final MulticastDiscoveryService discoveryService;
+        private final MembershipControlService membershipControlService;
+        private final JoinPlanner joinPlanner;
 
-    public MulticastJoinCoordinator(
-            NodeAddress localAddress,
-            int maxNeighbors,
-            ConnectionManager connectionManager,
-            MulticastDiscoveryService discoveryService,
-            MembershipControlService membershipControlService) {
-        this.localAddress = localAddress;
-        this.maxNeighbors = maxNeighbors;
-        this.connectionManager = connectionManager;
-        this.discoveryService = discoveryService;
-        this.membershipControlService = membershipControlService;
-        this.joinPlanner = new JoinPlanner(localAddress, maxNeighbors);
-    }
-
-    public void joinNetwork() {
-        try {
-            List<JoinAck> acks = discoveryService.discoverPeers();
-
-            if (acks.isEmpty()) {
-                Console.log("No peers discovered. Node starts as the first node.");
-                connectionManager.setInNetwork(true);
-                return;
-            }
-
-            JoinPlan plan = joinPlanner.createPlan(acks);
-
-            if (plan.directTargets().isEmpty()) {
-                Console.log("No valid join plan. Node remains alone temporarily.");
-                return;
-            }
-
-            joinHybridNetwork(plan);
-
-            // if (acks.size() <= maxNeighbors) {
-            // joinSmallNetwork(plan);
-            // return;
-            // }
-
-            // joinScaledNetwork(plan);
-        // } catch (IOException exception) {
-        //     joinScaledNetwork(plan);
-        } catch (Exception exception) {
-            exception.printStackTrace();;
-            Console.log("Join failed: " + exception.getMessage());
-        }
-    }
-
-    private void joinSmallNetwork(JoinPlan plan) {
-        String txId = UUID.randomUUID().toString();
-
-        for (NodeAddress peer : plan.directTargets()) {
-            if (connectionManager.size() >= maxNeighbors) {
-                break;
-            }
-
-            boolean committed = membershipControlService.commitSmallJoinTarget(
-                    peer,
-                    localAddress,
-                    txId + ":small:" + peer.nodeId());
-
-            if (!committed) {
-                Console.log("Small-network commit failed for " + peer
-                        + ". Not adding it locally to avoid one-way neighbor state.");
-                continue;
-            }
-
-            connectionManager.addIfSpace(peer, "small-network committed join");
-
-            Console.log("Small-network bidirectional join established between "
-                    + localAddress.nodeId()
-                    + " and "
-                    + peer.nodeId());
+        public MulticastJoinCoordinator(
+                        NodeAddress localAddress,
+                        int maxNeighbors,
+                        ConnectionManager connectionManager,
+                        MulticastDiscoveryService discoveryService,
+                        MembershipControlService membershipControlService) {
+                this.localAddress = localAddress;
+                this.maxNeighbors = maxNeighbors;
+                this.connectionManager = connectionManager;
+                this.discoveryService = discoveryService;
+                this.membershipControlService = membershipControlService;
+                this.joinPlanner = new JoinPlanner(localAddress, maxNeighbors);
         }
 
-        Console.log("Small-network join complete. Current neighbors="
-                + connectionManager.neighborAddresses());
-        connectionManager.setInNetwork(!connectionManager.neighborAddresses().isEmpty());
-    }
+        public void joinNetwork() {
+                try {
+                        List<JoinAck> acks = discoveryService.discoverPeers();
 
-    private void joinHybridNetwork(JoinPlan plan) {
-        String txId = UUID.randomUUID().toString();
+                        if (acks.isEmpty()) {
+                                Console.log("No peers discovered. Node starts as the first node.");
+                                connectionManager.setInNetwork(true);
+                                return;
+                        }
 
-        for (NodeAddress directTarget : plan.directTargets()) {
-            // safety check, probably useless
-            if (connectionManager.size() >= maxNeighbors) {
-                break;
-            }
+                        JoinPlan plan = joinPlanner.createPlan(acks);
 
-            NodeAddress victim = plan.evictionByDirectTarget().get(directTarget);
+                        if (plan.directTargets().isEmpty()) {
+                                Console.log("No valid join plan. Node remains alone temporarily.");
+                                return;
+                        }
 
-            // join without evicting
-            if (victim == null) {
-                boolean committed = membershipControlService.commitSmallJoinTarget(
-                        directTarget,
-                        localAddress,
-                        txId + ":small:" + directTarget.nodeId());
+                        joinHybridNetwork(plan);
 
-                if (!committed) {
-                    Console.log("Small-network commit failed for "
-                            + directTarget + committed, Constant.BG_BLUE);
-                    continue;
+                        // if (acks.size() <= maxNeighbors) {
+                        // joinSmallNetwork(plan);
+                        // return;
+                        // }
+
+                        // joinScaledNetwork(plan);
+                        // } catch (IOException exception) {
+                        // joinScaledNetwork(plan);
+                } catch (Exception exception) {
+                        exception.printStackTrace();
+                        ;
+                        Console.log("Join failed: " + exception.getMessage());
+                }
+        }
+
+        private void joinSmallNetwork(JoinPlan plan) {
+                String txId = UUID.randomUUID().toString();
+
+                for (NodeAddress peer : plan.directTargets()) {
+                        if (connectionManager.size() >= maxNeighbors) {
+                                break;
+                        }
+
+                        boolean committed = membershipControlService.commitSmallJoinTarget(
+                                        peer,
+                                        localAddress,
+                                        txId + ":small:" + peer.nodeId());
+
+                        if (!committed) {
+                                Console.log("Small-network commit failed for " + peer
+                                                + ". Not adding it locally to avoid one-way neighbor state.");
+                                continue;
+                        }
+
+                        connectionManager.addIfSpace(peer, "small-network committed join");
+
+                        Console.log("Small-network bidirectional join established between "
+                                        + localAddress.nodeId()
+                                        + " and "
+                                        + peer.nodeId());
                 }
 
-                connectionManager.addIfSpace(
-                        directTarget,
-                        "small-network committed join");
-
-                Console.log("Small-network bidirectional join established between "
-                        + localAddress.nodeId()
-                        + " and "
-                        + directTarget.nodeId());
-
-                continue;
-            }
-
-            // join and evict
-            boolean directCommitted = membershipControlService.commitDirectTarget(
-                    directTarget,
-                    localAddress,
-                    victim,
-                    txId + ":direct:" + directTarget.nodeId());
-
-            if (!directCommitted) {
-                Console.log("Direct target commit failed for "
-                        + directTarget);
-                continue;
-            }
-
-            boolean victimCommitted = membershipControlService.commitVictim(
-                    victim,
-                    localAddress,
-                    directTarget,
-                    txId + ":victim:" + victim.nodeId());
-
-            if (!victimCommitted) {
-                Console.log("Victim commit failed for "
-                        + victim
-                        + ". Failure detector/repair should fix this later.");
-                continue;
-            }
-
-            connectionManager.addIfSpace(
-                    directTarget,
-                    "scaled join direct target");
-
-            connectionManager.addIfSpace(
-                    victim,
-                    "scaled join evicted handover");
-
-            Console.log("Node "
-                    + localAddress.nodeId()
-                    + " successfully connected with direct target "
-                    + directTarget
-                    + " and handed over evicted node "
-                    + victim);
+                Console.log("Small-network join complete. Current neighbors="
+                                + connectionManager.neighborAddresses());
+                connectionManager.setInNetwork(!connectionManager.neighborAddresses().isEmpty());
         }
 
-        Console.log("Hybrid join complete. Current neighbors="
-                + connectionManager.neighborAddresses());
+        private void joinHybridNetwork(JoinPlan plan) {
+                String txId = UUID.randomUUID().toString();
 
-        connectionManager.setInNetwork(
-                !connectionManager.neighborAddresses().isEmpty());
-    }
+                for (NodeAddress directTarget : plan.directTargets()) {
+                        // safety check, probably useless
+                        if (connectionManager.size() >= maxNeighbors) {
+                                break;
+                        }
 
-    // NOTE: remember to handle node failures
-    private void joinScaledNetwork(JoinPlan plan) {
-        String txId = UUID.randomUUID().toString();
+                        NodeAddress victim = plan.evictionByDirectTarget().get(directTarget);
 
-        for (Map.Entry<NodeAddress, NodeAddress> entry : plan.evictionByDirectTarget().entrySet()) {
-            NodeAddress directTarget = entry.getKey();
-            NodeAddress victim = entry.getValue();
+                        // join without evicting
+                        if (victim == null) {
+                                boolean committed = membershipControlService.commitSmallJoinTarget(
+                                                directTarget,
+                                                localAddress,
+                                                txId + ":small:" + directTarget.nodeId());
 
-            boolean directCommitted = membershipControlService.commitDirectTarget(
-                    directTarget,
-                    localAddress,
-                    victim,
-                    txId + ":direct:" + directTarget.nodeId());
+                                if (!committed) {
+                                        Console.log("Small-network commit failed for "
+                                                        + directTarget + committed, Constant.BG_BLUE);
+                                        continue;
+                                }
 
-            if (!directCommitted) {
-                Console.log("Direct target commit failed for " + directTarget);
-                continue;
-            }
+                                connectionManager.addIfSpace(
+                                                directTarget,
+                                                "small-network committed join");
 
-            boolean victimCommitted = membershipControlService.commitVictim(
-                    victim,
-                    localAddress,
-                    directTarget,
-                    txId + ":victim:" + victim.nodeId());
+                                Console.log("Small-network bidirectional join established between "
+                                                + localAddress.nodeId()
+                                                + " and "
+                                                + directTarget.nodeId());
 
-            if (!victimCommitted) {
-                Console.log("Victim commit failed for " + victim
-                        + ". Failure detector/repair should fix this later.");
-                continue;
-            }
+                                continue;
+                        }
 
-            connectionManager.addIfSpace(directTarget, "scaled join direct target");
-            connectionManager.addIfSpace(victim, "scaled join evicted handover");
+                        // join and evict
+                        boolean directCommitted = membershipControlService.commitDirectTarget(
+                                        directTarget,
+                                        localAddress,
+                                        victim,
+                                        txId + ":direct:" + directTarget.nodeId());
 
-            Console.log("Node " + localAddress.nodeId()
-                    + " successfully connected with direct target " + directTarget
-                    + " and handed over evicted node " + victim);
+                        if (!directCommitted) {
+                                Console.log("Direct target commit failed for "
+                                                + directTarget);
+                                continue;
+                        }
+
+                        boolean victimCommitted = membershipControlService.commitVictim(
+                                        victim,
+                                        localAddress,
+                                        directTarget,
+                                        txId + ":victim:" + victim.nodeId());
+
+                        if (!victimCommitted) {
+                                Console.log("Victim commit failed for "
+                                                + victim
+                                                + ". Failure detector/repair should fix this later.");
+                                continue;
+                        }
+
+                        connectionManager.addIfSpace(
+                                        directTarget,
+                                        "scaled join direct target");
+
+                        connectionManager.addIfSpace(
+                                        victim,
+                                        "scaled join evicted handover");
+
+                        Console.log("Node "
+                                        + localAddress.nodeId()
+                                        + " successfully connected with direct target "
+                                        + directTarget
+                                        + " and handed over evicted node "
+                                        + victim);
+                }
+
+                Console.log("Hybrid join complete. Current neighbors="
+                                + connectionManager.neighborAddresses());
+
+                connectionManager.setInNetwork(
+                                !connectionManager.neighborAddresses().isEmpty());
         }
 
-        // for (NodeAddress directTarget : plan.directTargets()) {
-        // if (connectionManager.size() >= maxNeighbors) {
-        // break;
-        // }
+        // NOTE: remember to handle node failures
+        private void joinScaledNetwork(JoinPlan plan) {
+                String txId = UUID.randomUUID().toString();
 
-        // connectionManager.addIfSpace(directTarget, "fallback direct target");
-        // }
+                for (Map.Entry<NodeAddress, NodeAddress> entry : plan.evictionByDirectTarget().entrySet()) {
+                        NodeAddress directTarget = entry.getKey();
+                        NodeAddress victim = entry.getValue();
 
-        Console.log("Scaled join complete. Current neighbors="
-                + connectionManager.neighborAddresses());
-        connectionManager.setInNetwork(!connectionManager.neighborAddresses().isEmpty());
-    }
+                        boolean directCommitted = membershipControlService.commitDirectTarget(
+                                        directTarget,
+                                        localAddress,
+                                        victim,
+                                        txId + ":direct:" + directTarget.nodeId());
+
+                        if (!directCommitted) {
+                                Console.log("Direct target commit failed for " + directTarget);
+                                continue;
+                        }
+
+                        boolean victimCommitted = membershipControlService.commitVictim(
+                                        victim,
+                                        localAddress,
+                                        directTarget,
+                                        txId + ":victim:" + victim.nodeId());
+
+                        if (!victimCommitted) {
+                                Console.log("Victim commit failed for " + victim
+                                                + ". Failure detector/repair should fix this later.");
+                                continue;
+                        }
+
+                        connectionManager.addIfSpace(directTarget, "scaled join direct target");
+                        connectionManager.addIfSpace(victim, "scaled join evicted handover");
+
+                        Console.log("Node " + localAddress.nodeId()
+                                        + " successfully connected with direct target " + directTarget
+                                        + " and handed over evicted node " + victim);
+                }
+
+                // for (NodeAddress directTarget : plan.directTargets()) {
+                // if (connectionManager.size() >= maxNeighbors) {
+                // break;
+                // }
+
+                // connectionManager.addIfSpace(directTarget, "fallback direct target");
+                // }
+
+                Console.log("Scaled join complete. Current neighbors="
+                                + connectionManager.neighborAddresses());
+                connectionManager.setInNetwork(!connectionManager.neighborAddresses().isEmpty());
+        }
 
 }
