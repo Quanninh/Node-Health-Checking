@@ -7,11 +7,13 @@ import com.monitoring.agent.node.NodeAddress;
 public class DirectRepairCoordinator {
 
     private final NetworkTopologyCache repairCache;
-    private final RepairLockManager lockManager;
+    // private final RepairLockManager lockManager;
 
-    public DirectRepairCoordinator(NetworkTopologyCache repairCache, RepairLockManager lockManager) {
+    public DirectRepairCoordinator(NetworkTopologyCache repairCache
+    // , RepairLockManager lockManager
+    ) {
         this.repairCache = repairCache;
-        this.lockManager = lockManager;
+        // this.lockManager = lockManager;
     }
 
     /**
@@ -33,10 +35,10 @@ public class DirectRepairCoordinator {
                 continue;
             }
 
-            // If the node is locked, skip
-            if (lockManager.isLocked(candidate.nodeId())) {
-                continue;
-            }
+            // // If the node is locked, skip
+            // if (lockManager.isLocked(candidate.nodeId())) {
+            // continue;
+            // }
 
             return candidate;
         }
