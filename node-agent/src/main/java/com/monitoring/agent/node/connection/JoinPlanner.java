@@ -73,14 +73,14 @@ public final class JoinPlanner {
             return JoinPlan.empty();
         }
 
-        if (missingNeighborAcks.size() <= maxNeighbors) {
-            List<NodeAddress> directTargets = missingNeighborAcks.stream()
-                    .map(JoinAck::responder)
-                    .limit(maxNeighbors)
-                    .toList();
+        // if (missingNeighborAcks.size() <= maxNeighbors) {
+        //     List<NodeAddress> directTargets = missingNeighborAcks.stream()
+        //             .map(JoinAck::responder)
+        //             .limit(maxNeighbors)
+        //             .toList();
 
-            return new JoinPlan(directTargets, Map.of());
-        }
+        //     return new JoinPlan(directTargets, Map.of());
+        // }
 
         // If can accept all received acks, then all of them are set to be neighbors.
         // if (uniqueAcks.size() <= maxNeighbors) {
@@ -94,9 +94,10 @@ public final class JoinPlanner {
 
         // int directTargetCount = maxNeighbors / 2;
 
-        int missingDirectTargetCount = Math
+        int evenMissingDirectTargetCount = Math
                 .max((maxNeighbors - missingNeighborAcks.size()) % 2 == 0 ? missingNeighborAcks.size()
                         : missingNeighborAcks.size() - 1, 0);
+        int missingDirectTargetCount = Math.min(evenMissingDirectTargetCount, maxNeighbors);
         int fullDirectTargetCount = Math.min((maxNeighbors - missingDirectTargetCount) / 2, fullNeighborAcks.size());
 
         List<JoinAck> directTargetAcks = new ArrayList<>();
