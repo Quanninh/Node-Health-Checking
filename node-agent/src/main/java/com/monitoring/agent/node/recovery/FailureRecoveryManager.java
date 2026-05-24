@@ -26,7 +26,7 @@ public class FailureRecoveryManager {
      * 
      * @param failedNodeId the failed node
      */
-    public void onNeighborFailure(String failedNodeId) {
+    public void onRemoveUnreachableNeighbor(String failedNodeId) {
         Console.log(
                 "Reached here in the code of failure recovery manager. Prepare to remove node and start self recovery process.",
                 Constant.BG_BLUE);
