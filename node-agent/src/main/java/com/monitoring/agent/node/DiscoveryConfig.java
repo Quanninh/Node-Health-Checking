@@ -4,6 +4,19 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.time.Duration;
 
+/**
+ * Configures Discovery protocol
+ * 
+ * @param multicastGroup   the multicast group
+ * @param multicastPort    the multicast port
+ * @param networkInterface en0 for MacOS, wireless_32768 for Windows (not
+ *                         certain, needs more testing)
+ * @param maxNeighbors     maximum number of neighbors for each node
+ * @param retryCount
+ * @param retryInterval
+ * @param collectionWindow
+ * @param packetBufferSize buffer size
+ */
 public record DiscoveryConfig(
         InetAddress multicastGroup,
         int multicastPort,
@@ -28,17 +41,4 @@ public record DiscoveryConfig(
         }
     }
 
-    public static DiscoveryConfig defaultLanConfig(
-            int maxNeighbors,
-            NetworkInterface networkInterface) throws Exception {
-        return new DiscoveryConfig(
-                InetAddress.getByName("239.10.20.30"),
-                50505,
-                networkInterface,
-                maxNeighbors,
-                3,
-                Duration.ofMillis(400),
-                Duration.ofSeconds(3),
-                8192);
-    }
 }

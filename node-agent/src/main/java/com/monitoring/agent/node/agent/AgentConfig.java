@@ -18,46 +18,45 @@ import static com.monitoring.agent.constant.Constant.DEFAULT_WARNING_THRESHOLD;
 /**
  * Configuration settings for an agent.
  *
- * @param nodeId                          unique ID of the node
- * @param bindHost                        local network interface/IP address the
- *                                        node
- *                                        listens on
- * @param advertiseHost                   IP address that this node tells its
- *                                        peers to
- *                                        use when reaching back to it
- *                                        (self-advertisement
- *                                        address)
- * @param p2pPort                         port dedicated to P2P node-to-node
- *                                        communication (Gossip/SWIM)
- * @param dashboardUrl                    API endpoint of the centralized server
- *                                        used
- *                                        for demo, testing, and state
- *                                        visualization
+ * @param nodeId                      unique ID of the node
+ * @param bindHost                    local network interface/IP address the
+ *                                    node
+ *                                    listens on
+ * @param advertiseHost               IP address that this node tells its
+ *                                    peers to
+ *                                    use when reaching back to it
+ *                                    (self-advertisement
+ *                                    address)
+ * @param p2pPort                     port dedicated to P2P node-to-node
+ *                                    communication (Gossip/SWIM)
+ * @param dashboardUrl                API endpoint of the centralized server
+ *                                    used for demo, testing, and state
+ *                                    visualization
  * @param multicastGroup
  * @param multicastPort
  * @param multicastInterfaceName
  * @param discoveryRetryCount
- * @param discoveryRetryIntervalMillis
- * @param discoveryCollectionWindowMillis
- * @param probeIntervalSeconds            interval (in seconds) between
- *                                        gossip/probe
- *                                        messages
- * @param ackTimeoutSeconds               timeout (in seconds) for ACK responses
- *                                        from peer
- *                                        nodes
- * @param gossipTtl                       gossip time to live (max hops)
- * @param phiWindowSize                   size of sliding window for phi accrual
- *                                        failure
- *                                        detection
- * @param warningThreshold                phi threshold for warning state
- * @param suspectedThreshold              phi threshold for suspected failure
- *                                        state
- * @param unreachableThreshold            phi threshold for unreachable/failed
- *                                        state
- * @param minStdDeviation                 minimum standard deviation for phi
- *                                        calculations
- * @param minProbability                  minimum probability for phi
- *                                        calculations
+ * @param discoveryRetryIntervalMs
+ * @param discoveryCollectionWindowMs
+ * @param probeIntervalSeconds        interval (in seconds) between
+ *                                    gossip/probe
+ *                                    messages
+ * @param ackTimeoutSeconds           timeout (in seconds) for ACK responses
+ *                                    from peer
+ *                                    nodes
+ * @param gossipTtl                   gossip time to live (max hops)
+ * @param phiWindowSize               size of sliding window for phi accrual
+ *                                    failure
+ *                                    detection
+ * @param warningThreshold            phi threshold for warning state
+ * @param suspectedThreshold          phi threshold for suspected failure
+ *                                    state
+ * @param unreachableThreshold        phi threshold for unreachable/failed
+ *                                    state
+ * @param minStdDeviation             minimum standard deviation for phi
+ *                                    calculations
+ * @param minProbability              minimum probability for phi
+ *                                    calculations
  */
 public record AgentConfig(
         String nodeId,
@@ -70,8 +69,8 @@ public record AgentConfig(
         int maxNeighbors,
         String multicastInterfaceName,
         int discoveryRetryCount,
-        int discoveryRetryIntervalMillis,
-        int discoveryCollectionWindowMillis,
+        int discoveryRetryIntervalMs,
+        int discoveryCollectionWindowMs,
         int probeIntervalSeconds,
         int ackTimeoutSeconds,
         int gossipTtl,
@@ -132,6 +131,7 @@ public record AgentConfig(
         int discoveryCollectionWindowMillis = Integer.parseInt(values.getOrDefault(
                 "--discovery-collection-window-ms",
                 "3000"));
+
         int probeIntervalSeconds = Integer.parseInt(values.getOrDefault(
                 "--probe-interval-seconds",
                 values.getOrDefault("--gossip-interval-seconds",

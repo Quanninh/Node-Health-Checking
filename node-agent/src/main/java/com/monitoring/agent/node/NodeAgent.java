@@ -98,8 +98,8 @@ public class NodeAgent {
                 multicastInterface,
                 config.maxNeighbors(),
                 config.discoveryRetryCount(),
-                Duration.ofMillis(config.discoveryRetryIntervalMillis()),
-                Duration.ofMillis(config.discoveryCollectionWindowMillis()),
+                Duration.ofMillis(config.discoveryRetryIntervalMs()),
+                Duration.ofMillis(config.discoveryCollectionWindowMs()),
                 8192);
 
         discoveryService = new MulticastDiscoveryService(
@@ -175,6 +175,14 @@ public class NodeAgent {
         printStartupInfo();
     }
 
+    /**
+     * Takes the multicast interface from the agent configuration and finds the
+     * interface. The popular interface on MacOS is en0 and on Windows is
+     * wireless_32768.
+     * 
+     * @return a network interface
+     * @throws Exception when the interface is not found
+     */
     private NetworkInterface resolveMulticastInterface() throws Exception {
         if (!config.multicastInterfaceName().isBlank()) {
             NetworkInterface networkInterface = NetworkInterface.getByName(config.multicastInterfaceName());
@@ -194,7 +202,7 @@ public class NodeAgent {
         if (networkInterface == null) {
             throw new IllegalArgumentException(
                     "Could not resolve network interface for advertiseHost: " + config.advertiseHost()
-                            + ". Try passing --multicast-interface manually, e.g. en0 on macOS.");
+                            + ". Try passing --multicast-interface manually, e.g. en0 on macOS and wireless_32768 for Windows.");
         }
 
         return networkInterface;
@@ -216,8 +224,8 @@ public class NodeAgent {
         Console.println("Current neighbor count     : " + connectionManager.size());
         Console.println("Max neighbors n            : " + connectionManager.getMaxNeighbors());
         Console.println("Discovery retry count      : " + config.discoveryRetryCount());
-        Console.println("Discovery retry interval   : " + config.discoveryRetryIntervalMillis() + " ms");
-        Console.println("Discovery collection window: " + config.discoveryCollectionWindowMillis() + " ms");
+        Console.println("Discovery retry interval   : " + config.discoveryRetryIntervalMs() + " ms");
+        Console.println("Discovery collection window: " + config.discoveryCollectionWindowMs() + " ms");
         Console.println("Probe interval             : " + config.probeIntervalSeconds() + " seconds");
         Console.println("ACK timeout                : " + config.ackTimeoutSeconds() + " seconds");
         Console.println("Phi window size            : " + config.phiWindowSize());
