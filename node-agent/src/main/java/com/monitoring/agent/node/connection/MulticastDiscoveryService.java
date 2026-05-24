@@ -72,6 +72,8 @@ public final class MulticastDiscoveryService implements AutoCloseable {
 
         Console.log("Joined multicast discovery group " + config.multicastGroup().getHostAddress() + ":"
                 + config.multicastPort() + " on interface " + config.networkInterface().getName(), Constant.YELLOW);
+
+        Console.log("DEBUG: " + config.networkInterface().getName() + " multicast=" + config.networkInterface().supportsMulticast(), Constant.BG_YELLOW);
     }
 
     /**
