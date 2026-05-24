@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.JoinAck;
 import com.monitoring.agent.node.NodeAddress;
 import com.monitoring.agent.util.Console;
@@ -74,12 +75,12 @@ public final class JoinPlanner {
         }
 
         // if (missingNeighborAcks.size() <= maxNeighbors) {
-        //     List<NodeAddress> directTargets = missingNeighborAcks.stream()
-        //             .map(JoinAck::responder)
-        //             .limit(maxNeighbors)
-        //             .toList();
+        // List<NodeAddress> directTargets = missingNeighborAcks.stream()
+        // .map(JoinAck::responder)
+        // .limit(maxNeighbors)
+        // .toList();
 
-        //     return new JoinPlan(directTargets, Map.of());
+        // return new JoinPlan(directTargets, Map.of());
         // }
 
         // If can accept all received acks, then all of them are set to be neighbors.
@@ -94,11 +95,20 @@ public final class JoinPlanner {
 
         // int directTargetCount = maxNeighbors / 2;
 
-        int evenMissingDirectTargetCount = Math
-                .max((maxNeighbors - missingNeighborAcks.size()) % 2 == 0 ? missingNeighborAcks.size()
-                        : missingNeighborAcks.size() - 1, 0);
-        int missingDirectTargetCount = Math.min(evenMissingDirectTargetCount, maxNeighbors);
-        int fullDirectTargetCount = Math.min((maxNeighbors - missingDirectTargetCount) / 2, fullNeighborAcks.size());
+        int missingDirectTargetCount;
+        int fullDirectTargetCount;
+
+        if (missingNeighborAcks.size() + fullNeighborAcks.size() * 2 <= maxNeighbors) {
+            missingDirectTargetCount = missingNeighborAcks.size();
+            fullDirectTargetCount = fullNeighborAcks.size();
+        } else {
+            int evenMissingDirectTargetCount = Math
+                    .max(missingNeighborAcks.size() % 2 == 0 ? missingNeighborAcks.size()
+                            : missingNeighborAcks.size() - 1, 0);
+            missingDirectTargetCount = Math.min(evenMissingDirectTargetCount, maxNeighbors);
+            fullDirectTargetCount = Math.min((maxNeighbors - missingDirectTargetCount) / 2,
+                    fullNeighborAcks.size());
+        }
 
         List<JoinAck> directTargetAcks = new ArrayList<>();
 
@@ -106,6 +116,14 @@ public final class JoinPlanner {
 
         directTargetAcks.addAll(missingNeighborAcks.subList(0, missingDirectTargetCount));
         directTargetAcks.addAll(fullDirectTargetAcks);
+
+        Console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
+        Console.log("UNIQUE ACKS: " + uniqueAcks, Constant.CYAN);
+        Console.log("FULL NEIGHBOR ACKS: " + fullNeighborAcks, Constant.CYAN);
+        Console.log("MISSING NEIGHBOR ACKS: " + missingNeighborAcks, Constant.CYAN);
+        Console.log("Missing direct target count: " + missingDirectTargetCount + " || Full direct target count: "
+                + fullDirectTargetCount, Constant.BG_CYAN);
+        Console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
 
         // uniqueAcks.subList(0, fullDirectTargetCount);
 

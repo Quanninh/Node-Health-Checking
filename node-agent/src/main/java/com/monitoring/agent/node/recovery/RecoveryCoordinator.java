@@ -49,13 +49,10 @@ public class RecoveryCoordinator {
     public void startSelfRecovery(String repairEpoch) {
         recoveryControlService.gossipSelfDeficient(repairEpoch, 2);
 
-        // BUG: WHAT? THIS IS THE LIST OF NEIGHBORS, NOT DEFICIENT NODES
-
-        List<NodeAddress> deficientNodes = new ArrayList<>(connectionManager.neighborAddresses());
         // List<NodeAddress> deficientNodes = new
-        // ArrayList<>(networkTopologyCache.getDeficientNodes());
-        // BUG: THIS WILL DEFINITELY FAIL BECAUSE NEIGHBORS CAN'T BE ADDED TO THE
-        // BUG: CANDIDATE LIST
+        // ArrayList<>(connectionManager.neighborAddresses());
+        List<NodeAddress> deficientNodes = new ArrayList<>(networkTopologyCache.getDeficientNodes());
+
         NodeAddress candidate = directRepairCoordinator.findDirectCandidate(localAddress, deficientNodes);
 
         if (candidate != null) {
@@ -64,7 +61,7 @@ public class RecoveryCoordinator {
         }
 
         // BUG: WHY AM I REWIRING MYSELF TO MYSELF?
-        rewiringCoordinator.attemptRewiring(localAddress, localAddress, deficientNodes);
+        rewiringCoordinator.attemptRewiring(localAddress, localAddress, connectionManager.neighborAddresses());
 
         // BUG: I'M GETTING A BOOLEAN AND DOING NOTHING WITH IT...
         convergenceMonitor.hasConverged();

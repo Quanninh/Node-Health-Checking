@@ -18,7 +18,7 @@ public class NetworkTopologyCache {
     private final Map<String, Set<NodeAddress>> adjacencyCache = new ConcurrentHashMap<>();
 
     /** The set of deficient nodes. */
-    private final Set<String> deficientNodes = ConcurrentHashMap.newKeySet();
+    private final Set<NodeAddress> deficientNodes = ConcurrentHashMap.newKeySet();
 
     /**
      * Stores a connection between a node and its neighbor.
@@ -52,19 +52,19 @@ public class NetworkTopologyCache {
     /**
      * Marks a node as deficient.
      * 
-     * @param nodeId the deficient node
+     * @param node the deficient node
      */
-    public void markDeficient(String nodeId) {
-        deficientNodes.add(nodeId);
+    public void markDeficient(NodeAddress node) {
+        deficientNodes.add(node);
     }
 
     /**
      * Marks a node as sufficient (not deficient).
      * 
-     * @param nodeId the sufficient node
+     * @param node the sufficient node
      */
-    public void clearDeficient(String nodeId) {
-        deficientNodes.remove(nodeId);
+    public void clearDeficient(NodeAddress node) {
+        deficientNodes.remove(node);
     }
 
     /**
@@ -72,7 +72,7 @@ public class NetworkTopologyCache {
      * 
      * @return the list of deficient nodes
      */
-    public Set<String> getDeficientNodes() {
+    public Set<NodeAddress> getDeficientNodes() {
         return deficientNodes;
     }
 

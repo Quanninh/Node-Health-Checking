@@ -13,8 +13,10 @@ import com.monitoring.agent.util.Console;
 /**
  * Sends and receives recovery messages using UDP through the UdpCoordinator.
  * 
- * This service registers a consumer callback with the UdpCoordinator and processes
- * incoming recovery packets. It delegates all socket operations to UdpCoordinator.
+ * This service registers a consumer callback with the UdpCoordinator and
+ * processes
+ * incoming recovery packets. It delegates all socket operations to
+ * UdpCoordinator.
  */
 public class RecoveryUDPService implements AutoCloseable {
 
@@ -69,8 +71,9 @@ public class RecoveryUDPService implements AutoCloseable {
      * @param message the recovery message
      */
     private void handleDeficient(RecoveryMessage message) {
-        networkTopologyCache.markDeficient(message.subject().nodeId());
-        
+        Console.log("Received DEFICIENT. Working on it.", Constant.BG_PURPLE);
+        networkTopologyCache.markDeficient(message.subject());
+
         // Send DEFICIENT_ACK
         try {
             send(message.sender(),
@@ -82,24 +85,26 @@ public class RecoveryUDPService implements AutoCloseable {
             Console.log("Failed to send DEFICIENT_ACK to " + message.sender() + ": " + e.getMessage(), Constant.RED);
         }
 
-        // Gossip to neighbors
-        for (NodeAddress neighbor : connectionManager.neighborAddresses()) {
-            try {
-                send(neighbor,
-                        new RecoveryMessage(message.type(), message.messageId(),
-                                message.repairEpoch(), message.sender(), message.subject(),
-                                message.target(), message.neighbors(),
-                                Math.max(message.ttl() - 1, 0),
-                                System.currentTimeMillis(), message.incarnation()));
+        if (message.ttl() > 0) {
+            // Gossip to neighbors
+            for (NodeAddress neighbor : connectionManager.neighborAddresses()) {
+                try {
+                    send(neighbor,
+                            new RecoveryMessage(message.type(), message.messageId(),
+                                    message.repairEpoch(), message.sender(), message.subject(),
+                                    message.target(), message.neighbors(),
+                                    Math.max(message.ttl() - 1, 0),
+                                    System.currentTimeMillis(), message.incarnation()));
 
-                Console.log(
-                        "Gossiping DEFICIENT message [" + message + "] to " + neighbor + " success",
-                        Constant.BG_CYAN + Constant.BOLD);
-            } catch (IOException e) {
-                Console.log(
-                        "Failed to gossip message [" + message + "] to " + neighbor + " because "
-                                + e.getMessage(),
-                        Constant.RED);
+                    Console.log(
+                            "Gossiping DEFICIENT message [" + message + "] to " + neighbor + " success",
+                            Constant.BG_CYAN + Constant.BOLD);
+                } catch (IOException e) {
+                    Console.log(
+                            "Failed to gossip message [" + message + "] to " + neighbor + " because "
+                                    + e.getMessage(),
+                            Constant.RED);
+                }
             }
         }
     }
@@ -113,10 +118,10 @@ public class RecoveryUDPService implements AutoCloseable {
      */
     public void send(NodeAddress target, RecoveryMessage message) throws IOException {
         Console.log("Before sending: " + message + " to " + target.toString(), Constant.BG_GREEN);
-        
+
         String encodedMessage = message.encode();
         udpCoordinator.send(target.host(), target.port(), UdpPacketType.RECOVERY, encodedMessage);
-        
+
         Console.log("After sending: " + message + " to " + target.toString(), Constant.BG_GREEN);
     }
 

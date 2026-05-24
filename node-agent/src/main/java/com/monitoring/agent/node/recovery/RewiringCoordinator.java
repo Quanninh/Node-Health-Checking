@@ -46,7 +46,7 @@ public class RewiringCoordinator {
                 /**
                  * Rewiring scheme:
                  * A       B
-                 * |       |
+                 * |   x   |
                  * C - - - D
                  */
                 boolean orientation1 = !repairCache.areAdjacent(deficientA.nodeId(), candidateD.nodeId())
