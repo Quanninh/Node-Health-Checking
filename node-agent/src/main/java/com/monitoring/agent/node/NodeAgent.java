@@ -61,6 +61,8 @@ public class NodeAgent {
     public NodeAgent(String[] args) throws Exception {
         config = AgentConfig.fromArgs(args);
 
+        Console.setNodeId(config.nodeId());
+
         localAddress = new NodeAddress(
                 config.nodeId(),
                 config.advertiseHost(),

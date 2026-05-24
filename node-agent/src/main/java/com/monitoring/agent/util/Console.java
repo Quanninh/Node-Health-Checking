@@ -15,10 +15,10 @@ public class Console {
 
     private static synchronized void writeToFile(String text) {
         try (FileWriter fw = new FileWriter(LOG_FILE, true);
-             BufferedWriter bw = new BufferedWriter(fw);
-             PrintWriter out = new PrintWriter(bw)) {
+                BufferedWriter bw = new BufferedWriter(fw);
+                PrintWriter out = new PrintWriter(bw)) {
 
-            out.println(text);
+            out.println(nodeId + "::" + text);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -33,7 +33,7 @@ public class Console {
 
     public static void log(String message, String color) {
         String lineConsole = "[" + Constant.NOW() + "] " + color + message + Constant.RESET;
-        String line = "[" + Constant.NOW() + "] " + message + Constant.RESET;
+        String line = "[" + Constant.NOW() + "] " + message;
         System.out.println(lineConsole);
         writeToFile(line);
     }
