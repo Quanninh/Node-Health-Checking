@@ -3,7 +3,7 @@ package com.monitoring.agent.node;
 import java.util.List;
 
 /**
- * 
+ * Calculates the Phi Accrual Failure for the node.
  */
 public class PhiAccrualFailure {
 
