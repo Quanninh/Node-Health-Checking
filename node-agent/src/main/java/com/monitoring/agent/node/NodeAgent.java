@@ -19,6 +19,7 @@ import com.monitoring.agent.node.recovery.RecoveryControlService;
 import com.monitoring.agent.node.recovery.RecoveryCoordinator;
 import com.monitoring.agent.node.recovery.RecoveryUDPService;
 import com.monitoring.agent.node.recovery.RewiringCoordinator;
+import com.monitoring.agent.node.transport.UdpCoordinator;
 import com.monitoring.agent.util.Console;
 
 /**
@@ -39,6 +40,7 @@ public class NodeAgent {
     private final NetworkInterface multicastInterface;
     private final DiscoveryConfig discoveryConfig;
     private final MulticastDiscoveryService discoveryService;
+    private final UdpCoordinator udpCoordinator;
     private final MembershipControlService membershipControlService;
     private final MulticastJoinCoordinator joinCoordinator;
 
@@ -107,11 +109,13 @@ public class NodeAgent {
                 discoveryConfig,
                 connectionManager);
 
+        // Create a single UDP Coordinator for both membership and recovery services
+        udpCoordinator = new UdpCoordinator(config.p2pPort(), discoveryConfig.packetBufferSize());
+
         membershipControlService = new MembershipControlService(
                 localAddress,
                 connectionManager,
-                config.p2pPort(),
-                discoveryConfig.packetBufferSize());
+                udpCoordinator);
 
         joinCoordinator = new MulticastJoinCoordinator(
                 localAddress,
@@ -123,7 +127,7 @@ public class NodeAgent {
         repairCache = new NetworkTopologyCache();
 
         recoveryUdpService = new RecoveryUDPService(localAddress, repairCache, connectionManager,
-                config.p2pPort(), discoveryConfig.packetBufferSize());
+                udpCoordinator);
 
         recoveryControlService = new RecoveryControlService(localAddress, connectionManager, recoveryUdpService);
 
@@ -162,6 +166,9 @@ public class NodeAgent {
 
         nodeServer.start();
 
+        // Start UDP coordinator before services
+        udpCoordinator.start();
+
         membershipControlService.start();
 
         discoveryService.startResponder();
@@ -171,6 +178,9 @@ public class NodeAgent {
         dashboardReporter.reportSelfAlive(config.advertiseHost(), config.p2pPort());
 
         failureDetector.start();
+
+        // Start recovery service after other services
+        recoveryUdpService.start();
 
         printStartupInfo();
     }
