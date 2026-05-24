@@ -35,4 +35,21 @@ public class RecoveryUDPService {
         }
     }
 
+    public RecoveryMessage receive(int port, int bufferSize) throws IOException {
+        byte[] buffer = new byte[bufferSize];
+
+        DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
+
+        try (DatagramSocket socket = new DatagramSocket(port)) {
+            socket.receive(packet);
+
+            String raw = new String(
+                    packet.getData(),
+                    packet.getOffset(),
+                    packet.getLength(),
+                    StandardCharsets.UTF_8);
+
+            return RecoveryMessage.decode(raw);
+        }
+    }
 }

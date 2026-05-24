@@ -105,7 +105,7 @@ public class NeighborDirectory {
 
             Console.log("Reached here in the code of neighbor directory", Constant.BG_BLUE);
 
-            failureRecoveryManager.onNeighborFailure(nodeId);
+            failureRecoveryManager.onRemoveUnreachableNeighbor(nodeId);
         }
 
         if (nextIndex > connectionManager.size()) {

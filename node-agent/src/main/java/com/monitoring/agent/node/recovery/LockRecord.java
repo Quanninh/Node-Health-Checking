@@ -5,7 +5,7 @@ package com.monitoring.agent.node.recovery;
  * 
  * @param nodeId         the node ID
  * @param expirationTime the time of expiration (unix time)
- * @param repairEpoch    ???
+ * @param repairEpoch    the repair ID
  */
 public record LockRecord(String nodeId, long expirationTime, String repairEpoch) {
 
