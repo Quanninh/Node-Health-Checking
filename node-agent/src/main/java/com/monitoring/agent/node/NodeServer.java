@@ -15,7 +15,10 @@ import com.monitoring.agent.util.Console;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
-class NodeServer {
+/**
+ * Node Server to receive HTTP requests and handles them.
+ */
+public class NodeServer {
 
     private final String nodeId;
     private final String bindHost;
@@ -24,7 +27,7 @@ class NodeServer {
     private final HttpServer server;
     private volatile GossipService gossipService;
 
-    NodeServer(String nodeId, String bindHost, int port, NodeClient nodeClient) throws IOException {
+    public NodeServer(String nodeId, String bindHost, int port, NodeClient nodeClient) throws IOException {
         this.nodeId = nodeId;
         this.bindHost = bindHost;
         this.port = port;
@@ -37,16 +40,30 @@ class NodeServer {
         this.server.setExecutor(Executors.newFixedThreadPool(10));
     }
 
-    void setGossipService(GossipService gossipService) {
+    /**
+     * Sets the gossip service
+     * 
+     * @param gossipService the gossip service
+     */
+    public void setGossipService(GossipService gossipService) {
         this.gossipService = gossipService;
     }
 
-    void start() {
+    /**
+     * Starts the node server to listen to HTTP requests.
+     */
+    public void start() {
         server.start();
 
         Console.log("Node server listening on " + bindHost + ":" + port, Constant.GREEN);
     }
 
+    /**
+     * Handles PING requests. Sends back an ACK.
+     * 
+     * @param exchange the HTTP request
+     * @throws IOException
+     */
     private void handlePing(HttpExchange exchange) throws IOException {
         if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
             sendResponse(exchange, 405, "Method Not Allowed");
@@ -64,6 +81,13 @@ class NodeServer {
         sendResponse(exchange, 200, responseJson);
     }
 
+    /**
+     * Handles PING_REQ requests. Pings the requested target node and waits for the
+     * result. Returns the result to the sender.
+     * 
+     * @param exchange the HTTP request
+     * @throws IOException
+     */
     private void handlePingReq(HttpExchange exchange) throws IOException {
         if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
             sendResponse(exchange, 405, "Method Not Allowed");
@@ -97,6 +121,14 @@ class NodeServer {
         sendResponse(exchange, 200, responseJson);
     }
 
+    /**
+     * Receives a gossip.
+     * 
+     * @param exchange the gossip
+     * @throws IOException
+     * @see GossipService#receiveGossip(GossipMessage, String)
+     * @see GossipService#forwardGossip(GossipMessage, String)
+     */
     private void handleGossip(HttpExchange exchange) throws IOException {
         if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
             sendResponse(exchange, 405, "Method Not Allowed");
@@ -119,6 +151,13 @@ class NodeServer {
         gossipService.receiveGossip(message, senderNodeId);
     }
 
+    /**
+     * Extracts a JSON value from the json.
+     * 
+     * @param json      the json
+     * @param fieldName the field
+     * @return the value associated with the field
+     */
     private String extractJsonValue(String json, String fieldName) {
         Pattern stringPattern = Pattern.compile("\\\"" + fieldName + "\\\"\\s*:\\s*\\\"([^\\\"]*)\\\"");
         Matcher stringMatcher = stringPattern.matcher(json);
@@ -137,6 +176,14 @@ class NodeServer {
         throw new IllegalArgumentException("Missing field in JSON: " + fieldName);
     }
 
+    /**
+     * Sends a response to the sender with a status code and a response body.
+     * 
+     * @param exchange     the HTTP request
+     * @param statusCode   the status code
+     * @param responseBody the response body
+     * @throws IOException
+     */
     private void sendResponse(
             HttpExchange exchange,
             int statusCode,
