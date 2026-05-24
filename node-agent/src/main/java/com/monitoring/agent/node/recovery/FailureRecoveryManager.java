@@ -29,7 +29,7 @@ public class FailureRecoveryManager {
 
         if (connectionManager.size() < connectionManager.getMaxNeighbors()) {
 
-            recoveryCoordinator.startRecovery(
+            recoveryCoordinator.startSelfRecovery(
                     UUID.randomUUID().toString());
         }
     }

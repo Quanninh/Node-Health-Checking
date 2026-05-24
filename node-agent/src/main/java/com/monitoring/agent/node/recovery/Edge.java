@@ -5,6 +5,6 @@ import com.monitoring.agent.node.NodeAddress;
 /**
  * An edge?
  */
-public record EdgeCandidate(NodeAddress left, NodeAddress right) {
+public record Edge(NodeAddress left, NodeAddress right) {
 
 }

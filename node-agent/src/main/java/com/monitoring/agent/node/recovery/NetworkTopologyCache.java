@@ -54,7 +54,7 @@ public class NetworkTopologyCache {
      * 
      * @param nodeId the deficient node
      */
-    public void markDeficient(String nodeId) {
+    private void markDeficient(String nodeId) {
         deficientNodes.add(nodeId);
     }
 
@@ -72,7 +72,7 @@ public class NetworkTopologyCache {
      * 
      * @return the list of deficient nodes
      */
-    public Set<String> deficientNodes() {
+    public Set<String> getDeficientNodes() {
         return deficientNodes;
     }
 

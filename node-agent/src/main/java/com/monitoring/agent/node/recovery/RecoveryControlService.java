@@ -35,7 +35,7 @@ public class RecoveryControlService {
      * @param repairEpoch the repair epoch?
      * @param ttl         time to live
      */
-    public void gossipDeficientNode(String repairEpoch, int ttl) {
+    public void gossipSelfDeficient(String repairEpoch, int ttl) {
         RecoveryMessage message = new RecoveryMessage(
                 RecoveryMessageType.DEFICIENT,
                 UUID.randomUUID().toString(),

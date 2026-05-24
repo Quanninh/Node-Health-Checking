@@ -9,11 +9,14 @@ import com.monitoring.agent.node.connection.ConnectionManager;
 // TODO: This seems to be the main class, will return to this later
 public class RecoveryCoordinator {
 
+    /** TODO: Why 2? Should it be higher for more coverage? */
+    private static final int RECOVERY_TTL = 2;
+
     private final NodeAddress localAddress;
     private final ConnectionManager connectionManager;
 
-    private final RecoveryControlService controlService;
-    private final NetworkTopologyCache repairCache;
+    private final RecoveryControlService recoveryControlService;
+    private final NetworkTopologyCache networkTopologyCache;
 
     private final DirectRepairCoordinator directRepairCoordinator;
     private final RewiringCoordinator rewiringCoordinator;
@@ -24,47 +27,46 @@ public class RecoveryCoordinator {
             NodeAddress localAddress,
             ConnectionManager connectionManager,
             RecoveryControlService controlService,
-            NetworkTopologyCache repairCache,
+            NetworkTopologyCache networkTopologyCache,
             DirectRepairCoordinator directRepairCoordinator,
             RewiringCoordinator rewiringCoordinator,
             ConvergenceMonitor convergenceMonitor) {
 
         this.localAddress = localAddress;
         this.connectionManager = connectionManager;
-        this.controlService = controlService;
-        this.repairCache = repairCache;
+        this.recoveryControlService = controlService;
+        this.networkTopologyCache = networkTopologyCache;
         this.directRepairCoordinator = directRepairCoordinator;
         this.rewiringCoordinator = rewiringCoordinator;
         this.convergenceMonitor = convergenceMonitor;
     }
 
-    public void startRecovery(String repairEpoch) {
+    /**
+     * Starts the recovery process for the local node.
+     * 
+     * @param repairEpoch the ID of the epoch (random UUID)
+     */
+    public void startSelfRecovery(String repairEpoch) {
+        recoveryControlService.gossipSelfDeficient(repairEpoch, 2);
 
-        controlService.gossipDeficientNode(
-                repairEpoch,
-                2);
+        // BUG: WHAT? THIS IS THE LIST OF NEIGHBORS, NOT DEFICIENT NODES
 
-        List<NodeAddress> deficientNodes = new ArrayList<>(
-                connectionManager.neighborAddresses());
-
-        NodeAddress candidate = directRepairCoordinator.findDirectCandidate(
-                localAddress,
-                deficientNodes);
+        List<NodeAddress> deficientNodes = new ArrayList<>(connectionManager.neighborAddresses());
+        // List<NodeAddress> deficientNodes = new
+        // ArrayList<>(networkTopologyCache.getDeficientNodes());
+        // BUG: THIS WILL DEFINITELY FAIL BECAUSE NEIGHBORS CAN'T BE ADDED TO THE
+        // BUG: CANDIDATE LIST
+        NodeAddress candidate = directRepairCoordinator.findDirectCandidate(localAddress, deficientNodes);
 
         if (candidate != null) {
-
-            connectionManager.addIfSpace(
-                    candidate,
-                    "direct repair");
-
+            connectionManager.addIfSpace(candidate, "direct repair");
             return;
         }
 
-        rewiringCoordinator.attemptRewiring(
-                localAddress,
-                localAddress,
-                deficientNodes);
+        // BUG: WHY AM I REWIRING MYSELF TO MYSELF?
+        rewiringCoordinator.attemptRewiring(localAddress, localAddress, deficientNodes);
 
+        // BUG: I'M GETTING A BOOLEAN AND DOING NOTHING WITH IT...
         convergenceMonitor.hasConverged();
     }
 

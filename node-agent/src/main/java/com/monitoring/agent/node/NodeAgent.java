@@ -123,7 +123,8 @@ public class NodeAgent {
                 discoveryService,
                 membershipControlService);
 
-        recoveryCoordinator = new RecoveryCoordinator(localAddress, connectionManager, controlService, repairCache, directRepairCoordinator, rewiringCoordinator, convergenceMonitor)
+        recoveryCoordinator = new RecoveryCoordinator(localAddress, connectionManager, controlService, repairCache,
+                directRepairCoordinator, rewiringCoordinator, convergenceMonitor);
 
         failureRecoveryManager = new FailureRecoveryManager(localAddress, connectionManager, recoveryCoordinator);
 

@@ -16,78 +16,62 @@ public class RewiringCoordinator {
             ConnectionManager connectionManager,
             NetworkTopologyCache repairCache,
             EdgeLockManager edgeLockManager) {
-
         this.connectionManager = connectionManager;
         this.repairCache = repairCache;
         this.edgeLockManager = edgeLockManager;
     }
 
-    public boolean attemptRewiring(
-            NodeAddress deficientA,
-            NodeAddress deficientB,
-            List<NodeAddress> localNodes) {
-
-        List<EdgeCandidate> candidates = new ArrayList<>();
+    public boolean attemptRewiring(NodeAddress deficientA, NodeAddress deficientB, List<NodeAddress> localNodes) {
+        List<Edge> candidates = new ArrayList<>();
 
         for (NodeAddress c : localNodes) {
-
             for (NodeAddress d : repairCache.neighborsOf(c.nodeId())) {
-
-                candidates.add(
-                        new EdgeCandidate(c, d));
+                candidates.add(new Edge(c, d));
             }
         }
         Collections.shuffle(candidates);
 
-        for (EdgeCandidate edge : candidates) {
+        for (Edge edge : candidates) {
+            NodeAddress candidateC = edge.left();
+            NodeAddress candidateD = edge.right();
 
-            NodeAddress c = edge.left();
-            NodeAddress d = edge.right();
-
-            boolean reserved = edgeLockManager.reserve(
-                    c.nodeId(),
-                    d.nodeId());
+            boolean reserved = edgeLockManager.reserve(candidateC.nodeId(), candidateD.nodeId());
 
             if (!reserved) {
+                // Failed to reserve the edge, skip
                 continue;
             }
 
             try {
+                /**
+                 * Rewiring scheme:
+                 * A       B
+                 * |       |
+                 * C - - - D
+                 */
+                boolean orientation1 = !repairCache.areAdjacent(deficientA.nodeId(), candidateD.nodeId())
+                        && !repairCache.areAdjacent(deficientB.nodeId(), candidateC.nodeId());
 
-                boolean orientation1 = !repairCache.areAdjacent(
-                        deficientA.nodeId(),
-                        d.nodeId())
-                        &&
-                        !repairCache.areAdjacent(
-                                deficientB.nodeId(),
-                                c.nodeId());
-
+                // BUG: CONNECTION MANAGER IS FOR SELF, CAN'T CONNECT OTHER NODES
                 if (orientation1) {
-
-                    connectionManager.remove(
-                            d.nodeId(),
-                            "rewiring edge break");
-
-                    connectionManager.addIfSpace(
-                            deficientA,
-                            "rewiring repair");
-
-                    connectionManager.addIfSpace(
-                            deficientB,
-                            "rewiring repair");
-
+                    connectionManager.remove(candidateD.nodeId(), "rewiring edge break");
+                    connectionManager.addIfSpace(deficientA, "rewiring repair");
+                    connectionManager.addIfSpace(deficientB, "rewiring repair");
                     return true;
                 }
 
+                boolean orientation2 = !repairCache.areAdjacent(deficientA.nodeId(), candidateD.nodeId())
+                        && !repairCache.areAdjacent(deficientB.nodeId(), candidateC.nodeId());
+
             } catch (Exception e) {
 
-                rollback(c, d);
+                rollback(candidateC, candidateD);
 
             } finally {
 
                 edgeLockManager.release(
-                        c.nodeId(),
-                        d.nodeId());
+                        candidateC.nodeId(),
+                        candidateD.nodeId());
             }
         }
         return false;

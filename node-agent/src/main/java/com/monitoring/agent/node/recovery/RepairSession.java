@@ -1,22 +1,24 @@
-package com.monitoring.agent.node.recovery;
+// package com.monitoring.agent.node.recovery;
 
-public class RepairSession {
-    private final String repairEpoch;
-    private volatile boolean completed;
+// public class RepairSession {
 
-    public RepairSession(String repairEpoch) {
-        this.repairEpoch = repairEpoch;
-    }
+// private final String repairEpoch;
+// private volatile boolean completed;
 
-    public String repairEpoch() {
-        return repairEpoch;
-    }
+// public RepairSession(String repairEpoch) {
+// this.repairEpoch = repairEpoch;
+// }
 
-    public boolean completed() {
-        return completed;
-    }
+// public String getRepairEpoch() {
+// return repairEpoch;
+// }
 
-    public void markCompleted() {
-        this.completed = true;
-    }
-}
+// public boolean isCompleted() {
+// return completed;
+// }
+
+// public void markCompleted() {
+// this.completed = true;
+// }
+
+// }
