@@ -27,10 +27,11 @@ public class FailureRecoveryManager {
      * @param failedNodeId the failed node
      */
     public void onRemoveUnreachableNeighbor(String failedNodeId) {
-        Console.log(
-                "Reached here in the code of failure recovery manager. Prepare to remove node and start self recovery process.",
-                Constant.BG_BLUE);
-        connectionManager.remove(failedNodeId, "failure recovery removal");
+        // Console.log(
+        // "Reached here in the code of failure recovery manager. Prepare to remove node
+        // and start self recovery process.",
+        // Constant.BG_BLUE);
+        // connectionManager.remove(failedNodeId, "failure recovery removal");
 
         if (connectionManager.size() < connectionManager.getMaxNeighbors()) {
             Console.log("Recovery process starting...", Constant.BG_BLUE);

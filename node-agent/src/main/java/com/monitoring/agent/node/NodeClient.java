@@ -25,6 +25,12 @@ public class NodeClient {
                 .build();
     }
 
+    /**
+     * Sends a PING using HTTP to the target node and waits for the response.
+     * 
+     * @param targetNode the target node
+     * @return when the response arrives, true if status code is success
+     */
     public CompletableFuture<Boolean> ping(NodeAddress targetNode) {
         String json = """
                 {

@@ -307,11 +307,11 @@ public class NeighborDirectory {
             case SUSPECTED -> state.markSuspectedFromGossip(incarnationNumber);
             case UNREACHABLE -> state.markUnreachableFromGossip(incarnationNumber);
             case ALIVE -> state.markAliveFromGossip(incarnationNumber);
-            case JOIN -> {
-                if (incarnationNumber > state.getIncarnationNumber()) {
-                    state.markAliveFromGossip(incarnationNumber);
-                }
-            }
+            // case JOIN -> {
+            // if (incarnationNumber > state.getIncarnationNumber()) {
+            // state.markAliveFromGossip(incarnationNumber);
+            // }
+            // }
         }
     }
 
