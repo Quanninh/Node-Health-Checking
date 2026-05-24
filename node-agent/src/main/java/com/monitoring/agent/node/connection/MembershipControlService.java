@@ -1,10 +1,6 @@
 package com.monitoring.agent.node.connection;
 
 import java.io.IOException;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -186,17 +182,19 @@ public final class MembershipControlService implements AutoCloseable {
                 CompletableFuture<DiscoveryMessage> responseFuture = new CompletableFuture<>();
                 pendingResponses.put(discoveryMessage.transactionId(), responseFuture);
 
-                // Send the command via UDP using a temporary socket
-                byte[] bytes = discoveryMessage.encode().getBytes(StandardCharsets.UTF_8);
-                DatagramPacket packet = new DatagramPacket(
-                        bytes,
-                        bytes.length,
-                        InetAddress.getByName(target.host()),
-                        target.port());
+                // // Send the command via UDP using a temporary socket
+                // byte[] bytes = discoveryMessage.encode().getBytes(StandardCharsets.UTF_8);
+                // DatagramPacket packet = new DatagramPacket(
+                //         bytes,
+                //         bytes.length,
+                //         InetAddress.getByName(target.host()),
+                //         target.port());
 
-                try (DatagramSocket socket = new DatagramSocket()) {
-                    socket.send(packet);
-                }
+                // try (DatagramSocket socket = new DatagramSocket()) {
+                //     socket.send(packet);
+                // }
+                String encodeDiscoveryMess = discoveryMessage.encode();
+                udpCoordinator.send(target.host(), target.port(), UdpPacketType.MEMBERSHIP, encodeDiscoveryMess);
 
                 // Wait for the response with a timeout
                 DiscoveryMessage response = responseFuture.get(700, TimeUnit.MILLISECONDS);
