@@ -8,6 +8,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.NodeAddress;
 import com.monitoring.agent.util.Console;
 
@@ -255,6 +256,7 @@ public final class ConnectionManager {
             }
 
             if (neighborsById.size() >= maxNeighbors) {
+                Console.log("Accepting " + joiningNode + " will make this node exceed neighbor limit.", Constant.BG_YELLOW);
                 return new CommitResult(false, "Small join target has no free neighbor slot");
             }
 

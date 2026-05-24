@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.JoinAck;
 import com.monitoring.agent.node.NodeAddress;
 import com.monitoring.agent.util.Console;
@@ -49,12 +50,14 @@ public final class MulticastJoinCoordinator {
                 return;
             }
 
-            if (acks.size() <= maxNeighbors) {
-                joinSmallNetwork(plan);
-                return;
-            }
+            joinHybridNetwork(plan);
 
-            joinScaledNetwork(plan);
+            // if (acks.size() <= maxNeighbors) {
+            // joinSmallNetwork(plan);
+            // return;
+            // }
+
+            // joinScaledNetwork(plan);
         } catch (IOException exception) {
             Console.log("Join failed: " + exception.getMessage());
         }
@@ -90,6 +93,91 @@ public final class MulticastJoinCoordinator {
         Console.log("Small-network join complete. Current neighbors="
                 + connectionManager.neighborAddresses());
         connectionManager.setInNetwork(!connectionManager.neighborAddresses().isEmpty());
+    }
+
+    private void joinHybridNetwork(JoinPlan plan) {
+        String txId = UUID.randomUUID().toString();
+
+        for (NodeAddress directTarget : plan.directTargets()) {
+            // safety check, probably useless
+            if (connectionManager.size() >= maxNeighbors) {
+                break;
+            }
+
+            NodeAddress victim = plan.evictionByDirectTarget().get(directTarget);
+
+            // join without evicting
+            if (victim == null) {
+                boolean committed = membershipControlService.commitSmallJoinTarget(
+                        directTarget,
+                        localAddress,
+                        txId + ":small:" + directTarget.nodeId());
+
+                if (!committed) {
+                    Console.log("Small-network commit failed for "
+                            + directTarget + committed, Constant.BG_BLUE);
+                    continue;
+                }
+
+                connectionManager.addIfSpace(
+                        directTarget,
+                        "small-network committed join");
+
+                Console.log("Small-network bidirectional join established between "
+                        + localAddress.nodeId()
+                        + " and "
+                        + directTarget.nodeId());
+
+                continue;
+            }
+
+            // join and evict
+            boolean directCommitted = membershipControlService.commitDirectTarget(
+                    directTarget,
+                    localAddress,
+                    victim,
+                    txId + ":direct:" + directTarget.nodeId());
+
+            if (!directCommitted) {
+                Console.log("Direct target commit failed for "
+                        + directTarget);
+                continue;
+            }
+
+            boolean victimCommitted = membershipControlService.commitVictim(
+                    victim,
+                    localAddress,
+                    directTarget,
+                    txId + ":victim:" + victim.nodeId());
+
+            if (!victimCommitted) {
+                Console.log("Victim commit failed for "
+                        + victim
+                        + ". Failure detector/repair should fix this later.");
+                continue;
+            }
+
+            connectionManager.addIfSpace(
+                    directTarget,
+                    "scaled join direct target");
+
+            connectionManager.addIfSpace(
+                    victim,
+                    "scaled join evicted handover");
+
+            Console.log("Node "
+                    + localAddress.nodeId()
+                    + " successfully connected with direct target "
+                    + directTarget
+                    + " and handed over evicted node "
+                    + victim);
+        }
+
+        Console.log("Hybrid join complete. Current neighbors="
+                + connectionManager.neighborAddresses());
+
+        connectionManager.setInNetwork(
+                !connectionManager.neighborAddresses().isEmpty());
     }
 
     // NOTE: remember to handle node failures

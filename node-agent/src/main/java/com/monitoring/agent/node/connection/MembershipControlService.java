@@ -138,8 +138,9 @@ public final class MembershipControlService implements AutoCloseable {
 
                 if (response.type() == DiscoveryMessageType.COMMIT_ACK
                         && discoveryMessage.transactionId().equals(response.transactionId())) {
-                    Console.log("Commit ACK from " + target + " for txId=" + discoveryMessage.transactionId());
-                    return true;
+                    Console.log("Commit ACK from " + target + " for txId=" + discoveryMessage.transactionId()
+                            + " status=" + response.directTargetId() + Boolean.parseBoolean(response.directTargetId()));
+                    return Boolean.parseBoolean(response.directTargetId());
                 }
             } catch (Exception exception) {
                 Console.log("Commit attempt " + attempt + " failed for " + target
@@ -250,7 +251,7 @@ public final class MembershipControlService implements AutoCloseable {
                 0,
                 0,
                 List.of(),
-                accepted ? "accepted" : "rejected",
+                accepted ? "true" : "false",
                 null);
 
         byte[] bytes = ack.encode().getBytes(StandardCharsets.UTF_8);

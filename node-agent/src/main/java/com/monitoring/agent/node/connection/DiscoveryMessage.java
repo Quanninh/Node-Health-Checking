@@ -13,6 +13,8 @@ import com.monitoring.agent.node.NodeAddress;
 
 /**
  * Represents a discovery message.
+ * 
+ * @param directTargetId for COMMIT_ACK, this is a boolean
  */
 public record DiscoveryMessage(
         DiscoveryMessageType type,
@@ -98,7 +100,7 @@ public record DiscoveryMessage(
                 required(values, "txId"),
                 Long.parseLong(required(values, "sequence")),
                 sender,
-                Boolean.getBoolean(required(values, "isInNetwork")),
+                Boolean.parseBoolean(required(values, "isInNetwork")),
                 Integer.parseInt(values.getOrDefault("replyPort", "0")),
                 Long.parseLong(values.getOrDefault("neighborVersion", "0")),
                 decodeNeighbors(values.getOrDefault("neighbors", "")),
