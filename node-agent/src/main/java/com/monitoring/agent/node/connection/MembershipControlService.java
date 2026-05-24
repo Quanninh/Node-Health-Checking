@@ -183,19 +183,9 @@ public final class MembershipControlService implements AutoCloseable {
                 CompletableFuture<DiscoveryMessage> responseFuture = new CompletableFuture<>();
                 pendingResponses.put(discoveryMessage.transactionId(), responseFuture);
 
-                // // Send the command via UDP using a temporary socket
-                // byte[] bytes = discoveryMessage.encode().getBytes(StandardCharsets.UTF_8);
-                // DatagramPacket packet = new DatagramPacket(
-                //         bytes,
-                //         bytes.length,
-                //         InetAddress.getByName(target.host()),
-                //         target.port());
-
-                // try (DatagramSocket socket = new DatagramSocket()) {
-                //     socket.send(packet);
-                // }
-                String encodeDiscoveryMess = discoveryMessage.encode();
-                udpCoordinator.send(target.host(), target.port(), UdpPacketType.MEMBERSHIP, encodeDiscoveryMess);
+                // Send command via UdpCoordinator (payload is wrapped in UdpEnvelope)
+                udpCoordinator.send(target.host(), target.port(), UdpPacketType.MEMBERSHIP, 
+                        discoveryMessage.encode());
 
                 // Wait for the response with a timeout
                 DiscoveryMessage response = responseFuture.get(700, TimeUnit.MILLISECONDS);
