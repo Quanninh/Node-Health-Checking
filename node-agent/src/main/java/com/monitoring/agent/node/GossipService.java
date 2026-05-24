@@ -66,15 +66,6 @@ public class GossipService {
         receiveGossip(message, localNodeId);
     }
 
-    private void gossipJoin(String subjectNodeId, int incarnationNumber) {
-        GossipMessage message = createMessage(
-                subjectNodeId,
-                GossipMessageType.JOIN,
-                incarnationNumber,
-                "Node " + subjectNodeId + " joined/rejoined.");
-        receiveGossip(message, localNodeId);
-    }
-
     /**
      * Creates an UNREACHABLE message with
      * {@link #createMessage(String, GossipMessageType, int, String)}.

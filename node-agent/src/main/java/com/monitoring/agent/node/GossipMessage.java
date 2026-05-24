@@ -22,29 +22,6 @@ public record GossipMessage(
         int ttl,
         String details) {
 
-    // String toJson() {
-    // return """
-    // {
-    // \"messageId\": \"%s\",
-    // \"sourceNodeId\": \"%s\",
-    // \"subjectNodeId\": \"%s\",
-    // \"messageType\": \"%s\",
-    // \"incarnationNumber\": %d,
-    // \"timestamp\": %d,
-    // \"ttl\": %d,
-    // \"details\": \"%s\"
-    // }
-    // """.formatted(
-    // escapeJson(messageId),
-    // escapeJson(sourceNodeId),
-    // escapeJson(subjectNodeId),
-    // messageType,
-    // incarnationNumber,
-    // timestamp,
-    // ttl,
-    // escapeJson(details));
-    // }
-
     /**
      * Decreases time to live of a gossip message.
      */
