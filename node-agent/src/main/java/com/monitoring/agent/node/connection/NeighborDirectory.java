@@ -17,7 +17,6 @@ import com.monitoring.agent.node.NodeAddress;
 import com.monitoring.agent.node.NodeState;
 import com.monitoring.agent.node.NodeStatus;
 import com.monitoring.agent.node.PhiAccrualFailure;
-import com.monitoring.agent.node.recovery.FailureRecoveryManager;
 import com.monitoring.agent.util.Console;
 
 /**
@@ -29,7 +28,7 @@ public class NeighborDirectory {
      * Manager for a node's neighbors.
      */
     private final ConnectionManager connectionManager;
-    private FailureRecoveryManager failureRecoveryManager;
+    // private FailureRecoveryManager failureRecoveryManager;
 
     /**
      * Mapping of node id and its state.
@@ -41,9 +40,11 @@ public class NeighborDirectory {
     /** Index for iterating through neighbors (for failure detection). */
     private int nextIndex = 0;
 
-    public NeighborDirectory(ConnectionManager connectionManager, FailureRecoveryManager failureRecoveryManager) {
+    public NeighborDirectory(ConnectionManager connectionManager
+    // , FailureRecoveryManager failureRecoveryManager
+    ) {
         this.connectionManager = connectionManager;
-        this.failureRecoveryManager = failureRecoveryManager;
+        // this.failureRecoveryManager = failureRecoveryManager;
         syncStatesWithConnections();
     }
 
@@ -105,7 +106,7 @@ public class NeighborDirectory {
 
             Console.log("Reached here in the code of neighbor directory", Constant.BG_BLUE);
 
-            failureRecoveryManager.onRemoveUnreachableNeighbor(nodeId);
+            // failureRecoveryManager.onRemoveUnreachableNeighbor(nodeId);
         }
 
         if (nextIndex > connectionManager.size()) {

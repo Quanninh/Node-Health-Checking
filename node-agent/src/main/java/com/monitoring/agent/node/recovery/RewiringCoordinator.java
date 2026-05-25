@@ -10,8 +10,10 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.monitoring.agent.node.NodeAddress;
@@ -36,7 +38,7 @@ public final class RewiringCoordinator {
     private volatile RecoveryRole recoveryRole = RecoveryRole.FREE;
     private volatile String activeDeficientRecoveryId;
 
-    /*
+    /**
      * Used while this node is sending REWIRE_REQ and waiting for reply.
      *
      * Requirement:
@@ -45,16 +47,25 @@ public final class RewiringCoordinator {
      */
     private volatile boolean initiatingDeficientRequest = false;
 
-    /*
+    /**
      * One node may be REWIRING_NODE for multiple recovery sessions,
      * but the exact same edge C-D cannot be reserved by two recoveryIds.
      */
     private final ConcurrentHashMap<String, String> reservedEdgeByRecoveryId = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, String> recoveryIdByReservedEdge = new ConcurrentHashMap<>();
 
-    private final ConcurrentHashMap<String, CompletableFuture<RewireMessage>> pendingReplies =
-            new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, CompletableFuture<RewireMessage>> pendingReplies = new ConcurrentHashMap<>();
 
+    /**
+     * Constructor for the rewiring coordinator. Also refresh the health state for
+     * the first time.
+     * 
+     * @param localAddress
+     * @param connectionManager
+     * @param topologyCache
+     * @param udpCoordinator
+     * @see RewiringCoordinator#refreshHealthState()
+     */
     public RewiringCoordinator(
             NodeAddress localAddress,
             ConnectionManager connectionManager,
@@ -69,6 +80,10 @@ public final class RewiringCoordinator {
         refreshHealthState();
     }
 
+    /**
+     * Starts the rewiring coordinator. Registers with the UDP coordinator, when
+     * receiving a RECOVERY message, will handle it, see if it is a Rewire message.
+     */
     public void start() {
         udpCoordinator.registerRecoveryConsumer(envelope -> {
             try {
@@ -120,22 +135,10 @@ public final class RewiringCoordinator {
     private boolean runFullRewiring(NodeAddress defA, NodeAddress defB) {
         String requestId = UUID.randomUUID().toString();
 
-        List<NodeAddress> defANeighborsAtRequestTime =
-                connectionManager.neighborAddresses();
+        List<NodeAddress> defANeighborsAtRequestTime = connectionManager.neighborAddresses();
 
-        RewireMessage req = RewireMessage.of(
-                RecoveryMessageType.REWIRE_REQ,
-                requestId,
-                localAddress,
-                defA,
-                defB,
-                null,
-                null,
-                null,
-                null,
-                defANeighborsAtRequestTime,
-                List.of(),
-                null);
+        RewireMessage req = RewireMessage.of(RecoveryMessageType.REWIRE_REQ, requestId, localAddress, defA, defB, null,
+                null, null, null, defANeighborsAtRequestTime, List.of(), null);
 
         RewireMessage ack;
 
@@ -158,12 +161,14 @@ public final class RewiringCoordinator {
             return false;
         }
 
+        // Not the leader -> skip
         if (!localAddress.nodeId().equals(electLeader(defA, defB).nodeId())) {
             return false;
         }
 
         String recoveryId = UUID.randomUUID().toString();
 
+        // Tries to become the leader. If can't -> skip
         if (!becomeDeficientLeader(recoveryId)) {
             return false;
         }
@@ -175,14 +180,9 @@ public final class RewiringCoordinator {
                 RecoveryMessageType.COMMIT_ACK,
                 recoveryId,
                 localAddress,
-                defA,
-                defB,
-                null,
-                null,
-                null,
-                null,
-                defANeighbors,
-                defBNeighbors,
+                defA, defB, null, null,
+                null, null,
+                defANeighbors, defBNeighbors,
                 RewireStatus.ACCEPTED);
 
         sendOnly(defB, commit);
@@ -200,21 +200,14 @@ public final class RewiringCoordinator {
                     RecoveryMessageType.NEIGHBORS_QUERY,
                     recoveryId,
                     localAddress,
-                    defA,
-                    defB,
-                    c,
-                    null,
-                    null,
-                    null,
-                    defANeighbors,
-                    defBNeighbors,
+                    defA, defB, c, null,
+                    null, null,
+                    defANeighbors, defBNeighbors,
                     null);
 
             RewireMessage response = sendAndWait(c, query, REQUEST_TIMEOUT);
 
-            if (response == null
-                    || response.status() != RewireStatus.ACCEPTED
-                    || response.nodeD() == null) {
+            if (response == null || response.status() != RewireStatus.ACCEPTED || response.nodeD() == null) {
                 continue;
             }
 
@@ -264,56 +257,56 @@ public final class RewiringCoordinator {
         return connectionManager.addIfSpace(defB, "direct rewiring recovery");
     }
 
-    private boolean executeScheme(
-            String recoveryId,
-            NodeAddress defA,
-            NodeAddress defB,
-            NodeAddress c,
-            NodeAddress d) {
+    /**
+     * Executes the rewiring scheme.
+     *
+     * <p>
+     * Upon receiving a successful status from {@code C}, {@code defA}
+     * performs the following atomic topology handoff:
+     *
+     * <pre>
+     * Before: C <-> D
+     * After : defA <-> D, defB <-> C
+     * </pre>
+     *
+     * <p>
+     * {@code defA} concurrently dispatches three
+     * {@code REWIRE_SCHEME} packets:
+     *
+     * <ul>
+     * <li>To {@code C}: {@code connectsTo=defB},
+     * {@code disconnectsFrom=D}</li>
+     * <li>To {@code D}: {@code connectsTo=defA},
+     * {@code disconnectsFrom=C}</li>
+     * <li>To {@code defB}: {@code connectsTo=C}</li>
+     * </ul>
+     *
+     * <p>
+     * {@code defA} updates its local neighbor list to include
+     * {@code D}. All participating nodes update their topology state and
+     * return to {@code FREE} unless concurrently acting as a
+     * {@code REWIRING_NODE} in another independent recovery session.
+     *
+     * @param recoveryId the recovery session identifier
+     * @param defA       the initiating deficient node
+     * @param defB       the partner deficient node
+     * @param c          the rewiring node currently connected to {@code d}
+     * @param d          the rewiring node currently connected to {@code c}
+     * @return {@code true} if the rewiring completes successfully;
+     *         otherwise {@code false}
+     */
+    private boolean executeScheme(String recoveryId, NodeAddress defA, NodeAddress defB, NodeAddress c, NodeAddress d) {
 
         String txId = recoveryId + ":scheme";
 
-        RewireMessage toC = RewireMessage.of(
-                RecoveryMessageType.REWIRE_SCHEME,
-                txId + ":C",
-                localAddress,
-                defA,
-                defB,
-                c,
-                d,
-                defB,
-                d,
-                List.of(),
-                List.of(),
-                null);
+        RewireMessage toC = RewireMessage.of(RecoveryMessageType.REWIRE_SCHEME, txId + ":C", localAddress, defA, defB,
+                c, d, defB, d, List.of(), List.of(), null);
 
-        RewireMessage toD = RewireMessage.of(
-                RecoveryMessageType.REWIRE_SCHEME,
-                txId + ":D",
-                localAddress,
-                defA,
-                defB,
-                c,
-                d,
-                defA,
-                c,
-                List.of(),
-                List.of(),
-                null);
+        RewireMessage toD = RewireMessage.of(RecoveryMessageType.REWIRE_SCHEME, txId + ":D", localAddress, defA, defB,
+                c, d, defA, c, List.of(), List.of(), null);
 
-        RewireMessage toB = RewireMessage.of(
-                RecoveryMessageType.REWIRE_SCHEME,
-                txId + ":B",
-                localAddress,
-                defA,
-                defB,
-                c,
-                d,
-                c,
-                null,
-                List.of(),
-                List.of(),
-                null);
+        RewireMessage toB = RewireMessage.of(RecoveryMessageType.REWIRE_SCHEME, txId + ":B", localAddress, defA, defB,
+                c, d, c, null, List.of(), List.of(), null);
 
         CompletableFuture<RewireMessage> ackC = sendAsync(c, toC);
         CompletableFuture<RewireMessage> ackD = sendAsync(d, toD);
@@ -324,19 +317,18 @@ public final class RewiringCoordinator {
             RewireMessage dAck = ackD.get(REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
             RewireMessage bAck = ackB.get(REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
 
-            boolean allRemoteAccepted =
-                    accepted(cAck)
-                            && accepted(dAck)
-                            && accepted(bAck);
+            boolean allRemoteAccepted = accepted(cAck) && accepted(dAck) && accepted(bAck);
 
             if (!allRemoteAccepted) {
                 Console.log("[REWIRE] Scheme aborted. At least one participant rejected.");
+
+                // TODO: Then what? Do we handle this? Maybe some connections has been made but
+                // not all?
+
                 return false;
             }
 
-            boolean localApplied = connectionManager.addIfSpace(
-                    d,
-                    "rewiring scheme: defA connects to D");
+            boolean localApplied = connectionManager.addIfSpace(d, "rewiring scheme: defA connects to D");
 
             if (!localApplied) {
                 Console.log("[REWIRE] Scheme failed locally. defA could not add D.");
@@ -345,27 +337,25 @@ public final class RewiringCoordinator {
 
             refreshHealthState();
 
-            Console.log("[REWIRE] Scheme committed. "
-                    + defA.nodeId()
-                    + " connected to "
-                    + d.nodeId()
-                    + ", "
-                    + defB.nodeId()
-                    + " connected to "
-                    + c.nodeId()
-                    + ", edge "
-                    + c.nodeId()
-                    + "-"
-                    + d.nodeId()
-                    + " removed.");
+            Console.log(
+                    "[REWIRE] Scheme committed. " + defA.nodeId() + " connected to " + d.nodeId() + ", " + defB.nodeId()
+                            + " connected to " + c.nodeId() + ", edge " + c.nodeId() + "-" + d.nodeId() + " removed.");
 
             return true;
-        } catch (Exception exception) {
+        } catch (InterruptedException | ExecutionException | TimeoutException exception) {
             Console.log("[REWIRE] Scheme failed: " + exception.getMessage());
             return false;
         }
     }
 
+    /**
+     * Handles the received rewire message.
+     * <p>
+     * Flow: Removes the reply from the pending replies. Then, depending on the
+     * reply type, pass the message to the corresponding handle functions.
+     * 
+     * @param message the rewire message
+     */
     private void handle(RewireMessage message) {
         if (message == null || message.type() == null) {
             return;
@@ -390,18 +380,27 @@ public final class RewiringCoordinator {
         }
     }
 
+    /**
+     * Handles when the node receives a REWIRE_REQ_DIRECT. If the node can accept
+     * the sender as a neighbor, sends a REWIRE_ACK back to the sender.
+     * 
+     * @param message the REWIRE_REQ_DIRECT message
+     */
     private void handleDirectRequest(RewireMessage message) {
-        boolean accepted =
-                canAcceptDeficientRequest()
-                        && connectionManager.addIfSpace(message.sender(), "direct rewiring request");
+        boolean accepted = canAcceptDeficientRequest()
+                && connectionManager.addIfSpace(message.sender(), "direct rewiring request");
 
         refreshHealthState();
 
-        sendOnly(
-                message.sender(),
-                reply(message, RecoveryMessageType.REWIRE_ACK, accepted, null));
+        sendOnly(message.sender(), reply(message, RecoveryMessageType.REWIRE_ACK, accepted, null));
     }
 
+    /**
+     * Handles when the node receives a REWIRE_REQ. If the node can accept the
+     * deficient node as a neighbor, sends back REWIRE_ACK, otherwise, REWIRE_DENY.
+     * 
+     * @param message the REWIRE_REQ message
+     */
     private void handleRewireRequest(RewireMessage message) {
         if (!canAcceptDeficientRequest()) {
             sendOnly(message.sender(), reply(message, RecoveryMessageType.REWIRE_DENY, false, null));
@@ -539,16 +538,15 @@ public final class RewiringCoordinator {
     }
 
     private void handleRewiringPropose(RewireMessage message) {
-        boolean valid =
-                message.nodeC() != null
-                        && message.nodeD() != null
-                        && connectionManager.containsNode(message.nodeC().nodeId())
-                        && tryBecomeRewiringNode(
-                                message.recoveryId(),
-                                message.nodeC(),
-                                message.nodeD(),
-                                message.connectsTo(),
-                                message.disconnectsFrom());
+        boolean valid = message.nodeC() != null
+                && message.nodeD() != null
+                && connectionManager.containsNode(message.nodeC().nodeId())
+                && tryBecomeRewiringNode(
+                        message.recoveryId(),
+                        message.nodeC(),
+                        message.nodeD(),
+                        message.connectsTo(),
+                        message.disconnectsFrom());
 
         sendOnly(
                 message.sender(),
@@ -571,15 +569,24 @@ public final class RewiringCoordinator {
                 reply(message, RecoveryMessageType.REWIRE_SCHEME_ACK, accepted, null));
     }
 
-    private NodeAddress findCandidateD(
-            NodeAddress c,
-            List<NodeAddress> defANeighbors,
+    /**
+     * For a candidate node C, finds a candidate node D. Requirements: D is a
+     * neighbor of C and B. D is NOT a neighbor of A.
+     * 
+     * @param c             the C node
+     * @param defANeighbors neighbors of A
+     * @param defBNeighbors neighbors of B
+     * @return
+     */
+    private NodeAddress findCandidateD(NodeAddress c, List<NodeAddress> defANeighbors,
             List<NodeAddress> defBNeighbors) {
 
         if (c == null) {
             return null;
         }
 
+        // BUG: This doesn't seem to be the list for neighbors of C? It seems to be
+        // neighbors of A (the node calling this method(?))
         List<NodeAddress> localNeighborsOfC = new ArrayList<>(connectionManager.neighborAddresses());
         Collections.shuffle(localNeighborsOfC);
 
@@ -604,9 +611,15 @@ public final class RewiringCoordinator {
         return null;
     }
 
-    private List<NodeAddress> selectCandidateCs(
-            List<NodeAddress> defANeighbors,
-            List<NodeAddress> defBNeighbors) {
+    /**
+     * Selects neighbors of A that are candidates for C node. Requirements: C is not
+     * a neighbor of defA.
+     * 
+     * @param defANeighbors neighbors of A
+     * @param defBNeighbors neighbors of B
+     * @return a list of candidates for node C
+     */
+    private List<NodeAddress> selectCandidateCs(List<NodeAddress> defANeighbors, List<NodeAddress> defBNeighbors) {
 
         List<NodeAddress> result = defANeighbors.stream()
                 .filter(c -> !contains(defBNeighbors, c.nodeId()))
@@ -616,6 +629,11 @@ public final class RewiringCoordinator {
         return result;
     }
 
+    /**
+     * If a node is DEFICIENT and FREE, then it can start deficient recovery.
+     * 
+     * @return whether the node pass the conditions
+     */
     private boolean canStartDeficientRecovery() {
         roleLock.lock();
         try {
@@ -631,11 +649,16 @@ public final class RewiringCoordinator {
         }
     }
 
+    /**
+     * Attempts to set the local node as the DEFICIENT_LEADER.
+     * 
+     * @param recoveryId the recovery ID
+     * @return success or not
+     */
     private boolean becomeDeficientLeader(String recoveryId) {
         roleLock.lock();
         try {
             refreshHealthState();
-
             if (healthState != HealthState.DEFICIENT) {
                 return false;
             }
@@ -653,6 +676,12 @@ public final class RewiringCoordinator {
         }
     }
 
+    /**
+     * Attempts to set the local node as the DEFICIENT_FELLOW.
+     * 
+     * @param recoveryId the recovery ID
+     * @return success or not
+     */
     private boolean becomeDeficientFellow(String recoveryId) {
         roleLock.lock();
         try {
@@ -675,6 +704,12 @@ public final class RewiringCoordinator {
         }
     }
 
+    /**
+     * If a node is DEFICIENT and FREE and is NOT initiating any deficient request,
+     * then it can accept deficient requests.
+     * 
+     * @return whether the node pass the conditions
+     */
     private boolean canAcceptDeficientRequest() {
         roleLock.lock();
         try {
@@ -694,11 +729,7 @@ public final class RewiringCoordinator {
         }
     }
 
-    private boolean tryBecomeRewiringNode(
-            String recoveryId,
-            NodeAddress c,
-            NodeAddress d,
-            NodeAddress connectsTo,
+    private boolean tryBecomeRewiringNode(String recoveryId, NodeAddress c, NodeAddress d, NodeAddress connectsTo,
             NodeAddress disconnectsFrom) {
 
         roleLock.lock();
@@ -723,7 +754,6 @@ public final class RewiringCoordinator {
             }
 
             String edgeKey = edgeKey(c, d);
-
             String existingRecoveryId = recoveryIdByReservedEdge.putIfAbsent(edgeKey, recoveryId);
 
             if (existingRecoveryId != null && !existingRecoveryId.equals(recoveryId)) {
@@ -784,6 +814,7 @@ public final class RewiringCoordinator {
         }
     }
 
+    // TODO: Not yet understand
     private void releaseDeficientRoleIfMatching(String recoveryId) {
         roleLock.lock();
         try {
@@ -798,20 +829,42 @@ public final class RewiringCoordinator {
         }
     }
 
+    /**
+     * Gets the current health state: deficient or sufficient.
+     * 
+     * @return the health state
+     */
     private HealthState currentHealthState() {
         return connectionManager.size() < connectionManager.getMaxNeighbors()
                 ? HealthState.DEFICIENT
                 : HealthState.SUFFICIENT;
     }
 
+    /**
+     * Sets the current health state.
+     */
     private void refreshHealthState() {
         healthState = currentHealthState();
     }
 
+    /**
+     * If the rewiring requires both connecting to another node and disconnecting
+     * from another node then it is considered neutral.
+     * 
+     * @param connectsTo      the connecting-to node
+     * @param disconnectsFrom the disconnect-from node
+     * @return true if both the connecting-to and the disconnecting-from node are
+     *         both not null
+     */
     private boolean isDegreeNeutralSwap(NodeAddress connectsTo, NodeAddress disconnectsFrom) {
         return connectsTo != null && disconnectsFrom != null;
     }
 
+    /**
+     * Sets whether the node is initiating a DEFICIENT request.
+     * 
+     * @param value boolean to set
+     */
     private void markInitiatingDeficientRequest(boolean value) {
         roleLock.lock();
         try {
@@ -821,6 +874,13 @@ public final class RewiringCoordinator {
         }
     }
 
+    /**
+     * Checks if all neighbors of A exists in neighbors of B.
+     * 
+     * @param defANeighbors
+     * @param defBNeighbors
+     * @return
+     */
     private boolean allNeighborsOfAExistInNeighborsOfB(
             List<NodeAddress> defANeighbors,
             List<NodeAddress> defBNeighbors) {
@@ -838,6 +898,13 @@ public final class RewiringCoordinator {
         return true;
     }
 
+    /**
+     * Creates an edge key between node A and ndoe B.
+     * 
+     * @param a
+     * @param b
+     * @return A--B if A < B, or B--A if B < A
+     */
     private String edgeKey(NodeAddress a, NodeAddress b) {
         if (a == null || b == null) {
             throw new IllegalArgumentException("Cannot create edge key from null node.");
@@ -851,14 +918,28 @@ public final class RewiringCoordinator {
         return ids.get(0) + "--" + ids.get(1);
     }
 
+    /**
+     * Simple leader election: the larger node ID (lexical order) is the leader.
+     * 
+     * @param a node A
+     * @param b node B
+     * @return the leader
+     */
     private NodeAddress electLeader(NodeAddress a, NodeAddress b) {
         return a.nodeId().compareTo(b.nodeId()) >= 0 ? a : b;
     }
 
-    private RewireMessage reply(
-            RewireMessage request,
-            RecoveryMessageType replyType,
-            boolean accepted,
+    /**
+     * Returns a reply message.
+     * 
+     * @param request    the original message
+     * @param replyType  the message reply type
+     * @param accepted   whether the original request is accepted
+     * @param candidateD candidate D?
+     * @return
+     *         the reply message
+     */
+    private RewireMessage reply(RewireMessage request, RecoveryMessageType replyType, boolean accepted,
             NodeAddress candidateD) {
 
         return RewireMessage.of(
@@ -876,6 +957,15 @@ public final class RewiringCoordinator {
                 accepted ? RewireStatus.ACCEPTED : RewireStatus.REFUSED);
     }
 
+    /**
+     * Sends a message after putting it into the pending replies list. Then waits
+     * until receives a response.
+     * 
+     * @param target  the target node
+     * @param message the rewire message
+     * @param timeout timeout
+     * @return the response rewire message
+     */
     private RewireMessage sendAndWait(NodeAddress target, RewireMessage message, Duration timeout) {
         for (int attempt = 1; attempt <= SEND_ATTEMPTS; attempt++) {
             CompletableFuture<RewireMessage> future = new CompletableFuture<>();
@@ -885,7 +975,7 @@ public final class RewiringCoordinator {
             try {
                 sendOnly(target, message);
                 return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
-            } catch (Exception exception) {
+            } catch (InterruptedException | ExecutionException | TimeoutException exception) {
                 pendingReplies.remove(message.recoveryId());
             }
         }
@@ -893,31 +983,49 @@ public final class RewiringCoordinator {
         return null;
     }
 
+    /**
+     * Sends async message and waits for response. (I think this means you don't
+     * have to send the message right now, it will be sent later.)
+     * 
+     * @param target  the target node
+     * @param message the rewire message
+     * @return the response rewire message
+     */
     private CompletableFuture<RewireMessage> sendAsync(NodeAddress target, RewireMessage message) {
         return CompletableFuture.supplyAsync(() -> sendAndWait(target, message, REQUEST_TIMEOUT));
     }
 
+    /**
+     * Sends a message without waiting for any response.
+     * 
+     * @param target  the target node
+     * @param message the message
+     */
     private void sendOnly(NodeAddress target, RewireMessage message) {
         try {
-            udpCoordinator.send(
-                    target.host(),
-                    target.port(),
-                    UdpPacketType.RECOVERY,
-                    message.encode());
+            udpCoordinator.send(target.host(), target.port(), UdpPacketType.RECOVERY, message.encode());
         } catch (IOException exception) {
-            Console.log("[REWIRE] Failed to send "
-                    + message.type()
-                    + " to "
-                    + target
-                    + ": "
-                    + exception.getMessage());
+            Console.log("[REWIRE] Failed to send " + message.type() + " to " + target + ": " + exception.getMessage());
         }
     }
 
+    /**
+     * Checks if the message is an ACCEPTED rewire message.
+     * 
+     * @param message the require message
+     * @return whether the request is ACCEPTED
+     */
     private boolean accepted(RewireMessage message) {
         return message != null && message.status() == RewireStatus.ACCEPTED;
     }
 
+    /**
+     * Checks if the list of addresses contains a node.
+     * 
+     * @param addresses the list of addresses
+     * @param nodeId    the node
+     * @return whether the list contains the node
+     */
     private boolean contains(List<NodeAddress> addresses, String nodeId) {
         if (addresses == null || nodeId == null) {
             return false;
@@ -927,6 +1035,12 @@ public final class RewiringCoordinator {
                 .anyMatch(address -> address != null && address.nodeId().equals(nodeId));
     }
 
+    /**
+     * Checks if the message type is a reply message.
+     * 
+     * @param type the recovery message type
+     * @return whether the message type is a reply message
+     */
     private boolean isReply(RecoveryMessageType type) {
         return type == RecoveryMessageType.REWIRE_ACK
                 || type == RecoveryMessageType.REWIRE_DENY
@@ -935,6 +1049,9 @@ public final class RewiringCoordinator {
                 || type == RecoveryMessageType.REWIRE_SCHEME_ACK;
     }
 
+    /**
+     * Random backoff time.
+     */
     private void randomBackoff() {
         try {
             Thread.sleep(ThreadLocalRandom.current().nextLong(250, 1000));

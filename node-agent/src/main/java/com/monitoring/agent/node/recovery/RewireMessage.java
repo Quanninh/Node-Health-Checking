@@ -9,6 +9,24 @@ import java.util.UUID;
 
 import com.monitoring.agent.node.NodeAddress;
 
+/**
+ * A rewire message.
+ * 
+ * @param type            the recovery message type
+ * @param messageId       the message ID
+ * @param recoveryId      the recovery ID
+ * @param sender          the sender node
+ * @param defA            the deficient node A
+ * @param defB            the deficient node B
+ * @param nodeC           the node C neighbor of A
+ * @param nodeD           the node D neighbor of C
+ * @param connectsTo      the node that the receiver should connect to
+ * @param disconnectsFrom the node that the receiver should disconnect from
+ * @param defANeighbors   neighbors of A
+ * @param defBNeighbors   neighbors of B
+ * @param status          the rewire status
+ * @param timestamp       the timestamp (ms)
+ */
 public record RewireMessage(
         RecoveryMessageType type,
         String messageId,
@@ -29,6 +47,23 @@ public record RewireMessage(
     private static final String KEY_VALUE_SEPARATOR = "=";
     private static final String LIST_SEPARATOR = ",";
 
+    /**
+     * Returns a rewire message with parameters.
+     * 
+     * @param type            message type
+     * @param recoveryId      recovery ID
+     * @param sender          the sender node
+     * @param defA            the deficient node A
+     * @param defB            the deficient node B
+     * @param nodeC           the node C neighbor of A
+     * @param nodeD           the node D neighbor of C
+     * @param connectsTo      the node that the receiver should connect to
+     * @param disconnectsFrom the node that the receiver should disconnect from
+     * @param defANeighbors   neighbors of A
+     * @param defBNeighbors   neighbors of B
+     * @param status          the rewire status
+     * @return the rewire message
+     */
     public static RewireMessage of(
             RecoveryMessageType type,
             String recoveryId,
@@ -43,23 +78,16 @@ public record RewireMessage(
             List<NodeAddress> defBNeighbors,
             RewireStatus status) {
 
-        return new RewireMessage(
-                type,
-                UUID.randomUUID().toString(),
-                recoveryId,
-                sender,
-                defA,
-                defB,
-                nodeC,
-                nodeD,
-                connectsTo,
-                disconnectsFrom,
-                safeList(defANeighbors),
-                safeList(defBNeighbors),
-                status,
+        return new RewireMessage(type, UUID.randomUUID().toString(), recoveryId, sender, defA, defB, nodeC, nodeD,
+                connectsTo, disconnectsFrom, safeList(defANeighbors), safeList(defBNeighbors), status,
                 System.currentTimeMillis());
     }
 
+    /**
+     * Encodes the rewire message into a string.
+     * 
+     * @return the encoded message
+     */
     public String encode() {
         return "type=" + url(type.name())
                 + FIELD_SEPARATOR + "messageId=" + url(messageId)
@@ -77,6 +105,12 @@ public record RewireMessage(
                 + FIELD_SEPARATOR + "timestamp=" + timestamp;
     }
 
+    /**
+     * Decodes the string into a rewire message.
+     * 
+     * @param raw the raw string
+     * @return the rewire message
+     */
     public static RewireMessage decode(String raw) {
         String type = value(raw, "type");
 
@@ -97,6 +131,13 @@ public record RewireMessage(
                 Long.parseLong(value(raw, "timestamp")));
     }
 
+    /**
+     * Gets the value of the key from the raw message.
+     * 
+     * @param raw the raw message
+     * @param key the key
+     * @return the value
+     */
     private static String value(String raw, String key) {
         for (String pair : raw.split(FIELD_SEPARATOR)) {
             int index = pair.indexOf(KEY_VALUE_SEPARATOR);
@@ -115,6 +156,12 @@ public record RewireMessage(
         return "";
     }
 
+    /**
+     * Turns a string into a rewire status.
+     * 
+     * @param raw the string
+     * @return the rewire status
+     */
     private static RewireStatus parseStatus(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
@@ -123,6 +170,12 @@ public record RewireMessage(
         return RewireStatus.valueOf(raw);
     }
 
+    /**
+     * Turns a string into a node address.
+     * 
+     * @param raw the string
+     * @return the node address
+     */
     private static NodeAddress parseAddress(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
@@ -131,10 +184,22 @@ public record RewireMessage(
         return NodeAddress.fromString(raw);
     }
 
+    /**
+     * Turns a node address into a string.
+     * 
+     * @param address the node address
+     * @return the string
+     */
     private static String addressToString(NodeAddress address) {
         return address == null ? "" : address.toString();
     }
 
+    /**
+     * Encodes a list of node addresses into raw string.
+     * 
+     * @param addresses the list of node addresses
+     * @return the raw string
+     */
     private static String encodeList(List<NodeAddress> addresses) {
         if (addresses == null || addresses.isEmpty()) {
             return "";
@@ -146,6 +211,12 @@ public record RewireMessage(
                 .orElse("");
     }
 
+    /**
+     * Decodes the list of node addresses from the raw string.
+     * 
+     * @param raw the raw string
+     * @return the list of node addresses
+     */
     private static List<NodeAddress> decodeList(String raw) {
         if (raw == null || raw.isBlank()) {
             return List.of();
@@ -162,14 +233,32 @@ public record RewireMessage(
         return result;
     }
 
+    /**
+     * Returns a list safely.
+     * 
+     * @param input the list of node addresses
+     * @return the safe list of node addresses
+     */
     private static List<NodeAddress> safeList(List<NodeAddress> input) {
         return input == null ? List.of() : List.copyOf(input);
     }
 
+    /**
+     * URL format.
+     * 
+     * @param value
+     * @return
+     */
     private static String url(String value) {
         return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }
 
+    /**
+     * Decode URL format.
+     * 
+     * @param value
+     * @return
+     */
     private static String decodeUrl(String value) {
         return URLDecoder.decode(value, StandardCharsets.UTF_8);
     }
