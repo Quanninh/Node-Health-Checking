@@ -6,12 +6,20 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * A UDP wrapper for a UDP packet.
+ * 
+ * @param protocol the protocol name
+ * @param version  the protocol version
+ * @param type     the packet type
+ * @param payload  the message
+ */
 public record UdpEnvelope(
         String protocol,
         int version,
         UdpPacketType type,
         String payload) {
-    
+
     // Verify if this packet belongs to the project
     private static final String PROTOCOL = "NODE HEALTH CHECKING";
     private static final int VERSION = 1;
@@ -19,6 +27,13 @@ public record UdpEnvelope(
     private static final String FIELD_SEPARATOR = "&";
     private static final String KEY_VALUE_SEPARATOR = "=";
 
+    /**
+     * Wraps a message with a UDP envelope.
+     * 
+     * @param type    the packet type
+     * @param payload the message
+     * @return the UDP envelope
+     */
     public static UdpEnvelope wrap(UdpPacketType type, String payload) {
         return new UdpEnvelope(
                 PROTOCOL,
@@ -27,6 +42,11 @@ public record UdpEnvelope(
                 payload);
     }
 
+    /**
+     * Encodes the UDP envelope to a string to be sent through the network.
+     * 
+     * @return the encoded message
+     */
     public String encode() {
         Map<String, String> values = new LinkedHashMap<>();
 
@@ -50,12 +70,19 @@ public record UdpEnvelope(
         return builder.toString();
     }
 
+    /**
+     * Decodes the raw message into a UDP envelope.
+     * 
+     * @param raw the raw message
+     * @return the UDP envelope
+     */
     public static UdpEnvelope decode(String raw) {
         Map<String, String> values = new LinkedHashMap<>();
 
         for (String pair : raw.split(FIELD_SEPARATOR)) {
             int index = pair.indexOf(KEY_VALUE_SEPARATOR);
 
+            // No KEY_VALUE_SEPARATOR => no valid key-value pair -> skip
             if (index < 0) {
                 continue;
             }
@@ -89,6 +116,14 @@ public record UdpEnvelope(
         return type == expectedtype;
     }
 
+    /**
+     * Returns a value from the map.
+     * 
+     * @param values the map
+     * @param key    the key
+     * @return the value
+     * @throws IllegalArgumentException if the key does not exist in the map
+     */
     private static String required(Map<String, String> values, String key) {
         String value = values.get(key);
 
@@ -99,10 +134,22 @@ public record UdpEnvelope(
         return value;
     }
 
+    /**
+     * Converts to URL-friendly format.
+     * 
+     * @param value the original message
+     * @return the URL-friendly message
+     */
     private static String url(String value) {
         return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }
 
+    /**
+     * Converts from URL-friendly format.
+     * 
+     * @param value the URL-friendly messgae
+     * @return the original message
+     */
     private static String decodeUrl(String value) {
         return URLDecoder.decode(value, StandardCharsets.UTF_8);
     }

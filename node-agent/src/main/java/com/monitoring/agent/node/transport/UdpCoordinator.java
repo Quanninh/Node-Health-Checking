@@ -33,8 +33,8 @@ public class UdpCoordinator implements AutoCloseable {
     public UdpCoordinator(int port, int bufferSize) {
         this.port = port;
         this.bufferSize = bufferSize;
-        this.executorService = Executors.newSingleThreadExecutor(r -> {
-            Thread t = new Thread(r, "UDP-Coordinator-" + port);
+        this.executorService = Executors.newSingleThreadExecutor(runnable -> {
+            Thread t = new Thread(runnable, "UDP-Coordinator-" + port);
             t.setDaemon(false);
             return t;
         });

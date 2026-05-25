@@ -15,6 +15,7 @@ import com.monitoring.agent.node.NodeAddress;
 public class NetworkTopologyCache {
 
     /** The map of a node and its neighbors. */
+    @Deprecated
     private final Map<String, Set<NodeAddress>> adjacencyCache = new ConcurrentHashMap<>();
 
     /** The set of deficient nodes. */
@@ -58,6 +59,7 @@ public class NetworkTopologyCache {
         deficientNodes.add(node);
     }
 
+    // TODO: Clear deficient is not called anywhere
     /**
      * Marks a node as sufficient (not deficient).
      * 
