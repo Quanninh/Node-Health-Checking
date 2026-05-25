@@ -318,4 +318,42 @@ public final class ConnectionManager {
         this.isInNetwork = isInNetwork;
     }
 
+    // for rewiring operations
+    public boolean applyRewireScheme(
+        String txId,
+        NodeAddress connectsTo,
+        NodeAddress disconnectsFrom,
+        String reason) {
+
+        lock.lock();
+        try {
+            if (!processedTransactions.add("REWIRE_SCHEME:" + txId)) {
+                return true;
+            }
+
+            if (disconnectsFrom != null) {
+                neighborsById.remove(disconnectsFrom.nodeId());
+            }
+
+            if (connectsTo != null && !connectsTo.nodeId().equals(localAddress.nodeId())) {
+                neighborsById.put(connectsTo.nodeId(), connectsTo);
+            }
+
+            if (neighborsById.size() > maxNeighbors) {
+                return false;
+            }
+
+            version++;
+
+            Console.log("[REWIRE] " + localAddress.nodeId()
+                    + " applied scheme. connectsTo=" + connectsTo
+                    + ", disconnectsFrom=" + disconnectsFrom
+                    + ", reason=" + reason
+                    + ", neighbors=" + neighborsById.values());
+
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
 }

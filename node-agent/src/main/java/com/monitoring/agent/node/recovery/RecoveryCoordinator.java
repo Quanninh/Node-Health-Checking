@@ -61,7 +61,7 @@ public class RecoveryCoordinator {
         }
 
         // BUG: WHY AM I REWIRING MYSELF TO MYSELF?
-        rewiringCoordinator.attemptRewiring(localAddress, localAddress, connectionManager.neighborAddresses());
+        //rewiringCoordinator.attemptRewiring(localAddress, localAddress, connectionManager.neighborAddresses());
 
         // BUG: I'M GETTING A BOOLEAN AND DOING NOTHING WITH IT...
         convergenceMonitor.hasConverged();
