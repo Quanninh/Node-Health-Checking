@@ -27,6 +27,7 @@ public record RecoveryMessage(
 
     private static final String FIELD_SEPARATOR = "&";
     private static final String KEY_VALUE_SEPARATOR = "=";
+    private static final String LIST_SEPARATOR = ",";
 
     /**
      * Encodes the message into a string.
@@ -42,6 +43,7 @@ public record RecoveryMessage(
         values.put("sender", sender.toString());
         values.put("subject", subject == null ? "" : subject.toString());
         values.put("target", target == null ? "" : target.toString());
+        values.put("neighbors", encodeList(neighbors));
         values.put("ttl", Integer.toString(ttl));
         values.put("timestamp", Long.toString(timestamp));
         values.put("incarnation", Integer.toString(incarnation));
@@ -88,9 +90,9 @@ public record RecoveryMessage(
                 values.get("messageId"),
                 values.getOrDefault("repairEpoch", ""),
                 NodeAddress.fromString(values.get("sender")),
-                values.get("subject").isBlank() ? null : NodeAddress.fromString(values.get("subject")),
-                values.get("target").isBlank() ? null : NodeAddress.fromString(values.get("target")),
-                List.of(),
+                values.getOrDefault("subject", "").isBlank() ? null : NodeAddress.fromString(values.get("subject")),
+                values.getOrDefault("target", "").isBlank() ? null : NodeAddress.fromString(values.get("target")),
+                decodeList(values.get("neighbors")),
                 Integer.parseInt(values.getOrDefault("ttl", "0")),
                 Long.parseLong(values.getOrDefault("timestamp", "0")),
                 Integer.parseInt(values.getOrDefault("incarnation", "0")));
@@ -115,6 +117,28 @@ public record RecoveryMessage(
      */
     private static String decodeUrl(String value) {
         return URLDecoder.decode(value, StandardCharsets.UTF_8);
+    }
+
+    private static String encodeList(List<NodeAddress> addresses) {
+        if (addresses == null || addresses.isEmpty()) {
+            return "";
+        }
+
+        return addresses.stream()
+                .map(NodeAddress::toString)
+                .reduce((a, b) -> a + LIST_SEPARATOR + b)
+                .orElse("");
+    }
+
+    private static List<NodeAddress> decodeList(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return List.of();
+        }
+
+        return java.util.Arrays.stream(raw.split(LIST_SEPARATOR))
+                .filter(token -> !token.isBlank())
+                .map(NodeAddress::fromString)
+                .toList();
     }
 
 }

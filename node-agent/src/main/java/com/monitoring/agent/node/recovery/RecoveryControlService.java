@@ -1,6 +1,7 @@
 package com.monitoring.agent.node.recovery;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.UUID;
 
 import com.monitoring.agent.constant.Constant;
@@ -16,15 +17,49 @@ public class RecoveryControlService {
 
     private final NodeAddress localAddress;
     private final ConnectionManager connectionManager;
+    private final NetworkTopologyCache topologyCache;
     private final RecoveryUDPService udpService;
+    private final RewiringCoordinator rewiringCoordinator;
 
     public RecoveryControlService(
             NodeAddress localAddress,
             ConnectionManager connectionManager,
-            RecoveryUDPService udpService) {
+            NetworkTopologyCache topologyCache,
+            RecoveryUDPService udpService,
+            RewiringCoordinator rewiringCoordinator) {
         this.localAddress = localAddress;
         this.connectionManager = connectionManager;
+        this.topologyCache = topologyCache;
         this.udpService = udpService;
+        this.rewiringCoordinator = rewiringCoordinator;
+    }
+
+    public boolean gossipSelfIfDeficient(String reason) {
+        if (connectionManager.getHealthState() != HealthState.DEFICIENT) {
+            return false;
+        }
+
+        String repairEpoch = localAddress.nodeId() + "-" + System.currentTimeMillis();
+        topologyCache.markDeficient(new DeficientNodeRecord(
+                localAddress,
+                connectionManager.size(),
+                repairEpoch,
+                Instant.now(),
+                0));
+
+        Console.log("[RECOVERY] Local node is DEFICIENT after " + reason
+                + ". Gossiping deficient state.", Constant.BG_YELLOW);
+        gossipSelfDeficient(repairEpoch, Constant.DEFAULT_GOSSIP_TTL);
+        attemptWithKnownDeficientNodes();
+        return true;
+    }
+
+    private void attemptWithKnownDeficientNodes() {
+        for (DeficientNodeRecord record : topologyCache.getDeficientNodeRecords()) {
+            if (!record.nodeId().equals(localAddress.nodeId())) {
+                rewiringCoordinator.onDeficientNodeDiscovered(record);
+            }
+        }
     }
 
     /**

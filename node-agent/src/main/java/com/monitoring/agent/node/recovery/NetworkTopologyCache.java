@@ -3,6 +3,7 @@ package com.monitoring.agent.node.recovery;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.time.Instant;
 
 import com.monitoring.agent.node.NodeAddress;
 
@@ -18,8 +19,8 @@ public class NetworkTopologyCache {
     @Deprecated
     private final Map<String, Set<NodeAddress>> adjacencyCache = new ConcurrentHashMap<>();
 
-    /** The set of deficient nodes. */
-    private final Set<NodeAddress> deficientNodes = ConcurrentHashMap.newKeySet();
+    /** Deficient nodes discovered through recovery gossip, keyed by node id. */
+    private final Map<String, DeficientNodeRecord> deficientNodes = new ConcurrentHashMap<>();
 
     /**
      * Stores a connection between a node and its neighbor.
@@ -56,7 +57,31 @@ public class NetworkTopologyCache {
      * @param node the deficient node
      */
     public void markDeficient(NodeAddress node) {
-        deficientNodes.add(node);
+        markDeficient(new DeficientNodeRecord(node, -1, "", Instant.now(), 0));
+    }
+
+    /**
+     * Stores the latest deficient-node record for a node.
+     * 
+     * @param record the deficient-node record
+     */
+    public void markDeficient(DeficientNodeRecord record) {
+        if (record == null || record.node() == null) {
+            return;
+        }
+
+        deficientNodes.merge(record.nodeId(), record, (existing, incoming) -> {
+            if (incoming.incarnationNumber() > existing.incarnationNumber()) {
+                return incoming;
+            }
+
+            if (incoming.incarnationNumber() == existing.incarnationNumber()
+                    && incoming.timestamp().isAfter(existing.timestamp())) {
+                return incoming;
+            }
+
+            return existing;
+        });
     }
 
     // TODO: Clear deficient is not called anywhere
@@ -66,7 +91,9 @@ public class NetworkTopologyCache {
      * @param node the sufficient node
      */
     public void clearDeficient(NodeAddress node) {
-        deficientNodes.remove(node);
+        if (node != null) {
+            deficientNodes.remove(node.nodeId());
+        }
     }
 
     /**
@@ -75,7 +102,18 @@ public class NetworkTopologyCache {
      * @return the list of deficient nodes
      */
     public Set<NodeAddress> getDeficientNodes() {
-        return deficientNodes;
+        return deficientNodes.values().stream()
+                .map(DeficientNodeRecord::node)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
+
+    /**
+     * Gets the deficient-node records discovered by this node.
+     * 
+     * @return deficient-node records
+     */
+    public Set<DeficientNodeRecord> getDeficientNodeRecords() {
+        return Set.copyOf(deficientNodes.values());
     }
 
 }

@@ -7,5 +7,7 @@ public enum UdpPacketType {
     /** UDP packets to join the network. */
     MEMBERSHIP,
     /** UDP packets to recovery from deficiency. */
-    RECOVERY
+    RECOVERY,
+    /** UDP packets to rewire nodes. */
+    REWIRING
 }

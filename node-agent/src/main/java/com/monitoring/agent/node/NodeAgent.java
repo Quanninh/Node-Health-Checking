@@ -11,6 +11,8 @@ import com.monitoring.agent.node.connection.MulticastDiscoveryService;
 import com.monitoring.agent.node.connection.MulticastJoinCoordinator;
 import com.monitoring.agent.node.connection.NeighborDirectory;
 import com.monitoring.agent.node.recovery.NetworkTopologyCache;
+import com.monitoring.agent.node.recovery.RecoveryControlService;
+import com.monitoring.agent.node.recovery.RecoveryUDPService;
 import com.monitoring.agent.node.recovery.RewiringCoordinator;
 import com.monitoring.agent.node.transport.UdpCoordinator;
 import com.monitoring.agent.util.Console;
@@ -38,23 +40,11 @@ public class NodeAgent {
     private final MembershipControlService membershipControlService;
     private final MulticastJoinCoordinator joinCoordinator;
 
-    // Old recovery gossip service is commented out while the new
-    // RewiringCoordinator
-    // owns RECOVERY packets through UdpCoordinator. UdpCoordinator currently
-    // supports
-    // one recovery consumer, so starting RecoveryUDPService would overwrite the
-    // RewireMessage handler.
-    // private final RecoveryUDPService recoveryUdpService;
-    // private final RecoveryControlService recoveryControlService;
+    private final RecoveryUDPService recoveryUdpService;
+    private final RecoveryControlService recoveryControlService;
     private final NetworkTopologyCache repairCache;
-    // private final DirectRepairCoordinator directRepairCoordinator;
-    // private final ConvergenceMonitor convergenceMonitor;
-    // private final EdgeLockManager edgeLockManager;
     private final RewiringCoordinator rewiringCoordinator;
-    // private final FailureRecoveryManager failureRecoveryManager;
     private final NodeHttpServer crackingServer;
-    // private final RecoveryCoordinator recoveryCoordinator;
-    // private final FailureRecoveryManager failureRecoveryManager;
 
     /**
      * Constructor for NodeAgent from command line arguments.
@@ -128,29 +118,16 @@ public class NodeAgent {
 
         repairCache = new NetworkTopologyCache();
 
-        // recoveryUdpService = new RecoveryUDPService(localAddress, repairCache,
-        // connectionManager,
-        // udpCoordinator);
-
-        // recoveryControlService = new RecoveryControlService(localAddress,
-        // connectionManager, recoveryUdpService);
-
-        // directRepairCoordinator = new DirectRepairCoordinator(repairCache);
-
-        // edgeLockManager = new EdgeLockManager();
-
         rewiringCoordinator = new RewiringCoordinator(localAddress, connectionManager, repairCache,
                 udpCoordinator);
-        // convergenceMonitor = new ConvergenceMonitor(connectionManager);
 
-        // recoveryCoordinator = new RecoveryCoordinator(localAddress,
-        // connectionManager, recoveryControlService,
-        // repairCache, directRepairCoordinator, rewiringCoordinator,
-        // convergenceMonitor);
+        recoveryUdpService = new RecoveryUDPService(localAddress, repairCache, connectionManager, udpCoordinator,
+                rewiringCoordinator);
 
-        // failureRecoveryManager = new FailureRecoveryManager(connectionManager);
+        recoveryControlService = new RecoveryControlService(localAddress, connectionManager, repairCache,
+                recoveryUdpService, rewiringCoordinator);
 
-        neighborDirectory = new NeighborDirectory(connectionManager);// , failureRecoveryManager);
+        neighborDirectory = new NeighborDirectory(connectionManager);
 
         gossipService = new GossipService(
                 config.nodeId(),
@@ -167,13 +144,14 @@ public class NodeAgent {
                 dashboardReporter,
                 phiDetector,
                 gossipService,
+                recoveryControlService,
                 config.probeIntervalSeconds(),
                 config.unreachableThreshold());
 
         crackingServer = new NodeHttpServer(config.nodeId(), config.crackingPort());
 
         nodeServer.start();
-                crackingServer.start();
+        crackingServer.start();
 
         // Start UDP coordinator before services
         udpCoordinator.start();
@@ -183,19 +161,13 @@ public class NodeAgent {
         discoveryService.startResponder();
 
         rewiringCoordinator.start();
+        recoveryUdpService.start();
 
         joinCoordinator.joinNetwork();
-
-        crackingServer.start();
 
         dashboardReporter.reportSelfAlive(config.advertiseHost(), nodeServer.getPort(), config.crackingPort());
 
         failureDetector.start();
-
-        // Start recovery service after other services.
-        // Commented out for the new rewiring protocol because it overwrites
-        // rewiringCoordinator.start() as the RECOVERY consumer.
-        // recoveryUdpService.start();
 
         printStartupInfo();
     }

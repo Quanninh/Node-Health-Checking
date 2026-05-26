@@ -29,6 +29,7 @@ public class UdpCoordinator implements AutoCloseable {
     // Consumers for different packet types
     private volatile Consumer<UdpEnvelope> membershipConsumer;
     private volatile Consumer<UdpEnvelope> recoveryConsumer;
+    private volatile Consumer<UdpEnvelope> rewiringConsumer;
     
     public UdpCoordinator(int port, int bufferSize) {
         this.port = port;
@@ -68,6 +69,15 @@ public class UdpCoordinator implements AutoCloseable {
      */
     public void registerRecoveryConsumer(Consumer<UdpEnvelope> consumer) {
         this.recoveryConsumer = consumer;
+    }
+
+    /**
+     * Registers a consumer for REWIRING packets.
+     * 
+     * @param consumer the consumer function
+     */
+    public void registerRewiringConsumer(Consumer<UdpEnvelope> consumer) {
+        this.rewiringConsumer = consumer;
     }
     
     /**
@@ -116,6 +126,11 @@ public class UdpCoordinator implements AutoCloseable {
                     }
                 } else if (envelope.istype(UdpPacketType.RECOVERY)) {
                     Consumer<UdpEnvelope> consumer = recoveryConsumer;
+                    if (consumer != null) {
+                        consumer.accept(envelope);
+                    }
+                } else if (envelope.istype(UdpPacketType.REWIRING)) {
+                    Consumer<UdpEnvelope> consumer = rewiringConsumer;
                     if (consumer != null) {
                         consumer.accept(envelope);
                     }

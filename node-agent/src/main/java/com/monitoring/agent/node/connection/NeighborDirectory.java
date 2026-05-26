@@ -28,7 +28,6 @@ public class NeighborDirectory {
      * Manager for a node's neighbors.
      */
     private final ConnectionManager connectionManager;
-    // private FailureRecoveryManager failureRecoveryManager;
 
     /**
      * Mapping of node id and its state.
@@ -40,11 +39,8 @@ public class NeighborDirectory {
     /** Index for iterating through neighbors (for failure detection). */
     private int nextIndex = 0;
 
-    public NeighborDirectory(ConnectionManager connectionManager
-    // , FailureRecoveryManager failureRecoveryManager
-    ) {
+    public NeighborDirectory(ConnectionManager connectionManager) {
         this.connectionManager = connectionManager;
-        // this.failureRecoveryManager = failureRecoveryManager;
         syncStatesWithConnections();
     }
 
@@ -105,8 +101,6 @@ public class NeighborDirectory {
             nodeStates.remove(nodeId);
 
             Console.log("Reached here in the code of neighbor directory", Constant.BG_BLUE);
-
-            // failureRecoveryManager.onRemoveUnreachableNeighbor(nodeId);
         }
 
         if (nextIndex > connectionManager.size()) {

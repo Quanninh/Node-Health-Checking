@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import com.monitoring.agent.constant.Constant;
 import static com.monitoring.agent.constant.Constant.UNREACHABLE_CLEANUP_INTERVAL_SECONDS;
 import com.monitoring.agent.node.connection.NeighborDirectory;
+import com.monitoring.agent.node.recovery.RecoveryControlService;
 import com.monitoring.agent.util.Console;
 
 /**
@@ -24,6 +25,7 @@ public class FailureDetector {
     private final DashboardReporter dashboardReporter;
     private final PhiAccrualFailure phiDetector;
     private final GossipService gossipService;
+    private final RecoveryControlService recoveryControlService;
     private final int probeIntervalSeconds;
     private final ScheduledExecutorService scheduler;
     private final double unreachableThreshold;
@@ -35,6 +37,7 @@ public class FailureDetector {
             DashboardReporter dashboardReporter,
             PhiAccrualFailure phiDetector,
             GossipService gossipService,
+            RecoveryControlService recoveryControlService,
             int probeIntervalSeconds,
             double unreachableThreshold) {
         this.localNodeId = localNodeId;
@@ -43,6 +46,7 @@ public class FailureDetector {
         this.dashboardReporter = dashboardReporter;
         this.phiDetector = phiDetector;
         this.gossipService = gossipService;
+        this.recoveryControlService = recoveryControlService;
         this.probeIntervalSeconds = probeIntervalSeconds;
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
         this.unreachableThreshold = unreachableThreshold;
@@ -62,7 +66,7 @@ public class FailureDetector {
                 TimeUnit.SECONDS);
 
         scheduler.scheduleAtFixedRate(
-                neighborDirectory::removeUnreachableNeighbors,
+                this::removeUnreachableNeighborsSafely,
                 UNREACHABLE_CLEANUP_INTERVAL_SECONDS,
                 UNREACHABLE_CLEANUP_INTERVAL_SECONDS,
                 TimeUnit.SECONDS);
@@ -78,6 +82,16 @@ public class FailureDetector {
             runOneProbe();
         } catch (Exception exception) {
             Console.log("Failure detector error: "
+                    + exception.getMessage(), Constant.RED);
+        }
+    }
+
+    private void removeUnreachableNeighborsSafely() {
+        try {
+            neighborDirectory.removeUnreachableNeighbors();
+            recoveryControlService.gossipSelfIfDeficient("unreachable neighbor cleanup");
+        } catch (Exception exception) {
+            Console.log("Unreachable-neighbor cleanup error: "
                     + exception.getMessage(), Constant.RED);
         }
     }

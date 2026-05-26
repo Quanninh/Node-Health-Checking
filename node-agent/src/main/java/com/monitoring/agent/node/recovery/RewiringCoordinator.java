@@ -34,7 +34,6 @@ public final class RewiringCoordinator {
 
     private final ReentrantLock roleLock = new ReentrantLock();
 
-    private volatile HealthState healthState = HealthState.SUFFICIENT;
     private volatile RecoveryRole recoveryRole = RecoveryRole.FREE;
     private volatile String activeDeficientRecoveryId;
 
@@ -86,17 +85,33 @@ public final class RewiringCoordinator {
      * receiving a RECOVERY message, will handle it, see if it is a Rewire message.
      */
     public void start() {
-        udpCoordinator.registerRecoveryConsumer(envelope -> {
-            try {
-                RewireMessage message = RewireMessage.decode(envelope.payload());
-                handle(message);
-            } catch (Exception ignored) {
-                /*
-                 * Not every RECOVERY packet is a RewireMessage.
-                 * DEFICIENT messages can still be handled elsewhere.
-                 */
-            }
+        udpCoordinator.registerRewiringConsumer(envelope -> {
+            RewireMessage message = RewireMessage.decode(envelope.payload());
+            handle(message);
         });
+    }
+
+    public void onDeficientNodeDiscovered(DeficientNodeRecord record) {
+        if (record == null || record.node() == null) {
+            return;
+        }
+
+        topologyCache.markDeficient(record);
+        refreshHealthState();
+
+        NodeAddress deficientNode = record.node();
+
+        if (deficientNode.nodeId().equals(localAddress.nodeId())
+                || connectionManager.getHealthState() != HealthState.DEFICIENT) {
+            return;
+        }
+
+        boolean repaired = attemptRewiring(localAddress, deficientNode);
+
+        if (repaired) {
+            topologyCache.clearDeficient(localAddress);
+            topologyCache.clearDeficient(deficientNode);
+        }
     }
 
     /**
@@ -564,8 +579,7 @@ public final class RewiringCoordinator {
     private void handleNeighborsQuery(RewireMessage message) {
         NodeAddress d = findCandidateD(
                 message.nodeC(),
-                message.defANeighbors(),
-                message.defBNeighbors());
+                message.defANeighbors());
 
         if (d == null) {
             sendOnly(
@@ -667,15 +681,13 @@ public final class RewiringCoordinator {
 
     /**
      * For a candidate node C, finds a candidate node D. Requirements: D is a
-     * neighbor of C and B. D is NOT a neighbor of A.
+     * neighbor of C. D is NOT a neighbor of A.
      * 
      * @param c             the C node
      * @param defANeighbors neighbors of A
-     * @param defBNeighbors neighbors of B
      * @return
      */
-    private NodeAddress findCandidateD(NodeAddress c, List<NodeAddress> defANeighbors,
-            List<NodeAddress> defBNeighbors) {
+    private NodeAddress findCandidateD(NodeAddress c, List<NodeAddress> defANeighbors) {
 
         if (c == null) {
             return null;
@@ -683,6 +695,7 @@ public final class RewiringCoordinator {
 
         // BUG: This doesn't seem to be the list for neighbors of C? It seems to be
         // neighbors of A (the node calling this method(?))
+        // UPDATE: this is C, since its the one handling handleNeighborsQuery, not A
         List<NodeAddress> localNeighborsOfC = new ArrayList<>(connectionManager.neighborAddresses());
         Collections.shuffle(localNeighborsOfC);
 
@@ -708,7 +721,7 @@ public final class RewiringCoordinator {
 
     /**
      * Selects neighbors of A that are candidates for C node. Requirements: C is not
-     * a neighbor of defA.
+     * a neighbor of defB.
      * 
      * @param defANeighbors neighbors of A
      * @param defBNeighbors neighbors of B
@@ -734,7 +747,7 @@ public final class RewiringCoordinator {
         try {
             refreshHealthState();
 
-            if (healthState != HealthState.DEFICIENT) {
+            if (connectionManager.getHealthState() != HealthState.DEFICIENT) {
                 return false;
             }
 
@@ -754,7 +767,7 @@ public final class RewiringCoordinator {
         roleLock.lock();
         try {
             refreshHealthState();
-            if (healthState != HealthState.DEFICIENT) {
+            if (connectionManager.getHealthState() != HealthState.DEFICIENT) {
                 return false;
             }
 
@@ -782,7 +795,7 @@ public final class RewiringCoordinator {
         try {
             refreshHealthState();
 
-            if (healthState != HealthState.DEFICIENT) {
+            if (connectionManager.getHealthState() != HealthState.DEFICIENT) {
                 return false;
             }
 
@@ -814,7 +827,7 @@ public final class RewiringCoordinator {
                 return false;
             }
 
-            if (healthState != HealthState.DEFICIENT) {
+            if (connectionManager.getHealthState() != HealthState.DEFICIENT) {
                 return false;
             }
 
@@ -829,7 +842,7 @@ public final class RewiringCoordinator {
         try {
             refreshHealthState();
 
-            if (healthState != HealthState.DEFICIENT) {
+            if (connectionManager.getHealthState() != HealthState.DEFICIENT) {
                 return false;
             }
 
@@ -896,7 +909,7 @@ public final class RewiringCoordinator {
 
             /*
              * Both DEFICIENT and SUFFICIENT nodes may become REWIRING_NODE,
-             * but only if the operation is degree-neutral.
+             * but only if the operation is degree-neutral. (?)
              */
             if (!isDegreeNeutralSwap(connectsTo, disconnectsFrom)) {
                 return false;
@@ -958,7 +971,7 @@ public final class RewiringCoordinator {
             }
 
             Console.log("[REWIRE] Recovery attempt ended. healthState="
-                    + healthState
+                    + connectionManager.getHealthState()
                     + ", recoveryRole="
                     + recoveryRole
                     + ", neighbors="
@@ -971,10 +984,11 @@ public final class RewiringCoordinator {
     }
 
     // TODO: Not yet understand
+    // idea: return back to FREE state if having enough neighbor nodes after the fixing scheme
     private void releaseDeficientRoleIfMatching(String recoveryId) {
         roleLock.lock();
         try {
-            if (Objects.equals(activeDeficientRecoveryId, recoveryId)) {
+            if (Objects.equals(activeDeficientRecoveryId, recoveryId) && connectionManager.size() == connectionManager.getMaxNeighbors() ) {
                 recoveryRole = RecoveryRole.FREE;
                 activeDeficientRecoveryId = null;
             }
@@ -986,21 +1000,11 @@ public final class RewiringCoordinator {
     }
 
     /**
-     * Gets the current health state: deficient or sufficient.
-     * 
-     * @return the health state
-     */
-    private HealthState currentHealthState() {
-        return connectionManager.size() < connectionManager.getMaxNeighbors()
-                ? HealthState.DEFICIENT
-                : HealthState.SUFFICIENT;
-    }
-
-    /**
      * Sets the current health state.
      */
     private void refreshHealthState() {
-        healthState = currentHealthState();
+        connectionManager.refreshHealthStateLocked();
+        connectionManager.getHealthState();
     }
 
     /**
@@ -1191,7 +1195,7 @@ public final class RewiringCoordinator {
                     + message.recoveryId()
                     + " to "
                     + target.nodeId());
-            udpCoordinator.send(target.host(), target.port(), UdpPacketType.RECOVERY, message.encode());
+            udpCoordinator.send(target.host(), target.port(), UdpPacketType.REWIRING, message.encode());
         } catch (IOException exception) {
             Console.log("[REWIRE] Failed to send " + message.type() + " to " + target + ": " + exception.getMessage());
         }

@@ -1,6 +1,9 @@
 package com.monitoring.agent.node.recovery;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.NodeAddress;
@@ -24,13 +27,17 @@ public class RecoveryUDPService implements AutoCloseable {
     private final ConnectionManager connectionManager;
     private final NetworkTopologyCache networkTopologyCache;
     private final UdpCoordinator udpCoordinator;
+    private final RewiringCoordinator rewiringCoordinator;
+    private final Set<String> seenMessages = ConcurrentHashMap.newKeySet();
 
     public RecoveryUDPService(NodeAddress localAddress, NetworkTopologyCache networkTopologyCache,
-            ConnectionManager connectionManager, UdpCoordinator udpCoordinator) {
+            ConnectionManager connectionManager, UdpCoordinator udpCoordinator,
+            RewiringCoordinator rewiringCoordinator) {
         this.localAddress = localAddress;
         this.connectionManager = connectionManager;
         this.networkTopologyCache = networkTopologyCache;
         this.udpCoordinator = udpCoordinator;
+        this.rewiringCoordinator = rewiringCoordinator;
     }
 
     /**
@@ -57,7 +64,8 @@ public class RecoveryUDPService implements AutoCloseable {
             switch (message.type()) {
                 case DEFICIENT -> handleDeficient(message);
                 case DEFICIENT_ACK -> Console.log("Received DEFICIENT_ACK. Doing nothing with it.");
-                default -> throw new AssertionError();
+                default -> {
+                }
             }
         } catch (Exception ex) {
             System.getLogger(RecoveryUDPService.class.getName())
@@ -71,8 +79,20 @@ public class RecoveryUDPService implements AutoCloseable {
      * @param message the recovery message
      */
     private void handleDeficient(RecoveryMessage message) {
+        if (!seenMessages.add(message.messageId())) {
+            return;
+        }
+
         Console.log("Received DEFICIENT. Working on it.", Constant.BG_PURPLE);
-        networkTopologyCache.markDeficient(message.subject());
+        DeficientNodeRecord record = new DeficientNodeRecord(
+                message.subject(),
+                message.neighbors().size(),
+                message.repairEpoch(),
+                Instant.ofEpochMilli(message.timestamp()),
+                message.incarnation());
+
+        networkTopologyCache.markDeficient(record);
+        rewiringCoordinator.onDeficientNodeDiscovered(record);
 
         // Send DEFICIENT_ACK
         try {
@@ -88,10 +108,15 @@ public class RecoveryUDPService implements AutoCloseable {
         if (message.ttl() > 0) {
             // Gossip to neighbors
             for (NodeAddress neighbor : connectionManager.neighborAddresses()) {
+                if (neighbor.nodeId().equals(localAddress.nodeId())
+                        || neighbor.nodeId().equals(message.sender().nodeId())) {
+                    continue;
+                }
+
                 try {
                     send(neighbor,
                             new RecoveryMessage(message.type(), message.messageId(),
-                                    message.repairEpoch(), message.sender(), message.subject(),
+                                    message.repairEpoch(), localAddress, message.subject(),
                                     message.target(), message.neighbors(),
                                     Math.max(message.ttl() - 1, 0),
                                     System.currentTimeMillis(), message.incarnation()));

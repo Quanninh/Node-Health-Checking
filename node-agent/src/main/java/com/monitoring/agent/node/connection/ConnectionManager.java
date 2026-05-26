@@ -10,6 +10,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.NodeAddress;
+import com.monitoring.agent.node.recovery.HealthState;
 import com.monitoring.agent.util.Console;
 
 /**
@@ -28,6 +29,8 @@ public final class ConnectionManager {
     private final ReentrantLock lock = new ReentrantLock();
     private final Map<String, NodeAddress> neighborsById = new LinkedHashMap<>();
     private final Set<String> processedTransactions = ConcurrentHashMap.newKeySet();
+    private volatile HealthState healthState = HealthState.DEFICIENT;
+
 
     /** The version of the snapshot. Highest = latest. */
     private long version = 0;
@@ -104,6 +107,7 @@ public final class ConnectionManager {
 
             neighborsById.put(peer.nodeId(), peer);
             version++;
+            refreshHealthStateLocked();
 
             Console.log("Added neighbor " + peer + " because " + reason + ". neighbors=" + neighborsById.values());
             return true;
@@ -128,6 +132,7 @@ public final class ConnectionManager {
             }
 
             version++;
+            refreshHealthStateLocked();
             Console.log("Removed neighbor " + removed + " because " + reason
                     + ". neighbors=" + neighborsById.values());
             return true;
@@ -176,6 +181,7 @@ public final class ConnectionManager {
 
             neighborsById.put(joiningNode.nodeId(), joiningNode);
             version++;
+            refreshHealthStateLocked();
 
             Console.log("Node " + localAddress.nodeId()
                     + " accepted joining node " + joiningNode
@@ -217,6 +223,7 @@ public final class ConnectionManager {
             }
 
             version++;
+            refreshHealthStateLocked();
             Console.log("Node " + localAddress.nodeId()
                     + " replaced old direct target " + removed
                     + " with joining node " + joiningNode
@@ -263,6 +270,7 @@ public final class ConnectionManager {
 
             neighborsById.put(joiningNode.nodeId(), joiningNode);
             version++;
+            refreshHealthStateLocked();
 
             Console.log("Node " + localAddress.nodeId()
                     + " accepted small-network joining node " + joiningNode
@@ -346,10 +354,12 @@ public final class ConnectionManager {
             }
 
             if (neighborsById.size() > maxNeighbors) {
+                refreshHealthStateLocked();
                 return false;
             }
 
             version++;
+            refreshHealthStateLocked();
 
             Console.log("[REWIRE] " + localAddress.nodeId()
                     + " applied scheme. connectsTo=" + connectsTo
@@ -361,5 +371,19 @@ public final class ConnectionManager {
         } finally {
             lock.unlock();
         }
+    }
+
+    public HealthState getHealthState() {
+        return healthState;
+    }
+
+    public void setHealthState(HealthState healthState) {
+        this.healthState = healthState;
+    }
+
+    public void refreshHealthStateLocked() {
+        healthState = neighborsById.size() < maxNeighbors
+                ? HealthState.DEFICIENT
+                : HealthState.SUFFICIENT;
     }
 }
