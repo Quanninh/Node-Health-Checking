@@ -99,7 +99,7 @@ public record AgentConfig(
 
         String advertiseHost = values.getOrDefault("--advertise-host", bindHost);
 
-        int p2pPort = Integer.parseInt(values.getOrDefault("--p2p-port", "9001"));
+        int p2pPort = Integer.parseInt(values.getOrDefault("--p2p-port", "0"));
 
         String dashboardUrl = values.getOrDefault(
                 "--dashboard-url",
@@ -169,13 +169,11 @@ public record AgentConfig(
         double minProbability = Double.parseDouble(values.getOrDefault(
                 "--phi-min-probability",
                 String.valueOf(DEFAULT_MIN_PROBABILITY)));
-        
+
         int crackingPort = Integer.parseInt(
                 values.getOrDefault(
                         "--cracking-port",
-                        "8081"
-                )
-        );
+                        "8081"));
 
         return new AgentConfig(
                 nodeId,
