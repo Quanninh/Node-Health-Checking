@@ -9,8 +9,13 @@ import com.sun.net.httpserver.HttpExchange;
 
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.net.http.HttpClient;
+
 
 /**
  * Lightweight HTTP server running INSIDE NodeAgent.
@@ -30,6 +35,10 @@ public class NodeHttpServer {
     private final ObjectMapper mapper;
 
     private HttpServer server;
+    private final HttpClient httpClient = HttpClient.newHttpClient();
+
+    private final String springResultUrl =
+                "http://localhost:6789/node/result";
 
     public NodeHttpServer(int port) {
         this.port = port;
@@ -170,10 +179,7 @@ public class NodeHttpServer {
                                             - startTime
                             );
 
-                    sendResponse(
-                            exchange,
-                            response
-                    );
+                    sendResponse(response);
 
                     if (result.found) {
 
@@ -220,43 +226,26 @@ public class NodeHttpServer {
     /**
      * Sends JSON response back to server.
      */
-    private void sendResponse(
-            HttpExchange exchange,
-            CrackingResponse response
-    ) {
+    private void sendResponse(CrackingResponse response) {
 
         try {
+                String json = mapper.writeValueAsString(response);
 
-            String json =
-                    mapper.writeValueAsString(
-                            response
-                    );
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(springResultUrl))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(json))
+                        .build();
 
-            exchange.getResponseHeaders()
-                    .add(
-                            "Content-Type",
-                            "application/json"
-                    );
-
-            exchange.sendResponseHeaders(
-                    200,
-                    json.getBytes().length
-            );
-
-            OutputStream outputStream =
-                    exchange.getResponseBody();
-
-            outputStream.write(
-                    json.getBytes()
-            );
-
-            outputStream.flush();
-
-            outputStream.close();
+                httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                        .thenAccept(res -> {
+                        Console.println(
+                                "Sent result to Spring Boot: " + response.getNodeId()
+                        );
+                        });
 
         } catch (Exception e) {
-
-            e.printStackTrace();
+                e.printStackTrace();
         }
     }
 
