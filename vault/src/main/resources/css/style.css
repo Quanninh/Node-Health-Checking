@@ -1,8 +1,8 @@
 .root {
-    -primary-color: #FF5666;
-    -secondary-color: #FFCCC9;
-    -accent-color: #7D80DA;
-    -background-color: #D6FFF6;
+    -primary-color: #ff5666;
+    -secondary-color: #ffccc9;
+    -accent-color: #7d80da;
+    -background-color: #d6fff6;
     -text-color: #212121;
 
     -fx-background-color: -background-color;

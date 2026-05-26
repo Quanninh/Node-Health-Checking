@@ -191,7 +191,7 @@ public final class MembershipControlService implements AutoCloseable {
                 Console.log("[MEMBERSHIP] Sending " + discoveryMessage.type()
                         + " txId=" + discoveryMessage.transactionId()
                         + " to " + target);
-                udpCoordinator.send(target.host(), target.port(), UdpPacketType.MEMBERSHIP, 
+                udpCoordinator.send(target.host(), target.port(), UdpPacketType.MEMBERSHIP,
                         discoveryMessage.encode());
 
                 // Wait for the response with a timeout
@@ -206,8 +206,8 @@ public final class MembershipControlService implements AutoCloseable {
                 }
             } catch (Exception exception) {
                 Console.log("Commit attempt " + attempt + " failed for " + target
-                    + ": " + exception.getClass().getSimpleName()
-                    + " - " + exception.getMessage());
+                        + ": " + exception.getClass().getSimpleName()
+                        + " - " + exception.getMessage());
                 pendingResponses.remove(discoveryMessage.transactionId());
             }
         }

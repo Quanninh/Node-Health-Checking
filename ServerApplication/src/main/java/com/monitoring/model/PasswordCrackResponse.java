@@ -1,12 +1,14 @@
 package com.monitoring.model;
 
 public class PasswordCrackResponse {
+
     private boolean success;
     private String password;
     private String message;
     private long timeTaken;
 
-    public PasswordCrackResponse() {}
+    public PasswordCrackResponse() {
+    }
 
     public PasswordCrackResponse(boolean success, String password, String message, long timeTaken) {
         this.success = success;
@@ -46,4 +48,5 @@ public class PasswordCrackResponse {
     public void setTimeTaken(long timeTaken) {
         this.timeTaken = timeTaken;
     }
+
 }

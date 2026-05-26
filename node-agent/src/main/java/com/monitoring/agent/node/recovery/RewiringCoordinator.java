@@ -984,11 +984,13 @@ public final class RewiringCoordinator {
     }
 
     // TODO: Not yet understand
-    // idea: return back to FREE state if having enough neighbor nodes after the fixing scheme
+    // idea: return back to FREE state if having enough neighbor nodes after the
+    // fixing scheme
     private void releaseDeficientRoleIfMatching(String recoveryId) {
         roleLock.lock();
         try {
-            if (Objects.equals(activeDeficientRecoveryId, recoveryId) && connectionManager.size() == connectionManager.getMaxNeighbors() ) {
+            if (Objects.equals(activeDeficientRecoveryId, recoveryId)
+                    && connectionManager.size() == connectionManager.getMaxNeighbors()) {
                 recoveryRole = RecoveryRole.FREE;
                 activeDeficientRecoveryId = null;
             }

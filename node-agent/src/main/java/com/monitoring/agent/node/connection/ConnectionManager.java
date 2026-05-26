@@ -31,7 +31,6 @@ public final class ConnectionManager {
     private final Set<String> processedTransactions = ConcurrentHashMap.newKeySet();
     private volatile HealthState healthState = HealthState.DEFICIENT;
 
-
     /** The version of the snapshot. Highest = latest. */
     private long version = 0;
 

@@ -6,11 +6,9 @@ import java.net.URI;
 
 public class RestClient {
 
-    private static final HttpClient client =
-            HttpClient.newHttpClient();
+    private static final HttpClient client = HttpClient.newHttpClient();
 
-    private static final ObjectMapper mapper =
-            new ObjectMapper();
+    private static final ObjectMapper mapper = new ObjectMapper();
 
     public static String post(String url, Object body) {
 

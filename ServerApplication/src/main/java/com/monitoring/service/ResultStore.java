@@ -1,4 +1,5 @@
 package com.monitoring.service;
+
 import com.monitoring.model.*;
 import org.springframework.stereotype.Service;
 
@@ -18,4 +19,5 @@ public class ResultStore {
     public CrackingResponse getLatest() {
         return latestResult;
     }
+
 }

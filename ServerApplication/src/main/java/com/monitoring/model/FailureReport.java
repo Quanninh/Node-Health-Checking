@@ -1,4 +1,5 @@
 package com.monitoring.model;
+
 import java.time.LocalDateTime;
 
 import jakarta.persistence.Entity;
@@ -8,6 +9,7 @@ import jakarta.persistence.Id;
 
 @Entity
 public class FailureReport {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -82,4 +84,5 @@ public class FailureReport {
     public void setStatus(String status) {
         this.status = status;
     }
+
 }

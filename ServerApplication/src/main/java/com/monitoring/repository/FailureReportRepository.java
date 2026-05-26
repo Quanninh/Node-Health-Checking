@@ -13,4 +13,5 @@ public interface FailureReportRepository extends JpaRepository<FailureReport, Lo
     List<FailureReport> findByReporterNodeId(String reporterNodeId);
 
     List<FailureReport> findByFailedNodeId(String failedNodeId);
+
 }

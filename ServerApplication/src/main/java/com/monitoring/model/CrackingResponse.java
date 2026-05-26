@@ -6,7 +6,8 @@ public class CrackingResponse {
     private String nodeId;
     private long timeTaken;
 
-    public CrackingResponse() {}
+    public CrackingResponse() {
+    }
 
     public CrackingResponse(boolean found, String password, String nodeId, long timeTaken) {
         this.found = found;
@@ -47,4 +48,3 @@ public class CrackingResponse {
         this.timeTaken = timeTaken;
     }
 }
-

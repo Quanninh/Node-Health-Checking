@@ -1,11 +1,11 @@
 package com.monitoring.controller;
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.monitoring.model.*;
-import com.monitoring.service.*
-;
+import com.monitoring.service.*;
+
 @RestController
 @RequestMapping("/dashboard")
 public class DashboardController {

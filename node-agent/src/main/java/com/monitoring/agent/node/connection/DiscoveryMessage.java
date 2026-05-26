@@ -14,13 +14,15 @@ import com.monitoring.agent.node.NodeAddress;
 /**
  * Represents a discovery message.
  *
- * <p>Data flow:
+ * <p>
+ * Data flow:
  *
  * <ol>
- *   <li>Joining node sends broadcast JOIN_REQUEST to all nodes in the network.</li>
- *   <li>Nodes in the network send back JOIN_ACK to the joining node.</li>
- *   <li>Joining node sends COMMIT to chosen future neighbors.</li>
- *   <li>Nodes receiving COMMIT establish the connection and send COMMIT_ACK.</li>
+ * <li>Joining node sends broadcast JOIN_REQUEST to all nodes in the
+ * network.</li>
+ * <li>Nodes in the network send back JOIN_ACK to the joining node.</li>
+ * <li>Joining node sends COMMIT to chosen future neighbors.</li>
+ * <li>Nodes receiving COMMIT establish the connection and send COMMIT_ACK.</li>
  * </ol>
  *
  * @param directTargetId for COMMIT_ACK, this is a boolean

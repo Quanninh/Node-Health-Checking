@@ -6,7 +6,8 @@ public class CrackingRequest {
     private long rangeEnd;
     private long deadline;
 
-    public CrackingRequest() {}
+    public CrackingRequest() {
+    }
 
     public CrackingRequest(String hash, long rangeStart, long rangeEnd, long deadline) {
         this.hash = hash;

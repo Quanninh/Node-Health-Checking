@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <title>Password Cracker</title>
 
     <style>
-
         * {
             box-sizing: border-box;
         }
@@ -36,7 +36,7 @@
             border-radius: 12px;
 
             box-shadow:
-                    0 4px 12px rgba(0,0,0,0.1);
+                0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
         h1 {
@@ -112,120 +112,110 @@
 
             display: none;
         }
-
     </style>
 </head>
 
 <body>
 
-<div class="container">
+    <div class="container">
 
-    <h1>Distributed Password Cracker</h1>
+        <h1>Distributed Password Cracker</h1>
 
-    <label for="hashInput">
-        Hash
-    </label>
+        <label for="hashInput">
+            Hash
+        </label>
 
-    <input
-            id="hashInput"
-            type="text"
-            placeholder="Enter SHA-256 hash"
-    />
+        <input id="hashInput" type="text" placeholder="Enter SHA-256 hash" />
 
-    <button onclick="crackPassword()">
-        Crack Password
-    </button>
+        <button onclick="crackPassword()">
+            Crack Password
+        </button>
 
-    <div
-            id="loading"
-            class="loading"
-    >
-        Cracking password...
+        <div id="loading" class="loading">
+            Cracking password...
+        </div>
+
+        <div id="result" class="result">
+        </div>
+
     </div>
 
-    <div
-            id="result"
-            class="result"
-    >
-    </div>
+    <script>
 
-</div>
+        async function crackPassword() {
 
-<script>
+            const hashInput =
+                document.getElementById("hashInput");
 
-async function crackPassword() {
+            const resultDiv =
+                document.getElementById("result");
 
-    const hashInput =
-        document.getElementById("hashInput");
+            const loadingDiv =
+                document.getElementById("loading");
 
-    const resultDiv =
-        document.getElementById("result");
+            const hash =
+                hashInput.value.trim();
 
-    const loadingDiv =
-        document.getElementById("loading");
+            if (!hash) {
+                alert("Please enter a hash");
+                return;
+            }
 
-    const hash =
-        hashInput.value.trim();
+            resultDiv.style.display = "none";
+            loadingDiv.style.display = "block";
 
-    if (!hash) {
-        alert("Please enter a hash");
-        return;
-    }
+            try {
 
-    resultDiv.style.display = "none";
-    loadingDiv.style.display = "block";
+                const response = await fetch("http://localhost:6789/api/crack-password", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        hash: hash
+                    })
+                });
 
-    try {
-        
-        const response = await fetch("http://localhost:6789/api/crack-password", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                hash: hash
-            })
-        });
+                if (!response.ok) {
+                    throw new Error(`Server returned HTTP ${response.status}`);
+                }
 
-        if (!response.ok) {
-            throw new Error(`Server returned HTTP ${response.status}`);
-        }
+                const data = await response.json();
 
-        const data = await response.json();
+                loadingDiv.style.display = "none";
+                resultDiv.style.display = "block";
 
-        loadingDiv.style.display = "none";
-        resultDiv.style.display = "block";
+                if (data.success) {
 
-        if (data.success) {
-
-            resultDiv.innerHTML = `
+                    resultDiv.innerHTML = `
                 <h3>Password Found</h3>
 
                 <p><strong>Password:</strong> ${data.password}</p>
                 <p><strong>Time:</strong> ${data.timeTaken} ms</p>
             `;
 
-        } else {
+                } else {
 
-            resultDiv.innerHTML = `
+                    resultDiv.innerHTML = `
                 <h3>Password Not Found</h3>
                 <p>${data.message}</p>
             `;
-        }
+                }
 
-    } catch (error) {
+            } catch (error) {
 
-        loadingDiv.style.display = "none";
-        resultDiv.style.display = "block";
+                loadingDiv.style.display = "none";
+                resultDiv.style.display = "block";
 
-        resultDiv.innerHTML = `
+                resultDiv.innerHTML = `
             <h3>Error</h3>
             <p>${error.message}</p>
         `;
-    }
-}
+            }
+        }
 
-</script>
+    </script>
 
 </body>
+
 </html>

@@ -22,216 +22,216 @@ import com.sun.net.httpserver.HttpServer;
  */
 public class NodeHttpServer {
 
-        private final int port;
+    private final int port;
+
+    /**
+     * Worker pool for cracking tasks.
+     */
+    private final ExecutorService crackingExecutor;
+
+    private final ObjectMapper mapper;
+
+    private HttpServer server;
+    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final String nodeId;
+
+    private final String springResultUrl = "http://localhost:6789/api/node/result";
+
+    public NodeHttpServer(String nodeID, int port) {
+        this.nodeId = nodeID;
+        this.port = port;
+        this.mapper = new ObjectMapper();
 
         /**
-         * Worker pool for cracking tasks.
+         * Fixed thread pool for parallel cracking jobs.
          */
-        private final ExecutorService crackingExecutor;
+        this.crackingExecutor = Executors.newFixedThreadPool(
+                Runtime.getRuntime().availableProcessors());
+    }
 
-        private final ObjectMapper mapper;
+    public String getNodeID() {
+        return nodeId;
+    }
 
-        private HttpServer server;
-        private final HttpClient httpClient = HttpClient.newHttpClient();
-        private final String nodeId;
+    public int getPort() {
+        return server.getAddress().getPort();
+    }
 
-        private final String springResultUrl = "http://localhost:6789/api/node/result";
+    /**
+     * Starts HTTP server.
+     */
+    public void start() throws Exception {
 
-        public NodeHttpServer(String nodeID, int port) {
-                this.nodeId = nodeID;
-                this.port = port;
-                this.mapper = new ObjectMapper();
+        server = HttpServer.create(
+                new InetSocketAddress(port),
+                0);
 
-                /**
-                 * Fixed thread pool for parallel cracking jobs.
-                 */
-                this.crackingExecutor = Executors.newFixedThreadPool(
-                                Runtime.getRuntime().availableProcessors());
-        }
-
-        public String getNodeID() {
-                return nodeId;
-        }
-
-        public int getPort() {
-                return server.getAddress().getPort();
-        }
+        server.createContext(
+                "/node/crack",
+                this::handleCrackRequest);
 
         /**
-         * Starts HTTP server.
+         * HTTP request handling thread pool.
          */
-        public void start() throws Exception {
+        server.setExecutor(
+                Executors.newCachedThreadPool());
 
-                server = HttpServer.create(
-                                new InetSocketAddress(port),
-                                0);
+        server.start();
 
-                server.createContext(
-                                "/node/crack",
-                                this::handleCrackRequest);
+        Console.println(
+                "Cracking HTTP server started on port "
+                        + getPort());
+    }
 
-                /**
-                 * HTTP request handling thread pool.
-                 */
-                server.setExecutor(
-                                Executors.newCachedThreadPool());
+    /**
+     * Stops server gracefully.
+     */
+    public void stop() {
 
-                server.start();
-
-                Console.println(
-                                "Cracking HTTP server started on port "
-                                                + getPort());
+        if (server != null) {
+            server.stop(1);
         }
 
-        /**
-         * Stops server gracefully.
-         */
-        public void stop() {
+        crackingExecutor.shutdownNow();
 
-                if (server != null) {
-                        server.stop(1);
-                }
+        Console.println(
+                "Cracking HTTP server stopped");
+    }
 
-                crackingExecutor.shutdownNow();
+    /**
+     * Handles POST /node/crack
+     */
+    private void handleCrackRequest(HttpExchange exchange) {
 
-                Console.println(
-                                "Cracking HTTP server stopped");
-        }
+        try {
 
-        /**
-         * Handles POST /node/crack
-         */
-        private void handleCrackRequest(HttpExchange exchange) {
+            if (!"POST".equalsIgnoreCase(
+                    exchange.getRequestMethod())) {
+
+                exchange.sendResponseHeaders(
+                        405,
+                        -1);
+
+                return;
+            }
+
+            String requestBody = new String(
+                    exchange.getRequestBody()
+                            .readAllBytes());
+
+            CrackingRequest request = mapper.readValue(
+                    requestBody,
+                    CrackingRequest.class);
+            // sendResponse(response);
+            Console.log(
+                    "Received cracking task:");
+
+            Console.log(
+                    "Hash         : "
+                            + request.getHash());
+
+            Console.log(
+                    "Range Start  : "
+                            + request.getRangeStart());
+
+            Console.log(
+                    "Range End    : "
+                            + request.getRangeEnd());
+
+            exchange.sendResponseHeaders(202, -1);
+
+            /**
+             * Submit cracking work asynchronously.
+             */
+            crackingExecutor.submit(() -> {
 
                 try {
 
-                        if (!"POST".equalsIgnoreCase(
-                                        exchange.getRequestMethod())) {
+                    long startTime = System.currentTimeMillis();
 
-                                exchange.sendResponseHeaders(
-                                                405,
-                                                -1);
+                    Console.log(
+                            "Started cracking range "
+                                    + request.getRangeStart()
+                                    + " -> "
+                                    + request.getRangeEnd());
 
-                                return;
-                        }
+                    PasswordCracker cracker = new PasswordCracker(
+                            request.getHash());
 
-                        String requestBody = new String(
-                                        exchange.getRequestBody()
-                                                        .readAllBytes());
+                    PasswordCracker.CrackResult result = cracker.crackRange(
+                            request.getRangeStart(),
+                            request.getRangeEnd());
 
-                        CrackingRequest request = mapper.readValue(
-                                        requestBody,
-                                        CrackingRequest.class);
-                        // sendResponse(response);
-                        Console.log(
-                                        "Received cracking task:");
+                    CrackingResponse response = new CrackingResponse(
+                            result.found,
+                            result.password,
+                            buildNodeId(),
+                            System.currentTimeMillis()
+                                    - startTime);
 
-                        Console.log(
-                                        "Hash         : "
-                                                        + request.getHash());
+                    sendResponse(response);
 
-                        Console.log(
-                                        "Range Start  : "
-                                                        + request.getRangeStart());
+                    if (result.found) {
 
                         Console.log(
-                                        "Range End    : "
-                                                        + request.getRangeEnd());
+                                "PASSWORD FOUND: "
+                                        + result.password);
 
-                        exchange.sendResponseHeaders(202, -1);
+                    } else {
 
-                        /**
-                         * Submit cracking work asynchronously.
-                         */
-                        crackingExecutor.submit(() -> {
-
-                                try {
-
-                                        long startTime = System.currentTimeMillis();
-
-                                        Console.log(
-                                                        "Started cracking range "
-                                                                        + request.getRangeStart()
-                                                                        + " -> "
-                                                                        + request.getRangeEnd());
-
-                                        PasswordCracker cracker = new PasswordCracker(
-                                                        request.getHash());
-
-                                        PasswordCracker.CrackResult result = cracker.crackRange(
-                                                        request.getRangeStart(),
-                                                        request.getRangeEnd());
-
-                                        CrackingResponse response = new CrackingResponse(
-                                                        result.found,
-                                                        result.password,
-                                                        buildNodeId(),
-                                                        System.currentTimeMillis()
-                                                                        - startTime);
-
-                                        sendResponse(response);
-
-                                        if (result.found) {
-
-                                                Console.log(
-                                                                "PASSWORD FOUND: "
-                                                                                + result.password);
-
-                                        } else {
-
-                                                Console.log(
-                                                                "Password not found in assigned range. Time taken: "
-                                                                                + (System.currentTimeMillis()
-                                                                                                - startTime)
-                                                                                + " ms");
-                                        }
-
-                                } catch (Exception e) {
-
-                                        e.printStackTrace();
-                                }
-                        });
+                        Console.log(
+                                "Password not found in assigned range. Time taken: "
+                                        + (System.currentTimeMillis()
+                                                - startTime)
+                                        + " ms");
+                    }
 
                 } catch (Exception e) {
 
-                        e.printStackTrace();
-
-                        try {
-                                exchange.sendResponseHeaders(
-                                                500,
-                                                -1);
-                        } catch (Exception ignored) {
-                        }
+                    e.printStackTrace();
                 }
+            });
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            try {
+                exchange.sendResponseHeaders(
+                        500,
+                        -1);
+            } catch (Exception ignored) {
+            }
         }
+    }
 
-        private void sendResponse(CrackingResponse response) {
+    private void sendResponse(CrackingResponse response) {
 
-                try {
-                        String json = mapper.writeValueAsString(response);
+        try {
+            String json = mapper.writeValueAsString(response);
 
-                        HttpRequest request = HttpRequest.newBuilder()
-                                        .uri(URI.create(springResultUrl))
-                                        .header("Content-Type", "application/json")
-                                        .POST(HttpRequest.BodyPublishers.ofString(json))
-                                        .build();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(springResultUrl))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(json))
+                    .build();
 
-                        httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                                        .thenAccept(res -> {
-                                                Console.println(
-                                                                "Sent result to Spring Boot: " + response.getNodeId());
-                                        });
+            httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                    .thenAccept(res -> {
+                        Console.println(
+                                "Sent result to Spring Boot: " + response.getNodeId());
+                    });
 
-                } catch (Exception e) {
-                        e.printStackTrace();
-                }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+    }
 
-        /**
-         * Generates unique node identifier.
-         */
-        private String buildNodeId() {
+    /**
+     * Generates unique node identifier.
+     */
+    private String buildNodeId() {
 
-                return nodeId;
-        }
+        return nodeId;
+    }
 }

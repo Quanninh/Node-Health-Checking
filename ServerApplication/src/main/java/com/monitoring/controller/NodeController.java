@@ -27,43 +27,36 @@ public class NodeController {
 
     @PostMapping("/heartbeat")
     public ResponseEntity<String> receiveHeartbeat(
-            @RequestBody Node node
-    ) {
+            @RequestBody Node node) {
 
         nodeService.processHeartbeat(node);
 
         return ResponseEntity.ok(
-                "Heartbeat received from " + node.getId()
-        );
+                "Heartbeat received from " + node.getId());
     }
 
     @PostMapping("/failure-report")
     public ResponseEntity<String> receiveFailureReport(
-            @RequestBody FailureReport report
-    ) {
+            @RequestBody FailureReport report) {
 
         nodeService.processFailureReport(report);
 
         return ResponseEntity.ok(
-                "Failure report received"
-        );
+                "Failure report received");
     }
 
     @GetMapping("/nodes")
     public ResponseEntity<List<Node>> getAllNodes() {
 
         return ResponseEntity.ok(
-                nodeService.getAllNodes()
-        );
+                nodeService.getAllNodes());
     }
 
     @GetMapping("/nodes/{id}")
     public ResponseEntity<Node> getNodeById(
-            @PathVariable String id
-    ) {
+            @PathVariable String id) {
 
-        Node node =
-                nodeService.getNodeById(id);
+        Node node = nodeService.getNodeById(id);
 
         if (node == null) {
 
@@ -78,17 +71,14 @@ public class NodeController {
     public ResponseEntity<List<FailureReport>> getFailureReports() {
 
         return ResponseEntity.ok(
-                nodeService.getFailureReports()
-        );
+                nodeService.getFailureReports());
     }
 
     @PostMapping("/crack-password")
     public ResponseEntity<PasswordCrackResponse> crackPassword(
-            @RequestBody PasswordCrackRequest request
-    ) {
+            @RequestBody PasswordCrackRequest request) {
         try {
-            PasswordCrackResponse response =
-                    passwordCrackingService.crackPassword(request.getHash());
+            PasswordCrackResponse response = passwordCrackingService.crackPassword(request.getHash());
 
             return ResponseEntity.ok(response);
 
@@ -99,27 +89,23 @@ public class NodeController {
                             false,
                             null,
                             "Error: " + e.getMessage(),
-                            0
-                    )
-            );
+                            0));
         }
     }
 
     @PostMapping("/node/result")
     public ResponseEntity<String> receiveNodeResult(
-            @RequestBody CrackingResponse response
-    ) {
+            @RequestBody CrackingResponse response) {
         passwordCrackingService.handleNodeResult(response);
 
         return ResponseEntity.ok(
-                "Result received from node: " + response.getNodeId()
-        );
+                "Result received from node: " + response.getNodeId());
     }
 
-//     @GetMapping("/nodes")
-//     public ResponseEntity<List<Node>> getNodes() {
-//         return ResponseEntity.ok(
-//                 passwordCrackingService.getNodes()
-//         );
-//     }
+    // @GetMapping("/nodes")
+    // public ResponseEntity<List<Node>> getNodes() {
+    // return ResponseEntity.ok(
+    // passwordCrackingService.getNodes()
+    // );
+    // }
 }
