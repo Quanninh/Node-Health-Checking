@@ -54,6 +54,7 @@ public final class RewiringCoordinator {
     private final ConcurrentHashMap<String, String> reservedEdgeByRecoveryId = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, String> recoveryIdByReservedEdge = new ConcurrentHashMap<>();
 
+    /** Maps a RecoveryID with a RewireMessage CompletableFuture. */
     private final ConcurrentHashMap<String, CompletableFuture<RewireMessage>> pendingReplies = new ConcurrentHashMap<>();
 
     /**
@@ -98,6 +99,19 @@ public final class RewiringCoordinator {
         });
     }
 
+    /**
+     * Attempts to rewires the two deficient nodes.
+     * <p>
+     * If the two nodes are not neighbors, attempts a direct repair.
+     * <p>
+     * Else, attempts a full rewiring.
+     * 
+     * @param defA the deficient node A
+     * @param defB the deficient node B
+     * @return rewiring status
+     * @see #tryDirectRepair(NodeAddress, NodeAddress)
+     * @see #runFullRewiring(NodeAddress, NodeAddress)
+     */
     public boolean attemptRewiring(NodeAddress defA, NodeAddress defB) {
         if (!localAddress.nodeId().equals(defA.nodeId())) {
             return false;
@@ -118,10 +132,7 @@ public final class RewiringCoordinator {
                 boolean directOk = tryDirectRepair(defA, defB);
 
                 if (directOk) {
-                    Console.log("[REWIRE] Direct repair succeeded: "
-                            + defA.nodeId()
-                            + " <-> "
-                            + defB.nodeId());
+                    Console.log("[REWIRE] Direct repair succeeded: " + defA.nodeId() + " <-> " + defB.nodeId());
                     return true;
                 }
             }
@@ -231,6 +242,15 @@ public final class RewiringCoordinator {
         return false;
     }
 
+    /**
+     * Requests a direct rewire between the two deficient nodes. If they are not
+     * already neighbors (not checked in this function), the two nodes will become
+     * neighbors.
+     * 
+     * @param defA the deficient node A
+     * @param defB the deficient node B
+     * @return success?
+     */
     private boolean tryDirectRepair(NodeAddress defA, NodeAddress defB) {
         String recoveryId = UUID.randomUUID().toString();
 
@@ -467,6 +487,12 @@ public final class RewiringCoordinator {
         sendOnly(message.sender(), response);
     }
 
+    /**
+     * Handles when the node receives a COMMIT_ACK. <p>
+     * If the node returns an ACCEPTED response, that no
+     * 
+     * @param message the COMMIT_ACK message
+     */
     private void handleCommitAck(RewireMessage message) {
         if (message.status() != RewireStatus.ACCEPTED) {
             return;
@@ -769,6 +795,10 @@ public final class RewiringCoordinator {
         }
     }
 
+    /**
+     * 
+     * @param recoveryId
+     */
     private void releaseRewiringReservation(String recoveryId) {
         roleLock.lock();
         try {
@@ -789,6 +819,9 @@ public final class RewiringCoordinator {
         }
     }
 
+    /**
+     * Clears the node of the deficient recovery role after the recovery attempt.
+     */
     private void clearDeficientRecoveryRoleAfterAttempt() {
         roleLock.lock();
         try {

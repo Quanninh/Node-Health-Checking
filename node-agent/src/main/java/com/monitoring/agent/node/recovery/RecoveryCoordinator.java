@@ -47,7 +47,7 @@ public class RecoveryCoordinator {
      * @param repairEpoch the ID of the epoch (random UUID)
      */
     public void startSelfRecovery(String repairEpoch) {
-        recoveryControlService.gossipSelfDeficient(repairEpoch, 2);
+        recoveryControlService.gossipSelfDeficient(repairEpoch, RECOVERY_TTL);
 
         // List<NodeAddress> deficientNodes = new
         // ArrayList<>(connectionManager.neighborAddresses());
@@ -61,7 +61,8 @@ public class RecoveryCoordinator {
         }
 
         // BUG: WHY AM I REWIRING MYSELF TO MYSELF?
-        //rewiringCoordinator.attemptRewiring(localAddress, localAddress, connectionManager.neighborAddresses());
+        // rewiringCoordinator.attemptRewiring(localAddress, localAddress,
+        // connectionManager.neighborAddresses());
 
         // BUG: I'M GETTING A BOOLEAN AND DOING NOTHING WITH IT...
         convergenceMonitor.hasConverged();
