@@ -1,5 +1,6 @@
 package com.monitoring.agent.node.connection;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -49,13 +50,17 @@ public final class MulticastJoinCoordinator {
             }
 
             joinHybridNetwork(plan);
-        } catch (Exception exception) {
-            exception.printStackTrace();
-            ;
+        } catch (IOException exception) {
             Console.log("Join failed: " + exception.getMessage());
         }
     }
 
+    /**
+     * Join a "hybrid network". Connects with the direct targets, and tells the
+     * direct targets to evicts some neighbors.
+     * 
+     * @param plan the join plan
+     */
     private void joinHybridNetwork(JoinPlan plan) {
         String txId = UUID.randomUUID().toString();
 
