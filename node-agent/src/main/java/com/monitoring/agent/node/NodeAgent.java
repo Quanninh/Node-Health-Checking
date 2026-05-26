@@ -11,7 +11,6 @@ import com.monitoring.agent.node.connection.MulticastDiscoveryService;
 import com.monitoring.agent.node.connection.MulticastJoinCoordinator;
 import com.monitoring.agent.node.connection.NeighborDirectory;
 import com.monitoring.agent.node.recovery.NetworkTopologyCache;
-import com.monitoring.agent.node.recovery.RecoveryControlService;
 import com.monitoring.agent.node.recovery.RecoveryUDPService;
 import com.monitoring.agent.node.recovery.RewiringCoordinator;
 import com.monitoring.agent.node.transport.UdpCoordinator;
@@ -40,11 +39,10 @@ public class NodeAgent {
         private final MembershipControlService membershipControlService;
         private final MulticastJoinCoordinator joinCoordinator;
 
-        private final RecoveryUDPService recoveryUdpService;
-        private final RecoveryControlService recoveryControlService;
-        private final NetworkTopologyCache repairCache;
-        private final RewiringCoordinator rewiringCoordinator;
-        private final NodeHttpServer crackingServer;
+    private final RecoveryUDPService recoveryUdpService;
+    private final NetworkTopologyCache repairCache;
+    private final RewiringCoordinator rewiringCoordinator;
+    private final NodeHttpServer crackingServer;
 
         /**
          * Constructor for NodeAgent from command line arguments.
@@ -125,10 +123,7 @@ public class NodeAgent {
                                 udpCoordinator,
                                 rewiringCoordinator);
 
-                recoveryControlService = new RecoveryControlService(localAddress, connectionManager, repairCache,
-                                recoveryUdpService, rewiringCoordinator);
-
-                neighborDirectory = new NeighborDirectory(connectionManager);
+        neighborDirectory = new NeighborDirectory(connectionManager);
 
                 gossipService = new GossipService(
                                 config.nodeId(),
@@ -138,16 +133,16 @@ public class NodeAgent {
 
                 nodeServer.setGossipService(gossipService);
 
-                failureDetector = new FailureDetector(
-                                config.nodeId(),
-                                neighborDirectory,
-                                nodeClient,
-                                dashboardReporter,
-                                phiDetector,
-                                gossipService,
-                                recoveryControlService,
-                                config.probeIntervalSeconds(),
-                                config.unreachableThreshold());
+        failureDetector = new FailureDetector(
+                config.nodeId(),
+                neighborDirectory,
+                nodeClient,
+                dashboardReporter,
+                phiDetector,
+                gossipService,
+                recoveryUdpService,
+                config.probeIntervalSeconds(),
+                config.unreachableThreshold());
 
                 crackingServer = new NodeHttpServer(config.nodeId(), config.crackingPort());
 

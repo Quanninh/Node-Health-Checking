@@ -3,6 +3,7 @@ package com.monitoring.agent.node.recovery;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.monitoring.agent.constant.Constant;
@@ -46,6 +47,64 @@ public class RecoveryUDPService implements AutoCloseable {
     public void start() {
         udpCoordinator.registerRecoveryConsumer(this::handleRecoveryPacket);
         Console.log("Recovery UDP Service started");
+    }
+
+    public boolean gossipSelfIfDeficient(String reason) {
+        if (connectionManager.getHealthState() != HealthState.DEFICIENT) {
+            return false;
+        }
+
+        String repairEpoch = localAddress.nodeId() + "-" + System.currentTimeMillis();
+        networkTopologyCache.markDeficient(new DeficientNodeRecord(
+                localAddress,
+                connectionManager.size(),
+                repairEpoch,
+                Instant.now(),
+                0));
+
+        Console.log("[RECOVERY] Local node is DEFICIENT after " + reason
+                + ". Gossiping deficient state.", Constant.BG_YELLOW);
+        gossipSelfDeficient(repairEpoch, Constant.DEFAULT_GOSSIP_TTL);
+        attemptWithKnownDeficientNodes();
+        return true;
+    }
+
+    private void attemptWithKnownDeficientNodes() {
+        for (DeficientNodeRecord record : networkTopologyCache.getDeficientNodeRecords()) {
+            if (!record.nodeId().equals(localAddress.nodeId())) {
+                rewiringCoordinator.onDeficientNodeDiscovered(record);
+            }
+        }
+    }
+
+    public void gossipSelfDeficient(String repairEpoch, int ttl) {
+        RecoveryMessage message = new RecoveryMessage(
+                RecoveryMessageType.DEFICIENT,
+                UUID.randomUUID().toString(),
+                repairEpoch,
+                localAddress,
+                localAddress,
+                null,
+                connectionManager.neighborAddresses(),
+                ttl,
+                System.currentTimeMillis(),
+                0);
+
+        broadcastToNeighbors(message);
+    }
+
+    public void broadcastToNeighbors(RecoveryMessage message) {
+        for (NodeAddress neighbor : connectionManager.neighborAddresses()) {
+            try {
+                send(neighbor, message);
+                Console.log("Sent DEFICIENT message [" + message + "] to " + neighbor + " success",
+                        Constant.BG_CYAN + Constant.BOLD);
+            } catch (IOException e) {
+                Console.log(
+                        "Failed to send message [" + message + "] to " + neighbor + " because " + e.getMessage(),
+                        Constant.RED);
+            }
+        }
     }
 
     /**
