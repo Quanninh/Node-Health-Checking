@@ -22,6 +22,9 @@ public class UdpCoordinator implements AutoCloseable {
     private final int port;
     private final int bufferSize;
     private final ExecutorService executorService;
+    private final ExecutorService membershipExecutor;
+    private final ExecutorService recoveryExecutor;
+    private final ExecutorService rewiringExecutor;
     
     private volatile boolean running;
     private DatagramSocket socket;
@@ -36,6 +39,17 @@ public class UdpCoordinator implements AutoCloseable {
         this.bufferSize = bufferSize;
         this.executorService = Executors.newSingleThreadExecutor(runnable -> {
             Thread t = new Thread(runnable, "UDP-Coordinator-" + port);
+            t.setDaemon(false);
+            return t;
+        });
+        this.membershipExecutor = newSingleProtocolExecutor("UDP-Membership-" + port);
+        this.recoveryExecutor = newSingleProtocolExecutor("UDP-Recovery-" + port);
+        this.rewiringExecutor = newSingleProtocolExecutor("UDP-Rewiring-" + port);
+    }
+
+    private ExecutorService newSingleProtocolExecutor(String threadName) {
+        return Executors.newSingleThreadExecutor(runnable -> {
+            Thread t = new Thread(runnable, threadName);
             t.setDaemon(false);
             return t;
         });
@@ -118,23 +132,7 @@ public class UdpCoordinator implements AutoCloseable {
                 // Decode the UDP envelope
                 UdpEnvelope envelope = UdpPacket.decode(packet.getData(), packet.getOffset(), packet.getLength());
                 
-                // Dispatch to the appropriate consumer based on packet type
-                if (envelope.istype(UdpPacketType.MEMBERSHIP)) {
-                    Consumer<UdpEnvelope> consumer = membershipConsumer;
-                    if (consumer != null) {
-                        consumer.accept(envelope);
-                    }
-                } else if (envelope.istype(UdpPacketType.RECOVERY)) {
-                    Consumer<UdpEnvelope> consumer = recoveryConsumer;
-                    if (consumer != null) {
-                        consumer.accept(envelope);
-                    }
-                } else if (envelope.istype(UdpPacketType.REWIRING)) {
-                    Consumer<UdpEnvelope> consumer = rewiringConsumer;
-                    if (consumer != null) {
-                        consumer.accept(envelope);
-                    }
-                }
+                submit(envelope);
             } catch (SocketException ex) {
                 if (running) {
                     System.getLogger(UdpCoordinator.class.getName())
@@ -153,6 +151,27 @@ public class UdpCoordinator implements AutoCloseable {
             }
         }
     }
+
+    private void submit(UdpEnvelope envelope) {
+        if (envelope.istype(UdpPacketType.MEMBERSHIP)) {
+            membershipExecutor.submit(() -> dispatch(envelope, membershipConsumer));
+        } else if (envelope.istype(UdpPacketType.RECOVERY)) {
+            recoveryExecutor.submit(() -> dispatch(envelope, recoveryConsumer));
+        } else if (envelope.istype(UdpPacketType.REWIRING)) {
+            rewiringExecutor.submit(() -> dispatch(envelope, rewiringConsumer));
+        }
+    }
+
+    private void dispatch(UdpEnvelope envelope, Consumer<UdpEnvelope> consumer) {
+        try {
+            if (consumer != null) {
+                consumer.accept(envelope);
+            }
+        } catch (Exception ex) {
+            System.getLogger(UdpCoordinator.class.getName())
+                    .log(System.Logger.Level.ERROR, "UDP dispatch error: " + ex.getMessage(), ex);
+        }
+    }
     
     @Override
     public void close() throws Exception {
@@ -163,5 +182,8 @@ public class UdpCoordinator implements AutoCloseable {
         }
         
         executorService.shutdownNow();
+        membershipExecutor.shutdownNow();
+        recoveryExecutor.shutdownNow();
+        rewiringExecutor.shutdownNow();
     }
 }

@@ -133,6 +133,10 @@ public final class MembershipControlService implements AutoCloseable {
                 return;
             }
 
+            Console.log("[MEMBERSHIP] Received " + message.type()
+                    + " txId=" + message.transactionId()
+                    + " from " + message.sender());
+
             // Check if this is a response to a pending request
             if (message.type() == DiscoveryMessageType.COMMIT_ACK) {
                 CompletableFuture<DiscoveryMessage> future = pendingResponses.remove(message.transactionId());
@@ -184,6 +188,9 @@ public final class MembershipControlService implements AutoCloseable {
                 pendingResponses.put(discoveryMessage.transactionId(), responseFuture);
 
                 // Send command via UdpCoordinator (payload is wrapped in UdpEnvelope)
+                Console.log("[MEMBERSHIP] Sending " + discoveryMessage.type()
+                        + " txId=" + discoveryMessage.transactionId()
+                        + " to " + target);
                 udpCoordinator.send(target.host(), target.port(), UdpPacketType.MEMBERSHIP, 
                         discoveryMessage.encode());
 
@@ -199,7 +206,8 @@ public final class MembershipControlService implements AutoCloseable {
                 }
             } catch (Exception exception) {
                 Console.log("Commit attempt " + attempt + " failed for " + target
-                        + ": " + exception.getMessage());
+                    + ": " + exception.getClass().getSimpleName()
+                    + " - " + exception.getMessage());
                 pendingResponses.remove(discoveryMessage.transactionId());
             }
         }
@@ -229,6 +237,9 @@ public final class MembershipControlService implements AutoCloseable {
                 null);
 
         String encodedMessage = ack.encode();
+        Console.log("[MEMBERSHIP] Sending COMMIT_ACK txId=" + txId
+                + " accepted=" + accepted
+                + " to " + recipient);
         udpCoordinator.send(recipient.host(), recipient.port(), UdpPacketType.MEMBERSHIP, encodedMessage);
     }
 
