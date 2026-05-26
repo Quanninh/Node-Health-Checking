@@ -19,11 +19,21 @@ public class Node {
 
     private String status;
 
+    private int crackingPort;
+
     public Node() {
+    }
+
+    public int getCrackingPort(){
+        return crackingPort;
     }
 
     public String getId() {
         return id;
+    }
+
+    public void setCrackingPort(int crackingPort){
+        this.crackingPort = crackingPort;
     }
 
     public void setId(String id) {

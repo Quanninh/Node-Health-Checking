@@ -8,7 +8,11 @@ import org.springframework.web.bind.annotation.*;
 
 import com.monitoring.model.FailureReport;
 import com.monitoring.model.Node;
+import com.monitoring.model.PasswordCrackRequest;
+import com.monitoring.model.PasswordCrackResponse;
 import com.monitoring.service.NodeService;
+import com.monitoring.service.PasswordCrackingService;
+import com.monitoring.model.CrackingResponse;
 
 @RestController
 @RequestMapping("/api")
@@ -17,6 +21,9 @@ public class NodeController {
 
     @Autowired
     private NodeService nodeService;
+
+    @Autowired
+    private PasswordCrackingService passwordCrackingService;
 
     @PostMapping("/heartbeat")
     public ResponseEntity<String> receiveHeartbeat(
@@ -74,4 +81,45 @@ public class NodeController {
                 nodeService.getFailureReports()
         );
     }
+
+    @PostMapping("/crack-password")
+    public ResponseEntity<PasswordCrackResponse> crackPassword(
+            @RequestBody PasswordCrackRequest request
+    ) {
+        try {
+            PasswordCrackResponse response =
+                    passwordCrackingService.crackPassword(request.getHash());
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+
+            return ResponseEntity.ok(
+                    new PasswordCrackResponse(
+                            false,
+                            null,
+                            "Error: " + e.getMessage(),
+                            0
+                    )
+            );
+        }
+    }
+
+    @PostMapping("/node/result")
+    public ResponseEntity<String> receiveNodeResult(
+            @RequestBody CrackingResponse response
+    ) {
+        passwordCrackingService.handleNodeResult(response);
+
+        return ResponseEntity.ok(
+                "Result received from node: " + response.getNodeId()
+        );
+    }
+
+//     @GetMapping("/nodes")
+//     public ResponseEntity<List<Node>> getNodes() {
+//         return ResponseEntity.ok(
+//                 passwordCrackingService.getNodes()
+//         );
+//     }
 }

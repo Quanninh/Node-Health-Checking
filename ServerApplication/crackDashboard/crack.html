@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+    <title>Password Cracker</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            height: 100vh;
+        }
+
+        .container {
+
+            width: 420px;
+
+            background: white;
+
+            padding: 32px;
+
+            border-radius: 12px;
+
+            box-shadow:
+                    0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            margin-top: 0;
+            margin-bottom: 24px;
+
+            font-size: 24px;
+            text-align: center;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        input {
+
+            width: 100%;
+
+            padding: 12px;
+
+            border: 1px solid #ccc;
+
+            border-radius: 8px;
+
+            font-size: 14px;
+
+            margin-bottom: 20px;
+        }
+
+        button {
+
+            width: 100%;
+
+            padding: 12px;
+
+            border: none;
+
+            border-radius: 8px;
+
+            background: #1f6feb;
+
+            color: white;
+
+            font-size: 16px;
+
+            cursor: pointer;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .result {
+
+            margin-top: 24px;
+
+            padding: 16px;
+
+            border-radius: 8px;
+
+            background: #f0f3f6;
+
+            display: none;
+        }
+
+        .loading {
+
+            margin-top: 16px;
+
+            text-align: center;
+
+            display: none;
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Distributed Password Cracker</h1>
+
+    <label for="hashInput">
+        Hash
+    </label>
+
+    <input
+            id="hashInput"
+            type="text"
+            placeholder="Enter SHA-256 hash"
+    />
+
+    <button onclick="crackPassword()">
+        Crack Password
+    </button>
+
+    <div
+            id="loading"
+            class="loading"
+    >
+        Cracking password...
+    </div>
+
+    <div
+            id="result"
+            class="result"
+    >
+    </div>
+
+</div>
+
+<script>
+
+    async function crackPassword() {
+
+        const hashInput =
+            document.getElementById("hashInput");
+
+        const resultDiv =
+            document.getElementById("result");
+
+        const loadingDiv =
+            document.getElementById("loading");
+
+        const hash =
+            hashInput.value.trim();
+
+        if (!hash) {
+
+            alert("Please enter a hash");
+
+            return;
+        }
+
+        resultDiv.style.display = "none";
+
+        loadingDiv.style.display = "block";
+
+        try {
+
+            const response =
+                await fetch(
+                    "http://localhost:6789/api/crack-password",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            hash: hash
+                        })
+                    }
+                );
+
+            const data =
+                await response.json();
+
+            loadingDiv.style.display = "none";
+
+            resultDiv.style.display = "block";
+
+            if (data.success) {
+
+                resultDiv.innerHTML = `
+                    <h3>Password Found</h3>
+
+                    <p>
+                        <strong>Password:</strong>
+                        ${data.password}
+                    </p>
+
+                    <p>
+                        <strong>Time Taken:</strong>
+                        ${data.timeTaken} ms
+                    </p>
+                `;
+
+            } else {
+
+                resultDiv.innerHTML = `
+                    <h3>Failed</h3>
+
+                    <p>
+                        ${data.message}
+                    </p>
+                `;
+            }
+
+        } catch (error) {
+
+            loadingDiv.style.display = "none";
+
+            resultDiv.style.display = "block";
+
+            resultDiv.innerHTML = `
+                <h3>Error</h3>
+
+                <p>
+                    ${error.message}
+                </p>
+            `;
+        }
+    }
+
+</script>
+
+</body>
+</html>

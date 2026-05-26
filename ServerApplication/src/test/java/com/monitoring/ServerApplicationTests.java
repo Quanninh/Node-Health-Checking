@@ -1,4 +1,4 @@
-package com.monitoring.ServerApplication;
+package com.monitoring;
 
 import java.time.LocalDateTime;
 

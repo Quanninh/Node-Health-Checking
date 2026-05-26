@@ -40,6 +40,8 @@ public class NodeService {
 
         node.setLastHeartbeat(LocalDateTime.now());
 
+        node.setCrackingPort(incomingNode.getCrackingPort());
+
         nodeRepository.save(node);
 
         System.out.println(
