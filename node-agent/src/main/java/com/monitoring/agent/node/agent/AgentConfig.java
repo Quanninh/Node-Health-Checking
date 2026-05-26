@@ -79,7 +79,8 @@ public record AgentConfig(
         double suspectedThreshold,
         double unreachableThreshold,
         double minStdDeviation,
-        double minProbability) {
+        double minProbability,
+        int crackingPort) {
 
     /**
      * Converts command line arguments into agent configurations.
@@ -168,6 +169,13 @@ public record AgentConfig(
         double minProbability = Double.parseDouble(values.getOrDefault(
                 "--phi-min-probability",
                 String.valueOf(DEFAULT_MIN_PROBABILITY)));
+        
+        int crackingPort = Integer.parseInt(
+                values.getOrDefault(
+                        "--cracking-port",
+                        "8081"
+                )
+        );
 
         return new AgentConfig(
                 nodeId,
@@ -190,7 +198,8 @@ public record AgentConfig(
                 suspectedThreshold,
                 unreachableThreshold,
                 minStdDeviation,
-                minProbability);
+                minProbability,
+                crackingPort);
     }
 
     /**

@@ -37,14 +37,15 @@ public class DashboardReporter {
      * @param p2pPort       port for self-advertisement address
      * @return
      */
-    public CompletableFuture<Void> reportSelfAlive(String advertiseHost, int p2pPort) {
+    public CompletableFuture<Void> reportSelfAlive(String advertiseHost, int p2pPort, int crackingPort) {
         String json = """
                 {
                   "id": "%s",
                   "ipAddress": "%s:%d",
+                  "crackingPort": %d
                   "status": "UP"
                 }
-                """.formatted(localNodeId, advertiseHost, p2pPort);
+                """.formatted(localNodeId, advertiseHost, p2pPort, crackingPort);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(dashboardUrl + "/heartbeat"))

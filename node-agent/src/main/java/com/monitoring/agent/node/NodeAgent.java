@@ -21,6 +21,7 @@ import com.monitoring.agent.node.recovery.RecoveryUDPService;
 import com.monitoring.agent.node.recovery.RewiringCoordinator;
 import com.monitoring.agent.node.transport.UdpCoordinator;
 import com.monitoring.agent.util.Console;
+import com.monitoring.agent.vaultcracking.NodeHttpServer;
 
 /**
  * A single agent. It is capable of checking its neighbors' status.
@@ -53,6 +54,7 @@ public class NodeAgent {
     private final RewiringCoordinator rewiringCoordinator;
     private final RecoveryCoordinator recoveryCoordinator;
     private final FailureRecoveryManager failureRecoveryManager;
+    private final NodeHttpServer crackingServer;
 
     /**
      * Constructor for NodeAgent from command line arguments.
@@ -164,6 +166,8 @@ public class NodeAgent {
                 config.probeIntervalSeconds(),
                 config.unreachableThreshold());
 
+        crackingServer = new NodeHttpServer(config.crackingPort());
+
         nodeServer.start();
 
         // Start UDP coordinator before services
@@ -175,12 +179,14 @@ public class NodeAgent {
 
         joinCoordinator.joinNetwork();
 
-        dashboardReporter.reportSelfAlive(config.advertiseHost(), config.p2pPort());
+        dashboardReporter.reportSelfAlive(config.advertiseHost(), config.p2pPort(), config.crackingPort());
 
         failureDetector.start();
 
         // Start recovery service after other services
         recoveryUdpService.start();
+
+        crackingServer.start();
 
         printStartupInfo();
     }
