@@ -40,6 +40,10 @@ public class NodeServer {
         this.server.setExecutor(Executors.newFixedThreadPool(10));
     }
 
+    public int getPort() {
+        return server.getAddress().getPort();
+    }
+
     /**
      * Sets the gossip service
      * 

@@ -99,7 +99,7 @@ public record AgentConfig(
 
                 String advertiseHost = values.getOrDefault("--advertise-host", bindHost);
 
-                int p2pPort = Integer.parseInt(values.getOrDefault("--p2p-port", "9001"));
+        int p2pPort = Integer.parseInt(values.getOrDefault("--p2p-port", "0"));
 
                 String dashboardUrl = values.getOrDefault(
                                 "--dashboard-url",
