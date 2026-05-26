@@ -13,6 +13,7 @@ const API = "http://localhost:6789/api/nodes";
 const FAILURE_REPORTS_API = "http://localhost:6789/api/failure-reports";
 const REFRESH_INTERVAL_MS = 2000;
 
+let selectedNodeId = null;
 
 async function refreshDashboard() {
     try {
