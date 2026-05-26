@@ -256,7 +256,8 @@ public final class ConnectionManager {
             }
 
             if (neighborsById.size() >= maxNeighbors) {
-                Console.log("Accepting " + joiningNode + " will make this node exceed neighbor limit.", Constant.BG_YELLOW);
+                Console.log("Accepting " + joiningNode + " will make this node exceed neighbor limit.",
+                        Constant.BG_YELLOW);
                 return new CommitResult(false, "Small join target has no free neighbor slot");
             }
 
@@ -318,4 +319,47 @@ public final class ConnectionManager {
         this.isInNetwork = isInNetwork;
     }
 
+    /**
+     * Applies the rewiring scheme. Connects to a node and disconnects from another
+     * node.
+     * 
+     * @param txId            the transaction ID
+     * @param connectsTo      connects to this node
+     * @param disconnectsFrom disconnects from this node
+     * @param reason          the reason
+     * @return true if rewiring is successful or is already carried out, false if
+     *         after rewiring, the local node exceeds neighbor limit.
+     */
+    public boolean applyRewireScheme(String txId, NodeAddress connectsTo, NodeAddress disconnectsFrom, String reason) {
+        lock.lock();
+        try {
+            if (!processedTransactions.add("REWIRE_SCHEME:" + txId)) {
+                return true;
+            }
+
+            if (disconnectsFrom != null) {
+                neighborsById.remove(disconnectsFrom.nodeId());
+            }
+
+            if (connectsTo != null && !connectsTo.nodeId().equals(localAddress.nodeId())) {
+                neighborsById.put(connectsTo.nodeId(), connectsTo);
+            }
+
+            if (neighborsById.size() > maxNeighbors) {
+                return false;
+            }
+
+            version++;
+
+            Console.log("[REWIRE] " + localAddress.nodeId()
+                    + " applied scheme. connectsTo=" + connectsTo
+                    + ", disconnectsFrom=" + disconnectsFrom
+                    + ", reason=" + reason
+                    + ", neighbors=" + neighborsById.values());
+
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
 }

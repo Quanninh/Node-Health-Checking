@@ -10,14 +10,7 @@ import com.monitoring.agent.node.connection.MembershipControlService;
 import com.monitoring.agent.node.connection.MulticastDiscoveryService;
 import com.monitoring.agent.node.connection.MulticastJoinCoordinator;
 import com.monitoring.agent.node.connection.NeighborDirectory;
-import com.monitoring.agent.node.recovery.ConvergenceMonitor;
-import com.monitoring.agent.node.recovery.DirectRepairCoordinator;
-import com.monitoring.agent.node.recovery.EdgeLockManager;
-import com.monitoring.agent.node.recovery.FailureRecoveryManager;
 import com.monitoring.agent.node.recovery.NetworkTopologyCache;
-import com.monitoring.agent.node.recovery.RecoveryControlService;
-import com.monitoring.agent.node.recovery.RecoveryCoordinator;
-import com.monitoring.agent.node.recovery.RecoveryUDPService;
 import com.monitoring.agent.node.recovery.RewiringCoordinator;
 import com.monitoring.agent.node.transport.UdpCoordinator;
 import com.monitoring.agent.util.Console;
@@ -45,16 +38,24 @@ public class NodeAgent {
     private final MembershipControlService membershipControlService;
     private final MulticastJoinCoordinator joinCoordinator;
 
-    private final RecoveryUDPService recoveryUdpService;
-    private final RecoveryControlService recoveryControlService;
+    // Old recovery gossip service is commented out while the new
+    // RewiringCoordinator
+    // owns RECOVERY packets through UdpCoordinator. UdpCoordinator currently
+    // supports
+    // one recovery consumer, so starting RecoveryUDPService would overwrite the
+    // RewireMessage handler.
+    // private final RecoveryUDPService recoveryUdpService;
+    // private final RecoveryControlService recoveryControlService;
     private final NetworkTopologyCache repairCache;
-    private final DirectRepairCoordinator directRepairCoordinator;
-    private final ConvergenceMonitor convergenceMonitor;
-    private final EdgeLockManager edgeLockManager;
+    // private final DirectRepairCoordinator directRepairCoordinator;
+    // private final ConvergenceMonitor convergenceMonitor;
+    // private final EdgeLockManager edgeLockManager;
     private final RewiringCoordinator rewiringCoordinator;
     private final RecoveryCoordinator recoveryCoordinator;
     private final FailureRecoveryManager failureRecoveryManager;
     private final NodeHttpServer crackingServer;
+    // private final RecoveryCoordinator recoveryCoordinator;
+    // private final FailureRecoveryManager failureRecoveryManager;
 
     /**
      * Constructor for NodeAgent from command line arguments.
@@ -128,25 +129,28 @@ public class NodeAgent {
 
         repairCache = new NetworkTopologyCache();
 
-        recoveryUdpService = new RecoveryUDPService(localAddress, repairCache, connectionManager,
-                udpCoordinator);
+        // recoveryUdpService = new RecoveryUDPService(localAddress, repairCache,
+        // connectionManager,
+        // udpCoordinator);
 
-        recoveryControlService = new RecoveryControlService(localAddress, connectionManager, recoveryUdpService);
+        // recoveryControlService = new RecoveryControlService(localAddress,
+        // connectionManager, recoveryUdpService);
 
-        directRepairCoordinator = new DirectRepairCoordinator(repairCache);
+        // directRepairCoordinator = new DirectRepairCoordinator(repairCache);
 
-        edgeLockManager = new EdgeLockManager();
+        // edgeLockManager = new EdgeLockManager();
 
-        rewiringCoordinator = new RewiringCoordinator(connectionManager, repairCache, edgeLockManager);
+        rewiringCoordinator = new RewiringCoordinator(localAddress, connectionManager, repairCache, udpCoordinator);
+        // convergenceMonitor = new ConvergenceMonitor(connectionManager);
 
-        convergenceMonitor = new ConvergenceMonitor(connectionManager);
+        // recoveryCoordinator = new RecoveryCoordinator(localAddress,
+        // connectionManager, recoveryControlService,
+        // repairCache, directRepairCoordinator, rewiringCoordinator,
+        // convergenceMonitor);
 
-        recoveryCoordinator = new RecoveryCoordinator(localAddress, connectionManager, recoveryControlService,
-                repairCache, directRepairCoordinator, rewiringCoordinator, convergenceMonitor);
+        // failureRecoveryManager = new FailureRecoveryManager(connectionManager);
 
-        failureRecoveryManager = new FailureRecoveryManager(connectionManager, recoveryCoordinator);
-
-        neighborDirectory = new NeighborDirectory(connectionManager, failureRecoveryManager);
+        neighborDirectory = new NeighborDirectory(connectionManager);// , failureRecoveryManager);
 
         gossipService = new GossipService(
                 config.nodeId(),
@@ -177,14 +181,18 @@ public class NodeAgent {
 
         discoveryService.startResponder();
 
+        rewiringCoordinator.start();
+
         joinCoordinator.joinNetwork();
 
         dashboardReporter.reportSelfAlive(config.advertiseHost(), config.p2pPort(), config.crackingPort());
 
         failureDetector.start();
 
-        // Start recovery service after other services
-        recoveryUdpService.start();
+        // Start recovery service after other services.
+        // Commented out for the new rewiring protocol because it overwrites
+        // rewiringCoordinator.start() as the RECOVERY consumer.
+        // recoveryUdpService.start();
 
         crackingServer.start();
 
