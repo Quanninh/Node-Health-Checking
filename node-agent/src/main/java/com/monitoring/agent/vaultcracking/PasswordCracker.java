@@ -1,10 +1,11 @@
 package com.monitoring.agent.vaultcracking;
 
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.nio.charset.StandardCharsets;
 
 public class PasswordCracker {
+
     private static final String CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
     private static final int PASSWORD_LENGTH = 5;
 
@@ -16,6 +17,13 @@ public class PasswordCracker {
         this.targetHash = targetHash.toLowerCase();
     }
 
+    /**
+     * Cracks all passwords in the range.
+     * 
+     * @param startIndex
+     * @param endIndex
+     * @return the crack result
+     */
     public CrackResult crackRange(long startIndex, long endIndex) {
         long startTime = System.currentTimeMillis();
 
@@ -26,13 +34,19 @@ public class PasswordCracker {
             if (hash.equals(targetHash)) {
                 found = true;
                 foundPassword = password;
-                return new CrackResult(true, password, System.currentTimeMillis() - startTime);
+                return new CrackResult(true, foundPassword, System.currentTimeMillis() - startTime);
             }
         }
 
         return new CrackResult(false, null, System.currentTimeMillis() - startTime);
     }
 
+    /**
+     * Turns an index into a password.
+     * 
+     * @param index
+     * @return the password
+     */
     private String indexToPassword(long index) {
         char[] password = new char[PASSWORD_LENGTH];
         for (int i = PASSWORD_LENGTH - 1; i >= 0; i--) {
@@ -42,12 +56,19 @@ public class PasswordCracker {
         return new String(password);
     }
 
+    /**
+     * Calculates the hash of the input string.
+     * 
+     * @param input the string
+     * @return the hash
+     */
     private String computeSHA256(String input) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
 
             StringBuilder hexString = new StringBuilder();
+
             for (byte b : hash) {
                 String hex = Integer.toHexString(0xff & b);
                 if (hex.length() == 1) {
@@ -55,33 +76,11 @@ public class PasswordCracker {
                 }
                 hexString.append(hex);
             }
+
             return hexString.toString();
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException("SHA-256 algorithm not found", e);
         }
     }
 
-    public static class CrackResult {
-        public final boolean found;
-        public final String password;
-        public final long timeTaken;
-
-        public CrackResult(boolean found, String password, long timeTaken) {
-            this.found = found;
-            this.password = password;
-            this.timeTaken = timeTaken;
-        }
-    }
-
-    public static long getTotalPossiblePasswords() {
-        long result = 1;
-        for (int i = 0; i < PASSWORD_LENGTH; i++) {
-            result *= CHARSET.length();
-        }
-        return result;
-    }
-
-    public static long getCharsetSize() {
-        return CHARSET.length();
-    }
 }

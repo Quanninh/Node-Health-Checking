@@ -1,6 +1,5 @@
 package com.monitoring.agent.vaultcracking;
 
-import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -45,12 +44,7 @@ public class NodeHttpServer {
         /**
          * Fixed thread pool for parallel cracking jobs.
          */
-        this.crackingExecutor = Executors.newFixedThreadPool(
-                Runtime.getRuntime().availableProcessors());
-    }
-
-    public String getNodeID() {
-        return nodeId;
+        this.crackingExecutor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     }
 
     public int getPort() {
@@ -158,7 +152,7 @@ public class NodeHttpServer {
                     PasswordCracker cracker = new PasswordCracker(
                             request.getHash());
 
-                    PasswordCracker.CrackResult result = cracker.crackRange(
+                    CrackResult result = cracker.crackRange(
                             request.getRangeStart(),
                             request.getRangeEnd());
 
@@ -187,19 +181,15 @@ public class NodeHttpServer {
                     }
 
                 } catch (Exception e) {
-
                     e.printStackTrace();
                 }
             });
 
         } catch (Exception e) {
-
             e.printStackTrace();
 
             try {
-                exchange.sendResponseHeaders(
-                        500,
-                        -1);
+                exchange.sendResponseHeaders(500, -1);
             } catch (Exception ignored) {
             }
         }
