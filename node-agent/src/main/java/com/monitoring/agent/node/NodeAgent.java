@@ -185,6 +185,8 @@ public class NodeAgent {
 
                 joinCoordinator.joinNetwork();
 
+                crackingServer.start();
+
                 dashboardReporter.reportSelfAlive(config.advertiseHost(), config.p2pPort(), config.crackingPort());
 
                 failureDetector.start();
@@ -193,8 +195,6 @@ public class NodeAgent {
                 // Commented out for the new rewiring protocol because it overwrites
                 // rewiringCoordinator.start() as the RECOVERY consumer.
                 // recoveryUdpService.start();
-
-                crackingServer.start();
 
                 printStartupInfo();
         }

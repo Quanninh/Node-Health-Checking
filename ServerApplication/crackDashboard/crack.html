@@ -176,7 +176,7 @@ async function crackPassword() {
     loadingDiv.style.display = "block";
 
     try {
-
+        
         // STEP 1: SEND JOB TO SPRING BOOT
         await fetch("http://localhost:6789/api/crack-password", {
             method: "POST",

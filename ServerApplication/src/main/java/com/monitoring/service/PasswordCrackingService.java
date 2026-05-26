@@ -25,6 +25,9 @@ public class PasswordCrackingService {
         @Autowired
         private NodeRepository nodeRepository;
 
+        @Autowired
+        private ResultStore resultStore;
+
         private static final String CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
         private static final int PASSWORD_LENGTH = 5;
@@ -34,8 +37,6 @@ public class PasswordCrackingService {
         private volatile String foundPassword;
 
         private final ObjectMapper mapper = new ObjectMapper();
-
-        private ResultStore resultStore;
 
         public PasswordCrackResponse crackPassword(
                         String hash) throws Exception {
