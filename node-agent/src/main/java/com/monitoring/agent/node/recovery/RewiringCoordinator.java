@@ -148,8 +148,8 @@ public final class RewiringCoordinator {
 
         List<NodeAddress> defANeighborsAtRequestTime = connectionManager.neighborAddresses();
 
-        RewireMessage req = RewireMessage.of(RecoveryMessageType.REWIRE_REQ, requestId, localAddress, defA, defB, null,
-                null, null, null, defANeighborsAtRequestTime, List.of(), null);
+        RewireMessage req = RewireMessage.of(RecoveryMessageType.REWIRE_SESSION_REQ, requestId, localAddress, defA,
+                defB, null, null, null, null, defANeighborsAtRequestTime, List.of(), null);
 
         RewireMessage ack;
 
@@ -168,7 +168,7 @@ public final class RewiringCoordinator {
             return false;
         }
 
-        if (ack.type() != RecoveryMessageType.REWIRE_ACK) {
+        if (ack.type() != RecoveryMessageType.REWIRE_SESSION_ACK) {
             return false;
         }
 
@@ -188,7 +188,7 @@ public final class RewiringCoordinator {
         List<NodeAddress> defBNeighbors = ack.defBNeighbors();
 
         RewireMessage commit = RewireMessage.of(
-                RecoveryMessageType.COMMIT_ACK,
+                RecoveryMessageType.REWIRE_SESSION_COMMIT,
                 recoveryId,
                 localAddress,
                 defA, defB, null, null,
@@ -274,7 +274,29 @@ public final class RewiringCoordinator {
             return false;
         }
 
-        return connectionManager.addIfSpace(defB, "direct rewiring recovery");
+        boolean localApplied = connectionManager.addIfSpace(defB, "direct rewiring recovery commit");
+
+        if (!localApplied) {
+            return false;
+        }
+
+        RewireMessage commit = RewireMessage.of(
+                RecoveryMessageType.REWIRE_DIRECT_COMMIT,
+                recoveryId,
+                localAddress,
+                defA,
+                defB,
+                null,
+                null,
+                defB,
+                null,
+                connectionManager.neighborAddresses(),
+                List.of(),
+                RewireStatus.ACCEPTED);
+
+        sendOnly(defB, commit);
+        refreshHealthState();
+        return true;
     }
 
     /**
@@ -317,15 +339,16 @@ public final class RewiringCoordinator {
      */
     private boolean executeScheme(String recoveryId, NodeAddress defA, NodeAddress defB, NodeAddress c, NodeAddress d) {
 
-        String txId = recoveryId + ":scheme";
-
-        RewireMessage toC = RewireMessage.of(RecoveryMessageType.REWIRE_SCHEME, txId + ":C", localAddress, defA, defB,
+        RewireMessage toC = RewireMessage.of(RecoveryMessageType.REWIRE_SCHEME_REQ, recoveryId, localAddress, defA,
+                defB,
                 c, d, defB, d, List.of(), List.of(), null);
 
-        RewireMessage toD = RewireMessage.of(RecoveryMessageType.REWIRE_SCHEME, txId + ":D", localAddress, defA, defB,
+        RewireMessage toD = RewireMessage.of(RecoveryMessageType.REWIRE_SCHEME_REQ, recoveryId, localAddress, defA,
+                defB,
                 c, d, defA, c, List.of(), List.of(), null);
 
-        RewireMessage toB = RewireMessage.of(RecoveryMessageType.REWIRE_SCHEME, txId + ":B", localAddress, defA, defB,
+        RewireMessage toB = RewireMessage.of(RecoveryMessageType.REWIRE_SCHEME_REQ, recoveryId, localAddress, defA,
+                defB,
                 c, d, c, null, List.of(), List.of(), null);
 
         CompletableFuture<RewireMessage> ackC = sendAsync(c, toC);
@@ -348,13 +371,18 @@ public final class RewiringCoordinator {
                 return false;
             }
 
-            boolean localApplied = connectionManager.addIfSpace(d, "rewiring scheme: defA connects to D");
+            boolean localApplied = connectionManager.addIfSpace(d, "rewiring scheme commit: defA connects to D");
 
             if (!localApplied) {
                 Console.log("[REWIRE] Scheme failed locally. defA could not add D.");
                 return false;
             }
 
+            sendOnly(c, schemeCommit(recoveryId, defA, defB, c, d, defB, d));
+            sendOnly(d, schemeCommit(recoveryId, defA, defB, c, d, defA, c));
+            sendOnly(defB, schemeCommit(recoveryId, defA, defB, c, d, c, null));
+
+            releaseDeficientRoleIfMatching(recoveryId);
             refreshHealthState();
 
             Console.log(
@@ -381,20 +409,28 @@ public final class RewiringCoordinator {
             return;
         }
 
-        CompletableFuture<RewireMessage> pending = pendingReplies.remove(message.recoveryId());
+        if (isReply(message.type())) {
+            CompletableFuture<RewireMessage> pending = pendingReplies
+                    .remove(replyKey(message.recoveryId(), message.sender()));
 
-        if (pending != null && isReply(message.type())) {
-            pending.complete(message);
-            return;
+            if (pending != null) {
+                pending.complete(message);
+                return;
+            }
         }
 
         switch (message.type()) {
             case REWIRE_REQ_DIRECT -> handleDirectRequest(message);
-            case REWIRE_REQ -> handleRewireRequest(message);
-            case COMMIT_ACK -> handleCommitAck(message);
+            case REWIRE_DIRECT_COMMIT -> handleDirectCommit(message);
+            case REWIRE_SESSION_REQ -> handleSessionRequest(message);
+            case REWIRE_SESSION_COMMIT -> handleSessionCommit(message);
+            case REWIRE_REQ -> handleSessionRequest(message);
+            case COMMIT_ACK -> handleSessionCommit(message);
             case NEIGHBORS_QUERY -> handleNeighborsQuery(message);
             case REWIRING_PROPOSE -> handleRewiringPropose(message);
-            case REWIRE_SCHEME -> handleRewireScheme(message);
+            case REWIRE_SCHEME_REQ -> handleRewireSchemeRequest(message);
+            case REWIRE_SCHEME_COMMIT -> handleRewireSchemeCommit(message);
+            case REWIRE_SCHEME -> handleRewireSchemeCommit(message);
             default -> {
             }
         }
@@ -408,11 +444,29 @@ public final class RewiringCoordinator {
      */
     private void handleDirectRequest(RewireMessage message) {
         boolean accepted = canAcceptDeficientRequest()
-                && connectionManager.addIfSpace(message.sender(), "direct rewiring request");
+                && !connectionManager.containsNode(message.sender().nodeId())
+                && connectionManager.size() < connectionManager.getMaxNeighbors();
 
         refreshHealthState();
 
-        sendOnly(message.sender(), reply(message, RecoveryMessageType.REWIRE_ACK, accepted, null));
+        sendOnly(message.sender(), reply(message, RecoveryMessageType.REWIRE_REQ_DIRECT_ACK, accepted, null));
+    }
+
+    private void handleDirectCommit(RewireMessage message) {
+        if (message.status() != RewireStatus.ACCEPTED) {
+            return;
+        }
+
+        boolean accepted = connectionManager.addIfSpace(message.sender(), "direct rewiring recovery commit");
+
+        refreshHealthState();
+
+        Console.log("[REWIRE][COMMIT] Direct repair commit from "
+                + message.sender().nodeId()
+                + " accepted="
+                + accepted
+                + ", recoveryId="
+                + message.recoveryId());
     }
 
     /**
@@ -421,8 +475,8 @@ public final class RewiringCoordinator {
      * 
      * @param message the REWIRE_REQ message
      */
-    private void handleRewireRequest(RewireMessage message) {
-        if (!canAcceptDeficientRequest()) {
+    private void handleSessionRequest(RewireMessage message) {
+        if (!canAcceptSessionRequest(message)) {
             sendOnly(message.sender(), reply(message, RecoveryMessageType.REWIRE_DENY, false, null));
             return;
         }
@@ -471,7 +525,7 @@ public final class RewiringCoordinator {
         }
 
         RewireMessage response = RewireMessage.of(
-                RecoveryMessageType.REWIRE_ACK,
+                RecoveryMessageType.REWIRE_SESSION_ACK,
                 message.recoveryId(),
                 localAddress,
                 message.defA(),
@@ -488,12 +542,13 @@ public final class RewiringCoordinator {
     }
 
     /**
-     * Handles when the node receives a COMMIT_ACK. <p>
+     * Handles when the node receives a COMMIT_ACK.
+     * <p>
      * If the node returns an ACCEPTED response, that no
      * 
      * @param message the COMMIT_ACK message
      */
-    private void handleCommitAck(RewireMessage message) {
+    private void handleSessionCommit(RewireMessage message) {
         if (message.status() != RewireStatus.ACCEPTED) {
             return;
         }
@@ -579,20 +634,35 @@ public final class RewiringCoordinator {
                 reply(message, RecoveryMessageType.REWIRING_PROPOSE_ACK, valid, message.nodeD()));
     }
 
-    private void handleRewireScheme(RewireMessage message) {
+    private void handleRewireSchemeRequest(RewireMessage message) {
+        boolean accepted = canAcceptSchemeRequest(message);
+
+        sendOnly(
+                message.sender(),
+                reply(message, RecoveryMessageType.REWIRE_SCHEME_ACK, accepted, null));
+    }
+
+    private void handleRewireSchemeCommit(RewireMessage message) {
         boolean accepted = connectionManager.applyRewireScheme(
                 message.recoveryId(),
                 message.connectsTo(),
                 message.disconnectsFrom(),
-                "rewiring scheme from " + message.sender().nodeId());
+                "rewiring scheme commit from " + message.sender().nodeId());
 
         releaseRewiringReservation(message.recoveryId());
         releaseDeficientRoleIfMatching(message.recoveryId());
         refreshHealthState();
 
-        sendOnly(
-                message.sender(),
-                reply(message, RecoveryMessageType.REWIRE_SCHEME_ACK, accepted, null));
+        Console.log("[REWIRE][COMMIT] Scheme commit from "
+                + message.sender().nodeId()
+                + " accepted="
+                + accepted
+                + ", connectsTo="
+                + message.connectsTo()
+                + ", disconnectsFrom="
+                + message.disconnectsFrom()
+                + ", recoveryId="
+                + message.recoveryId());
     }
 
     /**
@@ -625,11 +695,10 @@ public final class RewiringCoordinator {
                 continue;
             }
 
-            boolean dInDefB = contains(defBNeighbors, d.nodeId());
             boolean dNotInDefA = !contains(defANeighbors, d.nodeId());
             boolean cAndDAdjacent = connectionManager.containsNode(d.nodeId());
 
-            if (dInDefB && dNotInDefA && cAndDAdjacent) {
+            if (dNotInDefA && cAndDAdjacent) {
                 return d;
             }
         }
@@ -750,6 +819,60 @@ public final class RewiringCoordinator {
             }
 
             return recoveryRole == RecoveryRole.FREE;
+        } finally {
+            roleLock.unlock();
+        }
+    }
+
+    private boolean canAcceptSessionRequest(RewireMessage message) {
+        roleLock.lock();
+        try {
+            refreshHealthState();
+
+            if (healthState != HealthState.DEFICIENT) {
+                return false;
+            }
+
+            if (recoveryRole != RecoveryRole.FREE) {
+                return false;
+            }
+
+            NodeAddress leader = electLeader(message.defA(), message.defB());
+
+            if (!leader.nodeId().equals(message.sender().nodeId())) {
+                return false;
+            }
+
+            if (initiatingDeficientRequest && leader.nodeId().equals(localAddress.nodeId())) {
+                return false;
+            }
+
+            return true;
+        } finally {
+            roleLock.unlock();
+        }
+    }
+
+    private boolean canAcceptSchemeRequest(RewireMessage message) {
+        roleLock.lock();
+        try {
+            if (recoveryRole == RecoveryRole.DEFICIENT_FELLOW) {
+                return Objects.equals(activeDeficientRecoveryId, message.recoveryId())
+                        && message.connectsTo() != null
+                        && message.disconnectsFrom() == null;
+            }
+
+            if (recoveryRole != RecoveryRole.REWIRING_NODE) {
+                return false;
+            }
+
+            String reservedEdge = reservedEdgeByRecoveryId.get(message.recoveryId());
+
+            if (reservedEdge == null) {
+                return false;
+            }
+
+            return isDegreeNeutralSwap(message.connectsTo(), message.disconnectsFrom());
         } finally {
             roleLock.unlock();
         }
@@ -990,6 +1113,30 @@ public final class RewiringCoordinator {
                 accepted ? RewireStatus.ACCEPTED : RewireStatus.REFUSED);
     }
 
+    private RewireMessage schemeCommit(
+            String recoveryId,
+            NodeAddress defA,
+            NodeAddress defB,
+            NodeAddress c,
+            NodeAddress d,
+            NodeAddress connectsTo,
+            NodeAddress disconnectsFrom) {
+
+        return RewireMessage.of(
+                RecoveryMessageType.REWIRE_SCHEME_COMMIT,
+                recoveryId,
+                localAddress,
+                defA,
+                defB,
+                c,
+                d,
+                connectsTo,
+                disconnectsFrom,
+                List.of(),
+                List.of(),
+                RewireStatus.ACCEPTED);
+    }
+
     /**
      * Sends a message after putting it into the pending replies list. Then waits
      * until receives a response.
@@ -1002,14 +1149,15 @@ public final class RewiringCoordinator {
     private RewireMessage sendAndWait(NodeAddress target, RewireMessage message, Duration timeout) {
         for (int attempt = 1; attempt <= SEND_ATTEMPTS; attempt++) {
             CompletableFuture<RewireMessage> future = new CompletableFuture<>();
+            String key = replyKey(message.recoveryId(), target);
 
-            pendingReplies.put(message.recoveryId(), future);
+            pendingReplies.put(key, future);
 
             try {
                 sendOnly(target, message);
                 return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
             } catch (InterruptedException | ExecutionException | TimeoutException exception) {
-                pendingReplies.remove(message.recoveryId());
+                pendingReplies.remove(key);
             }
         }
 
@@ -1036,6 +1184,13 @@ public final class RewiringCoordinator {
      */
     private void sendOnly(NodeAddress target, RewireMessage message) {
         try {
+            Console.log("[REWIRE]" + stageLabel(message.type())
+                    + " "
+                    + message.type()
+                    + " recoveryId="
+                    + message.recoveryId()
+                    + " to "
+                    + target.nodeId());
             udpCoordinator.send(target.host(), target.port(), UdpPacketType.RECOVERY, message.encode());
         } catch (IOException exception) {
             Console.log("[REWIRE] Failed to send " + message.type() + " to " + target + ": " + exception.getMessage());
@@ -1075,11 +1230,35 @@ public final class RewiringCoordinator {
      * @return whether the message type is a reply message
      */
     private boolean isReply(RecoveryMessageType type) {
-        return type == RecoveryMessageType.REWIRE_ACK
+        return type == RecoveryMessageType.REWIRE_REQ_DIRECT_ACK
+                || type == RecoveryMessageType.REWIRE_SESSION_ACK
+                || type == RecoveryMessageType.REWIRE_ACK
                 || type == RecoveryMessageType.REWIRE_DENY
                 || type == RecoveryMessageType.NEIGHBORS_QUERY_RESPONSE
                 || type == RecoveryMessageType.REWIRING_PROPOSE_ACK
                 || type == RecoveryMessageType.REWIRE_SCHEME_ACK;
+    }
+
+    private String replyKey(String recoveryId, NodeAddress sender) {
+        return recoveryId + ":" + (sender == null ? "" : sender.nodeId());
+    }
+
+    private String stageLabel(RecoveryMessageType type) {
+        if (type == null) {
+            return "";
+        }
+
+        return switch (type) {
+            case REWIRE_REQ_DIRECT, REWIRE_SESSION_REQ, REWIRE_SCHEME_REQ, NEIGHBORS_QUERY, REWIRING_PROPOSE,
+                    REWIRE_REQ, REWIRE_SCHEME ->
+                "[REQ]";
+            case REWIRE_REQ_DIRECT_ACK, REWIRE_SESSION_ACK, REWIRE_SCHEME_ACK, NEIGHBORS_QUERY_RESPONSE,
+                    REWIRING_PROPOSE_ACK, REWIRE_ACK, REWIRE_DENY ->
+                "[ACK]";
+            case REWIRE_DIRECT_COMMIT, REWIRE_SESSION_COMMIT, REWIRE_SCHEME_COMMIT, COMMIT_ACK ->
+                "[COMMIT]";
+            default -> "";
+        };
     }
 
     /**

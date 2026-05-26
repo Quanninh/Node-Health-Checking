@@ -16,6 +16,7 @@ import java.net.URL;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -38,12 +39,22 @@ public class PasswordCrackingService {
 
         private final ObjectMapper mapper = new ObjectMapper();
 
+        private final Queue<long[]> pendingRanges = new ConcurrentLinkedQueue<>();
+
+        private volatile String currentHash;
+        private volatile boolean crackingDone = false;
+
         public PasswordCrackResponse crackPassword(
                         String hash) throws Exception {
 
                 long startTime = System.currentTimeMillis();
 
                 foundPassword = null;
+                crackingDone = false;
+                currentHash = hash;
+
+                pendingRanges.clear();
+                pendingRanges.addAll(buildRanges(getTotalPossiblePasswords(), RANGE_SIZE));
 
                 List<Node> nodes = nodeRepository.findAll()
                                 .stream()
@@ -60,26 +71,10 @@ public class PasswordCrackingService {
                                         0);
                 }
 
-                long totalPasswords = getTotalPossiblePasswords();
-
-                Queue<long[]> ranges = buildRanges(
-                                totalPasswords,
-                                RANGE_SIZE);
-
                 // It only assign one task
                 for (Node node : nodes) {
 
-                        long[] range = ranges.poll();
-
-                        if (range == null) {
-                                break;
-                        }
-
-                        sendTaskToNode(
-                                        node,
-                                        hash,
-                                        range[0],
-                                        range[1]);
+                        assignNextRange(node);
                 }
 
                 long timeout = System.currentTimeMillis() + 60000;
@@ -104,6 +99,25 @@ public class PasswordCrackingService {
                                 null,
                                 "Password not found",
                                 System.currentTimeMillis() - startTime);
+        }
+
+        private void assignNextRange(Node node) {
+                if (crackingDone) {
+                        return;
+                }
+
+                long[] range = pendingRanges.poll();
+
+                if (range == null) {
+                        System.out.println("No more ranges to assign");
+                        return;
+                }
+
+                sendTaskToNode(
+                                node,
+                                currentHash,
+                                range[0],
+                                range[1]);
         }
 
         private void sendTaskToNode(
@@ -135,10 +149,18 @@ public class PasswordCrackingService {
                                                         + " -> "
                                                         + rangeEnd);
 
-                        String responseBody = RestClient.post(url, request);
-                        CrackingResponse response = mapper.readValue(responseBody, CrackingResponse.class);
+                        RestClient.post(url, request);
+                        System.out.println(
+                                        "Task accepted by node "
+                                                        + node.getId()
+                                                        + " range "
+                                                        + rangeStart
+                                                        + " -> "
+                                                        + rangeEnd);
+                        // CrackingResponse response = mapper.readValue(responseBody,
+                        // CrackingResponse.class);
 
-                        handleNodeResult(response);
+                        // handleNodeResult(response);
 
                 } catch (Exception e) {
 
@@ -167,6 +189,16 @@ public class PasswordCrackingService {
                                         "PASSWORD FOUND = "
                                                         + foundPassword);
                 }
+                Node node = nodeRepository
+                                .findById(response.getNodeId())
+                                .orElse(null);
+
+                if (node == null) {
+                        System.out.println("Cannot assign next range. Unknown node: " + response.getNodeId());
+                        return;
+                }
+
+                assignNextRange(node);
         }
 
         private Queue<long[]> buildRanges(

@@ -59,191 +59,191 @@ import static com.monitoring.agent.constant.Constant.DEFAULT_WARNING_THRESHOLD;
  *                                    calculations
  */
 public record AgentConfig(
-        String nodeId,
-        String bindHost,
-        String advertiseHost,
-        int p2pPort,
-        String dashboardUrl,
-        String multicastGroup,
-        int multicastPort,
-        int maxNeighbors,
-        String multicastInterfaceName,
-        int discoveryRetryCount,
-        int discoveryRetryIntervalMs,
-        int discoveryCollectionWindowMs,
-        int probeIntervalSeconds,
-        int ackTimeoutSeconds,
-        int gossipTtl,
-        int phiWindowSize,
-        double warningThreshold,
-        double suspectedThreshold,
-        double unreachableThreshold,
-        double minStdDeviation,
-        double minProbability,
-        int crackingPort) {
+                String nodeId,
+                String bindHost,
+                String advertiseHost,
+                int p2pPort,
+                String dashboardUrl,
+                String multicastGroup,
+                int multicastPort,
+                int maxNeighbors,
+                String multicastInterfaceName,
+                int discoveryRetryCount,
+                int discoveryRetryIntervalMs,
+                int discoveryCollectionWindowMs,
+                int probeIntervalSeconds,
+                int ackTimeoutSeconds,
+                int gossipTtl,
+                int phiWindowSize,
+                double warningThreshold,
+                double suspectedThreshold,
+                double unreachableThreshold,
+                double minStdDeviation,
+                double minProbability,
+                int crackingPort) {
 
-    /**
-     * Converts command line arguments into agent configurations.
-     * 
-     * @param args the command line arguments
-     * @return agent configurations
-     */
-    public static AgentConfig fromArgs(String[] args) {
-        Map<String, String> values = parseArgs(args);
+        /**
+         * Converts command line arguments into agent configurations.
+         * 
+         * @param args the command line arguments
+         * @return agent configurations
+         */
+        public static AgentConfig fromArgs(String[] args) {
+                Map<String, String> values = parseArgs(args);
 
-        String nodeId = values.getOrDefault(
-                "--node-id",
-                "node-" + UUID.randomUUID().toString().substring(0, 8));
+                String nodeId = values.getOrDefault(
+                                "--node-id",
+                                "node-" + UUID.randomUUID().toString().substring(0, 8));
 
-        String bindHost = values.getOrDefault("--bind-host", "127.0.0.1");
+                String bindHost = values.getOrDefault("--bind-host", "127.0.0.1");
 
-        String advertiseHost = values.getOrDefault("--advertise-host", bindHost);
+                String advertiseHost = values.getOrDefault("--advertise-host", bindHost);
 
         int p2pPort = Integer.parseInt(values.getOrDefault("--p2p-port", "0"));
 
-        String dashboardUrl = values.getOrDefault(
-                "--dashboard-url",
-                "http://localhost:6789/api");
+                String dashboardUrl = values.getOrDefault(
+                                "--dashboard-url",
+                                "http://localhost:6789/api");
 
-        String multicastGroup = values.getOrDefault(
-                "--multicast-group",
-                "239.10.20.30");
+                String multicastGroup = values.getOrDefault(
+                                "--multicast-group",
+                                "239.10.20.30");
 
-        int multicastPort = Integer.parseInt(values.getOrDefault(
-                "--multicast-port",
-                "50505"));
+                int multicastPort = Integer.parseInt(values.getOrDefault(
+                                "--multicast-port",
+                                "50505"));
 
-        int maxNeighbors = Integer.parseInt(values.getOrDefault(
-                "--max-neighbors",
-                String.valueOf(Constant.DEFAULT_MAX_NEIGHBORS)));
+                int maxNeighbors = Integer.parseInt(values.getOrDefault(
+                                "--max-neighbors",
+                                String.valueOf(Constant.DEFAULT_MAX_NEIGHBORS)));
 
-        String multicastInterfaceName = values.getOrDefault(
-                "--multicast-interface",
-                "");
+                String multicastInterfaceName = values.getOrDefault(
+                                "--multicast-interface",
+                                "");
 
-        int discoveryRetryCount = Integer.parseInt(values.getOrDefault(
-                "--discovery-retry-count",
-                "3"));
+                int discoveryRetryCount = Integer.parseInt(values.getOrDefault(
+                                "--discovery-retry-count",
+                                "3"));
 
-        int discoveryRetryIntervalMillis = Integer.parseInt(values.getOrDefault(
-                "--discovery-retry-interval-ms",
-                "400"));
+                int discoveryRetryIntervalMillis = Integer.parseInt(values.getOrDefault(
+                                "--discovery-retry-interval-ms",
+                                "400"));
 
-        int discoveryCollectionWindowMillis = Integer.parseInt(values.getOrDefault(
-                "--discovery-collection-window-ms",
-                "3000"));
+                int discoveryCollectionWindowMillis = Integer.parseInt(values.getOrDefault(
+                                "--discovery-collection-window-ms",
+                                "3000"));
 
-        int probeIntervalSeconds = Integer.parseInt(values.getOrDefault(
-                "--probe-interval-seconds",
-                values.getOrDefault("--gossip-interval-seconds",
-                        String.valueOf(DEFAULT_GOSSIP_INTERVAL_SECONDS))));
+                int probeIntervalSeconds = Integer.parseInt(values.getOrDefault(
+                                "--probe-interval-seconds",
+                                values.getOrDefault("--gossip-interval-seconds",
+                                                String.valueOf(DEFAULT_GOSSIP_INTERVAL_SECONDS))));
 
-        int ackTimeoutSeconds = Integer.parseInt(values.getOrDefault(
-                "--ack-timeout-seconds",
-                String.valueOf(DEFAULT_ACK_TIMEOUT_SECONDS)));
+                int ackTimeoutSeconds = Integer.parseInt(values.getOrDefault(
+                                "--ack-timeout-seconds",
+                                String.valueOf(DEFAULT_ACK_TIMEOUT_SECONDS)));
 
-        int gossipTtl = Integer.parseInt(values.getOrDefault(
-                "--gossip-ttl",
-                String.valueOf(DEFAULT_GOSSIP_TTL)));
+                int gossipTtl = Integer.parseInt(values.getOrDefault(
+                                "--gossip-ttl",
+                                String.valueOf(DEFAULT_GOSSIP_TTL)));
 
-        int phiWindowSize = Integer.parseInt(values.getOrDefault(
-                "--phi-window-size",
-                String.valueOf(DEFAULT_PHI_WINDOW_SIZE)));
+                int phiWindowSize = Integer.parseInt(values.getOrDefault(
+                                "--phi-window-size",
+                                String.valueOf(DEFAULT_PHI_WINDOW_SIZE)));
 
-        double warningThreshold = Double.parseDouble(values.getOrDefault(
-                "--phi-warning-threshold",
-                String.valueOf(DEFAULT_WARNING_THRESHOLD)));
+                double warningThreshold = Double.parseDouble(values.getOrDefault(
+                                "--phi-warning-threshold",
+                                String.valueOf(DEFAULT_WARNING_THRESHOLD)));
 
-        double suspectedThreshold = Double.parseDouble(values.getOrDefault(
-                "--phi-suspected-threshold",
-                String.valueOf(DEFAULT_SUSPECTED_THRESHOLD)));
+                double suspectedThreshold = Double.parseDouble(values.getOrDefault(
+                                "--phi-suspected-threshold",
+                                String.valueOf(DEFAULT_SUSPECTED_THRESHOLD)));
 
-        double unreachableThreshold = Double.parseDouble(values.getOrDefault(
-                "--phi-unreachable-threshold",
-                String.valueOf(DEFAULT_UNREACHABLE_THRESHOLD)));
+                double unreachableThreshold = Double.parseDouble(values.getOrDefault(
+                                "--phi-unreachable-threshold",
+                                String.valueOf(DEFAULT_UNREACHABLE_THRESHOLD)));
 
-        double minStdDeviation = Double.parseDouble(values.getOrDefault(
-                "--phi-min-std-deviation",
-                String.valueOf(DEFAULT_MIN_STD_DEVIATION)));
+                double minStdDeviation = Double.parseDouble(values.getOrDefault(
+                                "--phi-min-std-deviation",
+                                String.valueOf(DEFAULT_MIN_STD_DEVIATION)));
 
-        double minProbability = Double.parseDouble(values.getOrDefault(
-                "--phi-min-probability",
-                String.valueOf(DEFAULT_MIN_PROBABILITY)));
+                double minProbability = Double.parseDouble(values.getOrDefault(
+                                "--phi-min-probability",
+                                String.valueOf(DEFAULT_MIN_PROBABILITY)));
 
-        int crackingPort = Integer.parseInt(
-                values.getOrDefault(
-                        "--cracking-port",
-                        "8081"));
+                int crackingPort = Integer.parseInt(
+                                values.getOrDefault(
+                                                "--cracking-port",
+                                                "0"));
 
-        return new AgentConfig(
-                nodeId,
-                bindHost,
-                advertiseHost,
-                p2pPort,
-                dashboardUrl,
-                multicastGroup,
-                multicastPort,
-                maxNeighbors,
-                multicastInterfaceName,
-                discoveryRetryCount,
-                discoveryRetryIntervalMillis,
-                discoveryCollectionWindowMillis,
-                probeIntervalSeconds,
-                ackTimeoutSeconds,
-                gossipTtl,
-                phiWindowSize,
-                warningThreshold,
-                suspectedThreshold,
-                unreachableThreshold,
-                minStdDeviation,
-                minProbability,
-                crackingPort);
-    }
-
-    /**
-     * Parses the command line arguments into a map for each config-value pair.
-     * 
-     * @param args the command line arguments
-     * @return the mapping for each configuration
-     */
-    private static Map<String, String> parseArgs(String[] args) {
-        Map<String, String> values = new ConcurrentHashMap<>();
-
-        for (int i = 0; i < args.length; i++) {
-            String current = args[i];
-
-            if (current.startsWith("--")) {
-                if (i + 1 < args.length && !args[i + 1].startsWith("--")) {
-                    values.put(current, args[i + 1]);
-                    i++;
-                } else {
-                    values.put(current, "true");
-                }
-            }
+                return new AgentConfig(
+                                nodeId,
+                                bindHost,
+                                advertiseHost,
+                                p2pPort,
+                                dashboardUrl,
+                                multicastGroup,
+                                multicastPort,
+                                maxNeighbors,
+                                multicastInterfaceName,
+                                discoveryRetryCount,
+                                discoveryRetryIntervalMillis,
+                                discoveryCollectionWindowMillis,
+                                probeIntervalSeconds,
+                                ackTimeoutSeconds,
+                                gossipTtl,
+                                phiWindowSize,
+                                warningThreshold,
+                                suspectedThreshold,
+                                unreachableThreshold,
+                                minStdDeviation,
+                                minProbability,
+                                crackingPort);
         }
 
-        return values;
-    }
+        /**
+         * Parses the command line arguments into a map for each config-value pair.
+         * 
+         * @param args the command line arguments
+         * @return the mapping for each configuration
+         */
+        private static Map<String, String> parseArgs(String[] args) {
+                Map<String, String> values = new ConcurrentHashMap<>();
 
-    // private static List<NodeAddress> parseNeighborList(String rawNeighbors) {
-    // List<NodeAddress> neighborList = new ArrayList<>();
+                for (int i = 0; i < args.length; i++) {
+                        String current = args[i];
 
-    // if (rawNeighbors == null || rawNeighbors.isBlank()) {
-    // return neighborList;
-    // }
+                        if (current.startsWith("--")) {
+                                if (i + 1 < args.length && !args[i + 1].startsWith("--")) {
+                                        values.put(current, args[i + 1]);
+                                        i++;
+                                } else {
+                                        values.put(current, "true");
+                                }
+                        }
+                }
 
-    // String[] nodeTokens = rawNeighbors.split(",");
+                return values;
+        }
 
-    // for (String token : nodeTokens) {
-    // String trimmed = token.trim();
+        // private static List<NodeAddress> parseNeighborList(String rawNeighbors) {
+        // List<NodeAddress> neighborList = new ArrayList<>();
 
-    // if (trimmed.isBlank()) {
-    // continue;
-    // }
+        // if (rawNeighbors == null || rawNeighbors.isBlank()) {
+        // return neighborList;
+        // }
 
-    // neighborList.add(NodeAddress.fromString(trimmed));
-    // }
+        // String[] nodeTokens = rawNeighbors.split(",");
 
-    // return neighborList;
-    // }
+        // for (String token : nodeTokens) {
+        // String trimmed = token.trim();
+
+        // if (trimmed.isBlank()) {
+        // continue;
+        // }
+
+        // neighborList.add(NodeAddress.fromString(trimmed));
+        // }
+
+        // return neighborList;
+        // }
 }

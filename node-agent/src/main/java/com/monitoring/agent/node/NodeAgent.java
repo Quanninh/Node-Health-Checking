@@ -170,9 +170,10 @@ public class NodeAgent {
                 config.probeIntervalSeconds(),
                 config.unreachableThreshold());
 
-        crackingServer = new NodeHttpServer(config.crackingPort());
+        crackingServer = new NodeHttpServer(config.nodeId(), config.crackingPort());
 
         nodeServer.start();
+                crackingServer.start();
 
         // Start UDP coordinator before services
         udpCoordinator.start();
@@ -234,33 +235,33 @@ public class NodeAgent {
         return networkInterface;
     }
 
-    private void printStartupInfo() {
-        Console.println("====================================");
-        Console.println("Node Agent Started");
-        Console.println("Node ID                    : " + config.nodeId());
-        Console.println("Bind Address               : " + config.bindHost() + ":" + nodeServer.getPort());
-        Console.println("Advertise Address          : " + config.advertiseHost() + ":" + nodeServer.getPort());
-        Console.println("Dashboard URL              : " + config.dashboardUrl());
-        Console.println("Discovery Mode             : UDP Multicast");
-        Console.println("Multicast Group            : " + config.multicastGroup());
-        Console.println("Multicast Port             : " + config.multicastPort());
-        Console.println("Multicast Interface        : "
-                + (config.multicastInterfaceName().isBlank() ? "auto"
-                        : config.multicastInterfaceName()));
-        Console.println("Current neighbors          : " + neighborDirectory.addresses());
-        Console.println("Current neighbor count     : " + connectionManager.size());
-        Console.println("Max neighbors n            : " + connectionManager.getMaxNeighbors());
-        Console.println("Discovery retry count      : " + config.discoveryRetryCount());
-        Console.println("Discovery retry interval   : " + config.discoveryRetryIntervalMs() + " ms");
-        Console.println("Discovery collection window: " + config.discoveryCollectionWindowMs() + " ms");
-        Console.println("Probe interval             : " + config.probeIntervalSeconds() + " seconds");
-        Console.println("ACK timeout                : " + config.ackTimeoutSeconds() + " seconds");
-        Console.println("Phi window size            : " + config.phiWindowSize());
-        Console.println("Phi thresholds             : WARNING=" + config.warningThreshold()
-                + ", SUSPECTED=" + config.suspectedThreshold()
-                + ", UNREACHABLE=" + config.unreachableThreshold());
-        Console.println("Min std deviation          : " + config.minStdDeviation());
-        Console.println("Min probability            : " + config.minProbability());
-        Console.println("====================================");
-    }
+        private void printStartupInfo() {
+                Console.println("====================================");
+                Console.println("Node Agent Started");
+                Console.println("Node ID                    : " + config.nodeId());
+                Console.println("Bind Address               : " + config.bindHost() + ":" + config.p2pPort());
+                Console.println("Advertise Address          : " + config.advertiseHost() + ":" + config.p2pPort());
+                Console.println("Dashboard URL              : " + config.dashboardUrl());
+                Console.println("Discovery Mode             : UDP Multicast");
+                Console.println("Multicast Group            : " + config.multicastGroup());
+                Console.println("Multicast Port             : " + config.multicastPort());
+                Console.println("Multicast Interface        : "
+                                + (config.multicastInterfaceName().isBlank() ? "auto"
+                                                : config.multicastInterfaceName()));
+                Console.println("Current neighbors          : " + neighborDirectory.addresses());
+                Console.println("Current neighbor count     : " + connectionManager.size());
+                Console.println("Max neighbors n            : " + connectionManager.getMaxNeighbors());
+                Console.println("Discovery retry count      : " + config.discoveryRetryCount());
+                Console.println("Discovery retry interval   : " + config.discoveryRetryIntervalMs() + " ms");
+                Console.println("Discovery collection window: " + config.discoveryCollectionWindowMs() + " ms");
+                Console.println("Probe interval             : " + config.probeIntervalSeconds() + " seconds");
+                Console.println("ACK timeout                : " + config.ackTimeoutSeconds() + " seconds");
+                Console.println("Phi window size            : " + config.phiWindowSize());
+                Console.println("Phi thresholds             : WARNING=" + config.warningThreshold()
+                                + ", SUSPECTED=" + config.suspectedThreshold()
+                                + ", UNREACHABLE=" + config.unreachableThreshold());
+                Console.println("Min std deviation          : " + config.minStdDeviation());
+                Console.println("Min probability            : " + config.minProbability());
+                Console.println("====================================");
+        }
 }
