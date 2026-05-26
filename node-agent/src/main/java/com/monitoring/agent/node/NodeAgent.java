@@ -11,7 +11,6 @@ import com.monitoring.agent.node.connection.MulticastDiscoveryService;
 import com.monitoring.agent.node.connection.MulticastJoinCoordinator;
 import com.monitoring.agent.node.connection.NeighborDirectory;
 import com.monitoring.agent.node.recovery.NetworkTopologyCache;
-import com.monitoring.agent.node.recovery.RecoveryControlService;
 import com.monitoring.agent.node.recovery.RecoveryUDPService;
 import com.monitoring.agent.node.recovery.RewiringCoordinator;
 import com.monitoring.agent.node.transport.UdpCoordinator;
@@ -41,7 +40,6 @@ public class NodeAgent {
     private final MulticastJoinCoordinator joinCoordinator;
 
     private final RecoveryUDPService recoveryUdpService;
-    private final RecoveryControlService recoveryControlService;
     private final NetworkTopologyCache repairCache;
     private final RewiringCoordinator rewiringCoordinator;
     private final NodeHttpServer crackingServer;
@@ -124,9 +122,6 @@ public class NodeAgent {
         recoveryUdpService = new RecoveryUDPService(localAddress, repairCache, connectionManager, udpCoordinator,
                 rewiringCoordinator);
 
-        recoveryControlService = new RecoveryControlService(localAddress, connectionManager, repairCache,
-                recoveryUdpService, rewiringCoordinator);
-
         neighborDirectory = new NeighborDirectory(connectionManager);
 
         gossipService = new GossipService(
@@ -144,7 +139,7 @@ public class NodeAgent {
                 dashboardReporter,
                 phiDetector,
                 gossipService,
-                recoveryControlService,
+                recoveryUdpService,
                 config.probeIntervalSeconds(),
                 config.unreachableThreshold());
 
