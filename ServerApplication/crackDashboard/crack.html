@@ -153,98 +153,85 @@
 
 <script>
 
-    async function crackPassword() {
+async function crackPassword() {
 
-        const hashInput =
-            document.getElementById("hashInput");
+    const hashInput =
+        document.getElementById("hashInput");
 
-        const resultDiv =
-            document.getElementById("result");
+    const resultDiv =
+        document.getElementById("result");
 
-        const loadingDiv =
-            document.getElementById("loading");
+    const loadingDiv =
+        document.getElementById("loading");
 
-        const hash =
-            hashInput.value.trim();
+    const hash =
+        hashInput.value.trim();
 
-        if (!hash) {
+    if (!hash) {
+        alert("Please enter a hash");
+        return;
+    }
 
-            alert("Please enter a hash");
+    resultDiv.style.display = "none";
+    loadingDiv.style.display = "block";
 
-            return;
-        }
+    try {
 
-        resultDiv.style.display = "none";
+        // STEP 1: SEND JOB TO SPRING BOOT
+        await fetch("http://localhost:6789/api/crack-password", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                hash: hash
+            })
+        });
 
-        loadingDiv.style.display = "block";
-
-        try {
+        // STEP 2: POLL DASHBOARD FOR RESULT
+        const interval = setInterval(async () => {
 
             const response =
-                await fetch(
-                    "http://localhost:6789/api/crack-password",
-                    {
-                        method: "POST",
+                await fetch("http://localhost:6789/dashboard/result");
 
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
+            const data = await response.json();
 
-                        body: JSON.stringify({
-                            hash: hash
-                        })
-                    }
-                );
-
-            const data =
-                await response.json();
+            if (!data) return;
 
             loadingDiv.style.display = "none";
-
             resultDiv.style.display = "block";
 
-            if (data.success) {
+            if (data.found) {
 
                 resultDiv.innerHTML = `
                     <h3>Password Found</h3>
 
-                    <p>
-                        <strong>Password:</strong>
-                        ${data.password}
-                    </p>
-
-                    <p>
-                        <strong>Time Taken:</strong>
-                        ${data.timeTaken} ms
-                    </p>
+                    <p><strong>Password:</strong> ${data.password}</p>
                 `;
+
+                clearInterval(interval);
 
             } else {
 
                 resultDiv.innerHTML = `
-                    <h3>Failed</h3>
-
-                    <p>
-                        ${data.message}
-                    </p>
+                    <h3>Processing...</h3>
+                    <p>Nodes are still cracking...</p>
                 `;
             }
 
-        } catch (error) {
+        }, 1500);
 
-            loadingDiv.style.display = "none";
+    } catch (error) {
 
-            resultDiv.style.display = "block";
+        loadingDiv.style.display = "none";
+        resultDiv.style.display = "block";
 
-            resultDiv.innerHTML = `
-                <h3>Error</h3>
-
-                <p>
-                    ${error.message}
-                </p>
-            `;
-        }
+        resultDiv.innerHTML = `
+            <h3>Error</h3>
+            <p>${error.message}</p>
+        `;
     }
+}
 
 </script>
 
