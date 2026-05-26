@@ -28,8 +28,8 @@ public class NodeHttpServer {
 
     private final ObjectMapper mapper;
 
-    private HttpServer server;
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+        private HttpServer server;
+        private final HttpClient httpClient = HttpClient.newHttpClient();
 
     private final String springResultUrl = "http://localhost:6789/node/result";
 
