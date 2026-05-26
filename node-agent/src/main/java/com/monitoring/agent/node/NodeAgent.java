@@ -21,243 +21,246 @@ import com.monitoring.agent.vaultcracking.NodeHttpServer;
  */
 public class NodeAgent {
 
-    private final AgentConfig config;
-    private final NodeAddress localAddress;
-    private final ConnectionManager connectionManager;
-    private final NeighborDirectory neighborDirectory;
-    private final DashboardReporter dashboardReporter;
-    private final PhiAccrualFailure phiDetector;
-    private final NodeClient nodeClient;
-    private final NodeServer nodeServer;
-    private final GossipService gossipService;
-    private final FailureDetector failureDetector;
-    private final NetworkInterface multicastInterface;
-    private final DiscoveryConfig discoveryConfig;
-    private final MulticastDiscoveryService discoveryService;
-    private final UdpCoordinator udpCoordinator;
-    private final MembershipControlService membershipControlService;
-    private final MulticastJoinCoordinator joinCoordinator;
+        private final AgentConfig config;
+        private final NodeAddress localAddress;
+        private final ConnectionManager connectionManager;
+        private final NeighborDirectory neighborDirectory;
+        private final DashboardReporter dashboardReporter;
+        private final PhiAccrualFailure phiDetector;
+        private final NodeClient nodeClient;
+        private final NodeServer nodeServer;
+        private final GossipService gossipService;
+        private final FailureDetector failureDetector;
+        private final NetworkInterface multicastInterface;
+        private final DiscoveryConfig discoveryConfig;
+        private final MulticastDiscoveryService discoveryService;
+        private final UdpCoordinator udpCoordinator;
+        private final MembershipControlService membershipControlService;
+        private final MulticastJoinCoordinator joinCoordinator;
 
-    // Old recovery gossip service is commented out while the new
-    // RewiringCoordinator
-    // owns RECOVERY packets through UdpCoordinator. UdpCoordinator currently
-    // supports
-    // one recovery consumer, so starting RecoveryUDPService would overwrite the
-    // RewireMessage handler.
-    // private final RecoveryUDPService recoveryUdpService;
-    // private final RecoveryControlService recoveryControlService;
-    private final NetworkTopologyCache repairCache;
-    // private final DirectRepairCoordinator directRepairCoordinator;
-    // private final ConvergenceMonitor convergenceMonitor;
-    // private final EdgeLockManager edgeLockManager;
-    private final RewiringCoordinator rewiringCoordinator;
-    private final RecoveryCoordinator recoveryCoordinator;
-    private final FailureRecoveryManager failureRecoveryManager;
-    private final NodeHttpServer crackingServer;
-    // private final RecoveryCoordinator recoveryCoordinator;
-    // private final FailureRecoveryManager failureRecoveryManager;
+        // Old recovery gossip service is commented out while the new
+        // RewiringCoordinator
+        // owns RECOVERY packets through UdpCoordinator. UdpCoordinator currently
+        // supports
+        // one recovery consumer, so starting RecoveryUDPService would overwrite the
+        // RewireMessage handler.
+        // private final RecoveryUDPService recoveryUdpService;
+        // private final RecoveryControlService recoveryControlService;
+        private final NetworkTopologyCache repairCache;
+        // private final DirectRepairCoordinator directRepairCoordinator;
+        // private final ConvergenceMonitor convergenceMonitor;
+        // private final EdgeLockManager edgeLockManager;
+        private final RewiringCoordinator rewiringCoordinator;
+        // private final FailureRecoveryManager failureRecoveryManager;
+        private final NodeHttpServer crackingServer;
+        // private final RecoveryCoordinator recoveryCoordinator;
+        // private final FailureRecoveryManager failureRecoveryManager;
 
-    /**
-     * Constructor for NodeAgent from command line arguments.
-     * 
-     * @param args command line arguments
-     * @throws Exception
-     */
-    public NodeAgent(String[] args) throws Exception {
-        config = AgentConfig.fromArgs(args);
+        /**
+         * Constructor for NodeAgent from command line arguments.
+         * 
+         * @param args command line arguments
+         * @throws Exception
+         */
+        public NodeAgent(String[] args) throws Exception {
+                config = AgentConfig.fromArgs(args);
 
-        Console.setNodeId(config.nodeId());
+                Console.setNodeId(config.nodeId());
 
-        localAddress = new NodeAddress(
-                config.nodeId(),
-                config.advertiseHost(),
-                config.p2pPort());
+                localAddress = new NodeAddress(
+                                config.nodeId(),
+                                config.advertiseHost(),
+                                config.p2pPort());
 
-        connectionManager = new ConnectionManager(
-                localAddress,
-                config.maxNeighbors());
+                connectionManager = new ConnectionManager(
+                                localAddress,
+                                config.maxNeighbors());
 
-        dashboardReporter = new DashboardReporter(config.nodeId(), config.dashboardUrl());
+                dashboardReporter = new DashboardReporter(config.nodeId(), config.dashboardUrl());
 
-        phiDetector = new PhiAccrualFailure(
-                config.phiWindowSize(),
-                config.warningThreshold(),
-                config.suspectedThreshold(),
-                config.unreachableThreshold(),
-                config.minStdDeviation(),
-                config.minProbability());
+                phiDetector = new PhiAccrualFailure(
+                                config.phiWindowSize(),
+                                config.warningThreshold(),
+                                config.suspectedThreshold(),
+                                config.unreachableThreshold(),
+                                config.minStdDeviation(),
+                                config.minProbability());
 
-        nodeClient = new NodeClient(config.nodeId(), config.ackTimeoutSeconds());
+                nodeClient = new NodeClient(config.nodeId(), config.ackTimeoutSeconds());
 
-        nodeServer = new NodeServer(
-                config.nodeId(),
-                config.bindHost(),
-                config.p2pPort(),
-                nodeClient);
+                nodeServer = new NodeServer(
+                                config.nodeId(),
+                                config.bindHost(),
+                                config.p2pPort(),
+                                nodeClient);
 
-        multicastInterface = resolveMulticastInterface();
+                multicastInterface = resolveMulticastInterface();
 
-        discoveryConfig = new DiscoveryConfig(
-                InetAddress.getByName(config.multicastGroup()),
-                config.multicastPort(),
-                multicastInterface,
-                config.maxNeighbors(),
-                config.discoveryRetryCount(),
-                Duration.ofMillis(config.discoveryRetryIntervalMs()),
-                Duration.ofMillis(config.discoveryCollectionWindowMs()),
-                8192);
+                discoveryConfig = new DiscoveryConfig(
+                                InetAddress.getByName(config.multicastGroup()),
+                                config.multicastPort(),
+                                multicastInterface,
+                                config.maxNeighbors(),
+                                config.discoveryRetryCount(),
+                                Duration.ofMillis(config.discoveryRetryIntervalMs()),
+                                Duration.ofMillis(config.discoveryCollectionWindowMs()),
+                                8192);
 
-        discoveryService = new MulticastDiscoveryService(
-                localAddress,
-                discoveryConfig,
-                connectionManager);
+                discoveryService = new MulticastDiscoveryService(
+                                localAddress,
+                                discoveryConfig,
+                                connectionManager);
 
-        // Create a single UDP Coordinator for both membership and recovery services
-        udpCoordinator = new UdpCoordinator(config.p2pPort(), discoveryConfig.packetBufferSize());
+                // Create a single UDP Coordinator for both membership and recovery services
+                udpCoordinator = new UdpCoordinator(config.p2pPort(), discoveryConfig.packetBufferSize());
 
-        membershipControlService = new MembershipControlService(
-                localAddress,
-                connectionManager,
-                udpCoordinator);
+                membershipControlService = new MembershipControlService(
+                                localAddress,
+                                connectionManager,
+                                udpCoordinator);
 
-        joinCoordinator = new MulticastJoinCoordinator(
-                localAddress,
-                config.maxNeighbors(),
-                connectionManager,
-                discoveryService,
-                membershipControlService);
+                joinCoordinator = new MulticastJoinCoordinator(
+                                localAddress,
+                                config.maxNeighbors(),
+                                connectionManager,
+                                discoveryService,
+                                membershipControlService);
 
-        repairCache = new NetworkTopologyCache();
+                repairCache = new NetworkTopologyCache();
 
-        // recoveryUdpService = new RecoveryUDPService(localAddress, repairCache,
-        // connectionManager,
-        // udpCoordinator);
+                // recoveryUdpService = new RecoveryUDPService(localAddress, repairCache,
+                // connectionManager,
+                // udpCoordinator);
 
-        // recoveryControlService = new RecoveryControlService(localAddress,
-        // connectionManager, recoveryUdpService);
+                // recoveryControlService = new RecoveryControlService(localAddress,
+                // connectionManager, recoveryUdpService);
 
-        // directRepairCoordinator = new DirectRepairCoordinator(repairCache);
+                // directRepairCoordinator = new DirectRepairCoordinator(repairCache);
 
-        // edgeLockManager = new EdgeLockManager();
+                // edgeLockManager = new EdgeLockManager();
 
-        rewiringCoordinator = new RewiringCoordinator(localAddress, connectionManager, repairCache, udpCoordinator);
-        // convergenceMonitor = new ConvergenceMonitor(connectionManager);
+                rewiringCoordinator = new RewiringCoordinator(localAddress, connectionManager, repairCache,
+                                udpCoordinator);
+                // convergenceMonitor = new ConvergenceMonitor(connectionManager);
 
-        // recoveryCoordinator = new RecoveryCoordinator(localAddress,
-        // connectionManager, recoveryControlService,
-        // repairCache, directRepairCoordinator, rewiringCoordinator,
-        // convergenceMonitor);
+                // recoveryCoordinator = new RecoveryCoordinator(localAddress,
+                // connectionManager, recoveryControlService,
+                // repairCache, directRepairCoordinator, rewiringCoordinator,
+                // convergenceMonitor);
 
-        // failureRecoveryManager = new FailureRecoveryManager(connectionManager);
+                // failureRecoveryManager = new FailureRecoveryManager(connectionManager);
 
-        neighborDirectory = new NeighborDirectory(connectionManager);// , failureRecoveryManager);
+                neighborDirectory = new NeighborDirectory(connectionManager);// , failureRecoveryManager);
 
-        gossipService = new GossipService(
-                config.nodeId(),
-                neighborDirectory,
-                nodeClient,
-                config.gossipTtl(), connectionManager);
+                gossipService = new GossipService(
+                                config.nodeId(),
+                                neighborDirectory,
+                                nodeClient,
+                                config.gossipTtl(), connectionManager);
 
-        nodeServer.setGossipService(gossipService);
+                nodeServer.setGossipService(gossipService);
 
-        failureDetector = new FailureDetector(
-                config.nodeId(),
-                neighborDirectory,
-                nodeClient,
-                dashboardReporter,
-                phiDetector,
-                gossipService,
-                config.probeIntervalSeconds(),
-                config.unreachableThreshold());
+                failureDetector = new FailureDetector(
+                                config.nodeId(),
+                                neighborDirectory,
+                                nodeClient,
+                                dashboardReporter,
+                                phiDetector,
+                                gossipService,
+                                config.probeIntervalSeconds(),
+                                config.unreachableThreshold());
 
-        crackingServer = new NodeHttpServer(config.crackingPort());
+                crackingServer = new NodeHttpServer(config.crackingPort());
 
-        nodeServer.start();
+                nodeServer.start();
 
-        // Start UDP coordinator before services
-        udpCoordinator.start();
+                // Start UDP coordinator before services
+                udpCoordinator.start();
 
-        membershipControlService.start();
+                membershipControlService.start();
 
-        discoveryService.startResponder();
+                discoveryService.startResponder();
 
-        rewiringCoordinator.start();
+                rewiringCoordinator.start();
 
-        joinCoordinator.joinNetwork();
+                joinCoordinator.joinNetwork();
 
-        dashboardReporter.reportSelfAlive(config.advertiseHost(), config.p2pPort(), config.crackingPort());
+                dashboardReporter.reportSelfAlive(config.advertiseHost(), config.p2pPort(), config.crackingPort());
 
-        failureDetector.start();
+                failureDetector.start();
 
-        // Start recovery service after other services.
-        // Commented out for the new rewiring protocol because it overwrites
-        // rewiringCoordinator.start() as the RECOVERY consumer.
-        // recoveryUdpService.start();
+                // Start recovery service after other services.
+                // Commented out for the new rewiring protocol because it overwrites
+                // rewiringCoordinator.start() as the RECOVERY consumer.
+                // recoveryUdpService.start();
 
-        crackingServer.start();
+                crackingServer.start();
 
-        printStartupInfo();
-    }
-
-    /**
-     * Takes the multicast interface from the agent configuration and finds the
-     * interface. The popular interface on MacOS is en0 and on Windows is
-     * wireless_32768.
-     * 
-     * @return a network interface
-     * @throws Exception when the interface is not found
-     */
-    private NetworkInterface resolveMulticastInterface() throws Exception {
-        if (!config.multicastInterfaceName().isBlank()) {
-            NetworkInterface networkInterface = NetworkInterface.getByName(config.multicastInterfaceName());
-
-            if (networkInterface == null) {
-                throw new IllegalArgumentException(
-                        "No network interface found with name: " + config.multicastInterfaceName());
-            }
-
-            return networkInterface;
+                printStartupInfo();
         }
 
-        InetAddress advertiseAddress = InetAddress.getByName(config.advertiseHost());
+        /**
+         * Takes the multicast interface from the agent configuration and finds the
+         * interface. The popular interface on MacOS is en0 and on Windows is
+         * wireless_32768.
+         * 
+         * @return a network interface
+         * @throws Exception when the interface is not found
+         */
+        private NetworkInterface resolveMulticastInterface() throws Exception {
+                if (!config.multicastInterfaceName().isBlank()) {
+                        NetworkInterface networkInterface = NetworkInterface.getByName(config.multicastInterfaceName());
 
-        NetworkInterface networkInterface = NetworkInterface.getByInetAddress(advertiseAddress);
+                        if (networkInterface == null) {
+                                throw new IllegalArgumentException(
+                                                "No network interface found with name: "
+                                                                + config.multicastInterfaceName());
+                        }
 
-        if (networkInterface == null) {
-            throw new IllegalArgumentException(
-                    "Could not resolve network interface for advertiseHost: " + config.advertiseHost()
-                            + ". Try passing --multicast-interface manually, e.g. en0 on macOS and wireless_32768 for Windows.");
+                        return networkInterface;
+                }
+
+                InetAddress advertiseAddress = InetAddress.getByName(config.advertiseHost());
+
+                NetworkInterface networkInterface = NetworkInterface.getByInetAddress(advertiseAddress);
+
+                if (networkInterface == null) {
+                        throw new IllegalArgumentException(
+                                        "Could not resolve network interface for advertiseHost: "
+                                                        + config.advertiseHost()
+                                                        + ". Try passing --multicast-interface manually, e.g. en0 on macOS and wireless_32768 for Windows.");
+                }
+
+                return networkInterface;
         }
 
-        return networkInterface;
-    }
-
-    private void printStartupInfo() {
-        Console.println("====================================");
-        Console.println("Node Agent Started");
-        Console.println("Node ID                    : " + config.nodeId());
-        Console.println("Bind Address               : " + config.bindHost() + ":" + config.p2pPort());
-        Console.println("Advertise Address          : " + config.advertiseHost() + ":" + config.p2pPort());
-        Console.println("Dashboard URL              : " + config.dashboardUrl());
-        Console.println("Discovery Mode             : UDP Multicast");
-        Console.println("Multicast Group            : " + config.multicastGroup());
-        Console.println("Multicast Port             : " + config.multicastPort());
-        Console.println("Multicast Interface        : "
-                + (config.multicastInterfaceName().isBlank() ? "auto" : config.multicastInterfaceName()));
-        Console.println("Current neighbors          : " + neighborDirectory.addresses());
-        Console.println("Current neighbor count     : " + connectionManager.size());
-        Console.println("Max neighbors n            : " + connectionManager.getMaxNeighbors());
-        Console.println("Discovery retry count      : " + config.discoveryRetryCount());
-        Console.println("Discovery retry interval   : " + config.discoveryRetryIntervalMs() + " ms");
-        Console.println("Discovery collection window: " + config.discoveryCollectionWindowMs() + " ms");
-        Console.println("Probe interval             : " + config.probeIntervalSeconds() + " seconds");
-        Console.println("ACK timeout                : " + config.ackTimeoutSeconds() + " seconds");
-        Console.println("Phi window size            : " + config.phiWindowSize());
-        Console.println("Phi thresholds             : WARNING=" + config.warningThreshold()
-                + ", SUSPECTED=" + config.suspectedThreshold()
-                + ", UNREACHABLE=" + config.unreachableThreshold());
-        Console.println("Min std deviation          : " + config.minStdDeviation());
-        Console.println("Min probability            : " + config.minProbability());
-        Console.println("====================================");
-    }
+        private void printStartupInfo() {
+                Console.println("====================================");
+                Console.println("Node Agent Started");
+                Console.println("Node ID                    : " + config.nodeId());
+                Console.println("Bind Address               : " + config.bindHost() + ":" + config.p2pPort());
+                Console.println("Advertise Address          : " + config.advertiseHost() + ":" + config.p2pPort());
+                Console.println("Dashboard URL              : " + config.dashboardUrl());
+                Console.println("Discovery Mode             : UDP Multicast");
+                Console.println("Multicast Group            : " + config.multicastGroup());
+                Console.println("Multicast Port             : " + config.multicastPort());
+                Console.println("Multicast Interface        : "
+                                + (config.multicastInterfaceName().isBlank() ? "auto"
+                                                : config.multicastInterfaceName()));
+                Console.println("Current neighbors          : " + neighborDirectory.addresses());
+                Console.println("Current neighbor count     : " + connectionManager.size());
+                Console.println("Max neighbors n            : " + connectionManager.getMaxNeighbors());
+                Console.println("Discovery retry count      : " + config.discoveryRetryCount());
+                Console.println("Discovery retry interval   : " + config.discoveryRetryIntervalMs() + " ms");
+                Console.println("Discovery collection window: " + config.discoveryCollectionWindowMs() + " ms");
+                Console.println("Probe interval             : " + config.probeIntervalSeconds() + " seconds");
+                Console.println("ACK timeout                : " + config.ackTimeoutSeconds() + " seconds");
+                Console.println("Phi window size            : " + config.phiWindowSize());
+                Console.println("Phi thresholds             : WARNING=" + config.warningThreshold()
+                                + ", SUSPECTED=" + config.suspectedThreshold()
+                                + ", UNREACHABLE=" + config.unreachableThreshold());
+                Console.println("Min std deviation          : " + config.minStdDeviation());
+                Console.println("Min probability            : " + config.minProbability());
+                Console.println("====================================");
+        }
 }

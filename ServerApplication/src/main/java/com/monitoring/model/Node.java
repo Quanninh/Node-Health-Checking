@@ -21,10 +21,12 @@ public class Node {
 
     private int crackingPort;
 
+    private int p2pPort;
+
     public Node() {
     }
 
-    public int getCrackingPort(){
+    public int getCrackingPort() {
         return crackingPort;
     }
 
@@ -32,7 +34,7 @@ public class Node {
         return id;
     }
 
-    public void setCrackingPort(int crackingPort){
+    public void setCrackingPort(int crackingPort) {
         this.crackingPort = crackingPort;
     }
 
@@ -62,5 +64,13 @@ public class Node {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public int getP2pPort() {
+        return p2pPort;
+    }
+
+    public void setP2pPort(int p2pPort) {
+        this.p2pPort = p2pPort;
     }
 }

@@ -36,6 +36,8 @@ public class NodeService {
 
         node.setIpAddress(incomingNode.getIpAddress());
 
+        node.setP2pPort(incomingNode.getP2pPort());
+
         node.setStatus("UP");
 
         node.setLastHeartbeat(LocalDateTime.now());
@@ -47,8 +49,7 @@ public class NodeService {
         System.out.println(
                 "[" + LocalDateTime.now() + "] "
                         + "Heartbeat received from "
-                        + node.getId()
-        );
+                        + node.getId());
     }
 
     /**
@@ -59,17 +60,14 @@ public class NodeService {
 
         try {
 
-            LocalDateTime cutoffTime =
-                    LocalDateTime.now()
-                            .minusSeconds(NODE_TIMEOUT_SECONDS);
+            LocalDateTime cutoffTime = LocalDateTime.now()
+                    .minusSeconds(NODE_TIMEOUT_SECONDS);
 
-            List<Node> nodes =
-                    nodeRepository.findAll();
+            List<Node> nodes = nodeRepository.findAll();
 
             for (Node node : nodes) {
 
-                LocalDateTime lastHeartbeat =
-                        node.getLastHeartbeat();
+                LocalDateTime lastHeartbeat = node.getLastHeartbeat();
 
                 if (lastHeartbeat != null
                         && lastHeartbeat.isBefore(cutoffTime)
@@ -83,8 +81,7 @@ public class NodeService {
                     System.out.println(
                             "[" + LocalDateTime.now() + "] "
                                     + node.getId()
-                                    + " marked as DOWN"
-                    );
+                                    + " marked as DOWN");
                 }
             }
 
@@ -93,8 +90,7 @@ public class NodeService {
             System.out.println(
                     "[" + LocalDateTime.now() + "] "
                             + "Scheduler skipped: "
-                            + e.getMessage()
-            );
+                            + e.getMessage());
         }
     }
 
@@ -122,23 +118,21 @@ public class NodeService {
                             + report.getReporterNodeId()
                             + " detected "
                             + report.getFailedNodeId()
-                            + " as unreachable"
-            );
+                            + " as unreachable");
         }
 
         failureReportRepository.save(report);
 
-        Node failedNode =
-                nodeRepository
-                        .findById(report.getFailedNodeId())
-                        .orElseGet(() -> {
+        Node failedNode = nodeRepository
+                .findById(report.getFailedNodeId())
+                .orElseGet(() -> {
 
-                            Node node = new Node();
+                    Node node = new Node();
 
-                            node.setId(report.getFailedNodeId());
+                    node.setId(report.getFailedNodeId());
 
-                            return node;
-                        });
+                    return node;
+                });
 
         failedNode.setStatus("FAILED");
 
@@ -146,8 +140,7 @@ public class NodeService {
 
         System.out.println(
                 "[" + LocalDateTime.now() + "] "
-                        + report.getMessage()
-        );
+                        + report.getMessage());
     }
 
     public List<Node> getAllNodes() {

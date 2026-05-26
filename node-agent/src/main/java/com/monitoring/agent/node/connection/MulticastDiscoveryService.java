@@ -226,7 +226,8 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                 byte[] buffer = new byte[config.packetBufferSize()];
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 
-                multicastSocket.receive(packet); // receive here on a different port compared to MembershipControl and Recovery
+                multicastSocket.receive(packet); // receive here on a different port compared to MembershipControl and
+                                                 // Recovery
 
                 String raw = new String(
                         packet.getData(),

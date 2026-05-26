@@ -61,7 +61,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.3.0</version>
                 <configuration>
-                    <mainClass>com.monitoring.agent.node.NodeAgent</mainClass>
+                    <mainClass>com.monitoring.agent.App</mainClass>
                 </configuration>
             </plugin>
         </plugins>
