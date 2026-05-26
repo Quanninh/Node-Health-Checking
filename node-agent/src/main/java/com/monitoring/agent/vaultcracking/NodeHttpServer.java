@@ -80,7 +80,7 @@ public class NodeHttpServer {
 
                 Console.println(
                                 "Cracking HTTP server started on port "
-                                                + port);
+                                                + getPort());
         }
 
         /**

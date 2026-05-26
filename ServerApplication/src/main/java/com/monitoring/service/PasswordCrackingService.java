@@ -9,16 +9,11 @@ import com.monitoring.repository.NodeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URI;
-import java.net.URL;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 public class PasswordCrackingService {
@@ -37,9 +32,9 @@ public class PasswordCrackingService {
 
         private volatile String foundPassword;
 
-        private final ObjectMapper mapper = new ObjectMapper();
-
         private final Queue<long[]> pendingRanges = new ConcurrentLinkedQueue<>();
+
+        private final AtomicInteger activeTasks = new AtomicInteger();
 
         private volatile String currentHash;
         private volatile boolean crackingDone = false;
@@ -52,6 +47,8 @@ public class PasswordCrackingService {
                 foundPassword = null;
                 crackingDone = false;
                 currentHash = hash;
+                activeTasks.set(0);
+                resultStore.clear();
 
                 pendingRanges.clear();
                 pendingRanges.addAll(buildRanges(getTotalPossiblePasswords(), RANGE_SIZE));
@@ -71,16 +68,24 @@ public class PasswordCrackingService {
                                         0);
                 }
 
-                // It only assign one task
+                // Seed one range per active node. Follow-up ranges are assigned from handleNodeResult().
                 for (Node node : nodes) {
 
                         assignNextRange(node);
                 }
 
-                long timeout = System.currentTimeMillis() + 60000;
+                if (activeTasks.get() == 0) {
+                        crackingDone = true;
+
+                        return new PasswordCrackResponse(
+                                        false,
+                                        null,
+                                        "No active nodes accepted cracking tasks",
+                                        System.currentTimeMillis() - startTime);
+                }
 
                 while (foundPassword == null
-                                && System.currentTimeMillis() < timeout) {
+                                && !crackingDone) {
 
                         Thread.sleep(100);
                 }
@@ -101,26 +106,39 @@ public class PasswordCrackingService {
                                 System.currentTimeMillis() - startTime);
         }
 
-        private void assignNextRange(Node node) {
+        private boolean assignNextRange(Node node) {
                 if (crackingDone) {
-                        return;
+                        return false;
                 }
 
                 long[] range = pendingRanges.poll();
 
                 if (range == null) {
                         System.out.println("No more ranges to assign");
-                        return;
+
+                        if (activeTasks.get() == 0) {
+                                crackingDone = true;
+                        }
+
+                        return false;
                 }
 
-                sendTaskToNode(
+                boolean accepted = sendTaskToNode(
                                 node,
                                 currentHash,
                                 range[0],
                                 range[1]);
+
+                if (accepted) {
+                        activeTasks.incrementAndGet();
+                        return true;
+                }
+
+                pendingRanges.offer(range);
+                return false;
         }
 
-        private void sendTaskToNode(
+        private boolean sendTaskToNode(
                         Node node,
                         String hash,
                         long rangeStart,
@@ -132,7 +150,7 @@ public class PasswordCrackingService {
                                         hash,
                                         rangeStart,
                                         rangeEnd,
-                                        System.currentTimeMillis() + 60000);
+                                        Long.MAX_VALUE);
                         String url = "http://"
                                         + node.getIpAddress()
                                         + ":"
@@ -157,10 +175,8 @@ public class PasswordCrackingService {
                                                         + rangeStart
                                                         + " -> "
                                                         + rangeEnd);
-                        // CrackingResponse response = mapper.readValue(responseBody,
-                        // CrackingResponse.class);
 
-                        // handleNodeResult(response);
+                        return true;
 
                 } catch (Exception e) {
 
@@ -169,6 +185,8 @@ public class PasswordCrackingService {
                                                         + node.getId());
 
                         e.printStackTrace();
+
+                        return false;
                 }
         }
 
@@ -179,16 +197,27 @@ public class PasswordCrackingService {
                                 "Received result from node: "
                                                 + response.getNodeId());
 
+                if (crackingDone && !response.isFound()) {
+                        System.out.println("Ignoring late not-found result from node: " + response.getNodeId());
+                        return;
+                }
+
                 resultStore.save(response);
+
+                activeTasks.updateAndGet(value -> Math.max(0, value - 1));
 
                 if (response.isFound()) {
 
                         foundPassword = response.getPassword();
+                        crackingDone = true;
+                        pendingRanges.clear();
 
                         System.out.println(
                                         "PASSWORD FOUND = "
                                                         + foundPassword);
+                        return;
                 }
+
                 Node node = nodeRepository
                                 .findById(response.getNodeId())
                                 .orElse(null);
@@ -199,6 +228,10 @@ public class PasswordCrackingService {
                 }
 
                 assignNextRange(node);
+
+                if (pendingRanges.isEmpty() && activeTasks.get() == 0) {
+                        crackingDone = true;
+                }
         }
 
         private Queue<long[]> buildRanges(

@@ -11,6 +11,10 @@ public class ResultStore {
         this.latestResult = response;
     }
 
+    public void clear() {
+        this.latestResult = null;
+    }
+
     public CrackingResponse getLatest() {
         return latestResult;
     }
