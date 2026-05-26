@@ -170,9 +170,10 @@ public class NodeAgent {
                                 config.probeIntervalSeconds(),
                                 config.unreachableThreshold());
 
-                crackingServer = new NodeHttpServer(config.crackingPort());
+                crackingServer = new NodeHttpServer(config.nodeId(), config.crackingPort());
 
                 nodeServer.start();
+                crackingServer.start();
 
                 // Start UDP coordinator before services
                 udpCoordinator.start();
@@ -185,9 +186,7 @@ public class NodeAgent {
 
                 joinCoordinator.joinNetwork();
 
-                crackingServer.start();
-
-                dashboardReporter.reportSelfAlive(config.advertiseHost(), config.p2pPort(), config.crackingPort());
+                dashboardReporter.reportSelfAlive(config.advertiseHost(), config.p2pPort(), crackingServer.getPort());
 
                 failureDetector.start();
 
@@ -261,6 +260,7 @@ public class NodeAgent {
                                 + ", UNREACHABLE=" + config.unreachableThreshold());
                 Console.println("Min std deviation          : " + config.minStdDeviation());
                 Console.println("Min probability            : " + config.minProbability());
+                Console.println("Cracking HTTP Port        : " + crackingServer.getPort());
                 Console.println("====================================");
         }
 }
