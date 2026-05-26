@@ -35,6 +35,8 @@ public class PasswordCrackingService {
 
         private final ObjectMapper mapper = new ObjectMapper();
 
+        private ResultStore resultStore;
+
         public PasswordCrackResponse crackPassword(
                         String hash) throws Exception {
 
@@ -153,6 +155,8 @@ public class PasswordCrackingService {
                 System.out.println(
                                 "Received result from node: "
                                                 + response.getNodeId());
+
+                resultStore.save(response);
 
                 if (response.isFound()) {
 

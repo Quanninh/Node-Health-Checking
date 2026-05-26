@@ -7,8 +7,13 @@ import com.sun.net.httpserver.HttpExchange;
 
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.net.http.HttpClient;
+
 
 /**
  * Lightweight HTTP server running INSIDE NodeAgent.
@@ -18,7 +23,28 @@ import java.util.concurrent.Executors;
  */
 public class NodeHttpServer {
 
+<<<<<<< HEAD
         private final int port;
+=======
+    private final int port;
+
+    /**
+     * Worker pool for cracking tasks.
+     */
+    private final ExecutorService crackingExecutor;
+
+    private final ObjectMapper mapper;
+
+    private HttpServer server;
+    private final HttpClient httpClient = HttpClient.newHttpClient();
+
+    private final String springResultUrl =
+                "http://localhost:6789/node/result";
+
+    public NodeHttpServer(int port) {
+        this.port = port;
+        this.mapper = new ObjectMapper();
+>>>>>>> 57f383c900e2aaae6d9d668a33a3939f62d30aec
 
         /**
          * Worker pool for cracking tasks.
@@ -102,9 +128,13 @@ public class NodeHttpServer {
                                         exchange.getRequestBody()
                                                         .readAllBytes());
 
+<<<<<<< HEAD
                         CrackingRequest request = mapper.readValue(
                                         requestBody,
                                         CrackingRequest.class);
+=======
+                    sendResponse(response);
+>>>>>>> 57f383c900e2aaae6d9d668a33a3939f62d30aec
 
                         Console.log(
                                         "Received cracking task:");
@@ -195,6 +225,7 @@ public class NodeHttpServer {
                 }
         }
 
+<<<<<<< HEAD
         /**
          * Sends JSON response back to server.
          */
@@ -229,6 +260,31 @@ public class NodeHttpServer {
 
                         e.printStackTrace();
                 }
+=======
+    /**
+     * Sends JSON response back to server.
+     */
+    private void sendResponse(CrackingResponse response) {
+
+        try {
+                String json = mapper.writeValueAsString(response);
+
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(springResultUrl))
+                        .header("Content-Type", "application/json")
+                        .POST(HttpRequest.BodyPublishers.ofString(json))
+                        .build();
+
+                httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                        .thenAccept(res -> {
+                        Console.println(
+                                "Sent result to Spring Boot: " + response.getNodeId()
+                        );
+                        });
+
+        } catch (Exception e) {
+                e.printStackTrace();
+>>>>>>> 57f383c900e2aaae6d9d668a33a3939f62d30aec
         }
 
         /**
