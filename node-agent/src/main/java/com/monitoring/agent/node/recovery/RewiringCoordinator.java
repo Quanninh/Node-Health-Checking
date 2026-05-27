@@ -11,6 +11,9 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -26,6 +29,7 @@ import com.monitoring.agent.util.Console;
 public final class RewiringCoordinator {
 
     private static final Duration REQUEST_TIMEOUT = Duration.ofMillis(800);
+    private static final Duration SCHEME_COMMIT_TIMEOUT = Duration.ofMillis(2_500);
     private static final int SEND_ATTEMPTS = 3;
 
     private final NodeAddress localAddress;
@@ -57,6 +61,14 @@ public final class RewiringCoordinator {
 
     /** Maps a RecoveryID with a RewireMessage CompletableFuture. */
     private final ConcurrentHashMap<String, CompletableFuture<RewireMessage>> pendingReplies = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ScheduledFuture<?>> pendingSchemeCommits = new ConcurrentHashMap<>();
+    private final java.util.Set<String> expiredSchemeCommits = ConcurrentHashMap.newKeySet();
+    private final ScheduledExecutorService schemeCommitTimeoutExecutor = Executors.newSingleThreadScheduledExecutor(
+            runnable -> {
+                Thread thread = new Thread(runnable, "Rewire-Scheme-Commit-Timeout");
+                thread.setDaemon(false);
+                return thread;
+            });
 
     /**
      * Constructor for the rewiring coordinator. Also refresh the health state for
@@ -401,6 +413,7 @@ public final class RewiringCoordinator {
             if (!localApplied) {
                 Console.log("[REWIRE] Scheme failed locally. defA could not add D.");
                 // TODO: Send abort message to C and D.
+                // Should we update role of A to FREE also?
                 return false;
             }
 
@@ -680,9 +693,21 @@ public final class RewiringCoordinator {
         boolean accepted = canAcceptSchemeRequest(message);
 
         sendOnly(message.sender(), reply(message, RecoveryMessageType.REWIRE_SCHEME_ACK, accepted, null));
+
+        if (accepted) {
+            scheduleSchemeCommitTimeout(message);
+        }
     }
 
     private void handleRewireSchemeCommit(RewireMessage message) {
+        if (expiredSchemeCommits.remove(message.recoveryId())) {
+            Console.log("[REWIRE] Ignored late scheme commit for expired recoveryId="
+                    + message.recoveryId());
+            return;
+        }
+
+        clearSchemeCommitTimeout(message.recoveryId());
+
         boolean accepted = connectionManager.applyRewireScheme(
                 message.recoveryId(),
                 message.connectsTo(),
@@ -703,6 +728,44 @@ public final class RewiringCoordinator {
                 + message.disconnectsFrom()
                 + ", recoveryId="
                 + message.recoveryId());
+    }
+
+    private void scheduleSchemeCommitTimeout(RewireMessage message) {
+        clearSchemeCommitTimeout(message.recoveryId());
+        expiredSchemeCommits.remove(message.recoveryId());
+
+        ScheduledFuture<?> timeout = schemeCommitTimeoutExecutor.schedule(
+                () -> handleSchemeCommitTimeout(message.recoveryId()),
+                SCHEME_COMMIT_TIMEOUT.toMillis(),
+                TimeUnit.MILLISECONDS);
+
+        pendingSchemeCommits.put(message.recoveryId(), timeout);
+    }
+
+    private void clearSchemeCommitTimeout(String recoveryId) {
+        ScheduledFuture<?> timeout = pendingSchemeCommits.remove(recoveryId);
+
+        if (timeout != null) {
+            timeout.cancel(false);
+        }
+    }
+
+    private void handleSchemeCommitTimeout(String recoveryId) {
+        ScheduledFuture<?> timeout = pendingSchemeCommits.remove(recoveryId);
+
+        if (timeout == null) {
+            return;
+        }
+
+        releaseRewiringReservation(recoveryId);
+        releaseDeficientRoleIfMatching(recoveryId);
+        refreshHealthState();
+        expiredSchemeCommits.add(recoveryId);
+
+        Console.log("[REWIRE] Scheme commit timed out. Released local recovery role for recoveryId="
+                + recoveryId
+                + ", recoveryRole="
+                + recoveryRole);
     }
 
     /**
