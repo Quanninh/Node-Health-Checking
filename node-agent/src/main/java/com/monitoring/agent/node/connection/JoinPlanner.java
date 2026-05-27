@@ -71,29 +71,9 @@ public final class JoinPlanner {
         Collections.shuffle(missingNeighborAcks);
 
         if (uniqueAcks.isEmpty()) {
+            Console.log("No ACKs received, empty join plan", Constant.ORANGE);
             return JoinPlan.empty();
         }
-
-        // if (missingNeighborAcks.size() <= maxNeighbors) {
-        // List<NodeAddress> directTargets = missingNeighborAcks.stream()
-        // .map(JoinAck::responder)
-        // .limit(maxNeighbors)
-        // .toList();
-
-        // return new JoinPlan(directTargets, Map.of());
-        // }
-
-        // If can accept all received acks, then all of them are set to be neighbors.
-        // if (uniqueAcks.size() <= maxNeighbors) {
-        // List<NodeAddress> directTargets = uniqueAcks.stream()
-        // .map(JoinAck::responder)
-        // .limit(maxNeighbors)
-        // .toList();
-
-        // return new JoinPlan(directTargets, Map.of());
-        // }
-
-        // int directTargetCount = maxNeighbors / 2;
 
         int missingDirectTargetCount;
         int fullDirectTargetCount;
@@ -117,13 +97,14 @@ public final class JoinPlanner {
         directTargetAcks.addAll(missingNeighborAcks.subList(0, missingDirectTargetCount));
         directTargetAcks.addAll(fullDirectTargetAcks);
 
-        Console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
-        Console.log("UNIQUE ACKS: " + uniqueAcks, Constant.CYAN);
-        Console.log("FULL NEIGHBOR ACKS: " + fullNeighborAcks, Constant.CYAN);
-        Console.log("MISSING NEIGHBOR ACKS: " + missingNeighborAcks, Constant.CYAN);
-        Console.log("Missing direct target count: " + missingDirectTargetCount + " || Full direct target count: "
-                + fullDirectTargetCount, Constant.BG_CYAN);
-        Console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
+        // Console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
+        // Console.log("UNIQUE ACKS: " + uniqueAcks, Constant.CYAN);
+        // Console.log("FULL NEIGHBOR ACKS: " + fullNeighborAcks, Constant.CYAN);
+        // Console.log("MISSING NEIGHBOR ACKS: " + missingNeighborAcks, Constant.CYAN);
+        // Console.log("Missing direct target count: " + missingDirectTargetCount + " ||
+        // Full direct target count: "
+        // + fullDirectTargetCount, Constant.BG_CYAN);
+        // Console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
 
         // uniqueAcks.subList(0, fullDirectTargetCount);
 
@@ -160,7 +141,7 @@ public final class JoinPlanner {
                 .toList();
 
         Console.log("Join plan created. directTargets=" + directTargets
-                + ", evictions=" + evictionByDirectTarget);
+                + ", evictions=" + evictionByDirectTarget, Constant.ITALIC + Constant.GREEN);
 
         return new JoinPlan(directTargets, evictionByDirectTarget);
     }

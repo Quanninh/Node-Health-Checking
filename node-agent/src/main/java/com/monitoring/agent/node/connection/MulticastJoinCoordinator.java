@@ -37,7 +37,7 @@ public final class MulticastJoinCoordinator {
             List<JoinAck> acks = discoveryService.discoverPeers();
 
             if (acks.isEmpty()) {
-                Console.log("No peers discovered. Node starts as the first node.");
+                Console.log("No peers discovered -> FIRST NODE", Constant.ORANGE);
                 connectionManager.setInNetwork(true);
                 return;
             }
@@ -45,13 +45,13 @@ public final class MulticastJoinCoordinator {
             JoinPlan plan = joinPlanner.createPlan(acks);
 
             if (plan.directTargets().isEmpty()) {
-                Console.log("No valid join plan. Node remains alone temporarily.");
+                Console.log("No valid join plan. Node remains alone temporarily.", Constant.ORANGE);
                 return;
             }
 
             joinHybridNetwork(plan);
         } catch (IOException exception) {
-            Console.log("Join failed: " + exception.getMessage());
+            Console.log("Join failed: " + exception.getMessage(), Constant.RED);
         }
     }
 
@@ -80,14 +80,15 @@ public final class MulticastJoinCoordinator {
                         txId + ":small:" + directTarget.nodeId());
 
                 if (!committed) {
-                    Console.log("Small-network commit failed for " + directTarget + committed, Constant.BG_BLUE);
+                    Console.log("Small-network commit failed for " + directTarget.nodeId() + committed,
+                            Constant.BG_RED);
                     continue;
                 }
 
                 connectionManager.addIfSpace(directTarget, "small-network committed join");
 
                 Console.log("Small-network bidirectional join established between " + localAddress.nodeId() + " and "
-                        + directTarget.nodeId());
+                        + directTarget.nodeId(), Constant.GREEN);
 
                 continue;
             }
@@ -100,7 +101,7 @@ public final class MulticastJoinCoordinator {
                     txId + ":direct:" + directTarget.nodeId());
 
             if (!directCommitted) {
-                Console.log("Direct target commit failed for " + directTarget);
+                Console.log("Direct target commit failed for " + directTarget, Constant.RED);
                 continue;
             }
 
@@ -108,7 +109,8 @@ public final class MulticastJoinCoordinator {
                     victim, localAddress, directTarget, txId + ":victim:" + victim.nodeId());
 
             if (!victimCommitted) {
-                Console.log("Victim commit failed for " + victim + ". Failure detector/repair should fix this later.");
+                Console.log("Victim commit failed for " + victim + ". Failure detector/repair should fix this later.",
+                        Constant.RED);
                 continue;
             }
 
@@ -116,12 +118,11 @@ public final class MulticastJoinCoordinator {
 
             connectionManager.addIfSpace(victim, "scaled join evicted handover");
 
-            Console.log("Node " + localAddress.nodeId()
-                    + " successfully connected with direct target " + directTarget
-                    + " and handed over evicted node " + victim);
+            Console.log(localAddress.nodeId() + " successfully connected with " + directTarget
+                    + " and handed over evicted node " + victim, Constant.GREEN);
         }
 
-        Console.log("Hybrid join complete. Current neighbors=" + connectionManager.neighborAddresses());
+        Console.log("Hybrid join complete. Current neighbors=" + connectionManager.neighborIds(), Constant.GREEN);
 
         connectionManager.setInNetwork(!connectionManager.neighborAddresses().isEmpty());
     }

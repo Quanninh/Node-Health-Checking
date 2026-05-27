@@ -4,8 +4,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
+import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.NodeAddress;
 import com.monitoring.agent.node.transport.UdpCoordinator;
 import com.monitoring.agent.node.transport.UdpEnvelope;
@@ -40,7 +43,7 @@ public final class MembershipControlService implements AutoCloseable {
      */
     public void start() {
         udpCoordinator.registerMembershipConsumer(this::handleMembershipPacket);
-        Console.log("Membership Control Service started");
+        Console.log("Membership Control Service started", Constant.GREEN);
     }
 
     /**
@@ -130,12 +133,12 @@ public final class MembershipControlService implements AutoCloseable {
             DiscoveryMessage message = DiscoveryMessage.decode(envelope.payload());
 
             if (message.type() == null) {
+                Console.log("Invalid message: " + message);
                 return;
             }
 
-            Console.log("[MEMBERSHIP] Received " + message.type()
-                    + " txId=" + message.transactionId()
-                    + " from " + message.sender());
+            Console.log("[MEMBERSHIP] Received " + message.type() + " txId=" + message.transactionId() + " from "
+                    + message.sender());
 
             // Check if this is a response to a pending request
             if (message.type() == DiscoveryMessageType.COMMIT_ACK) {
@@ -143,6 +146,7 @@ public final class MembershipControlService implements AutoCloseable {
                 if (future != null) {
                     future.complete(message);
                 }
+                Console.log("Message is a COMMIT_ACK. Resolved");
                 return;
             }
 
@@ -161,15 +165,17 @@ public final class MembershipControlService implements AutoCloseable {
                         message.sender(),
                         message.directTargetId());
                 default -> {
+                    Console.log(
+                            "Message not COMMIT_SMALL_JOIN, COMMIT_DIRECT, COMMIT_VICTIM, but rather " + message.type(),
+                            Constant.PURPLE);
                     return;
                 }
             }
 
             sendCommitAck(message.sender(), message.transactionId(), result.accepted());
 
-        } catch (Exception ex) {
-            System.getLogger(MembershipControlService.class.getName())
-                    .log(System.Logger.Level.ERROR, "Error handling membership packet: " + ex.getMessage(), ex);
+        } catch (IOException ex) {
+            Console.log("Error handling membership packet; " + ex.getMessage(), Constant.RED);
         }
     }
 
@@ -189,8 +195,7 @@ public final class MembershipControlService implements AutoCloseable {
 
                 // Send command via UdpCoordinator (payload is wrapped in UdpEnvelope)
                 Console.log("[MEMBERSHIP] Sending " + discoveryMessage.type()
-                        + " txId=" + discoveryMessage.transactionId()
-                        + " to " + target);
+                        + " txId=" + discoveryMessage.transactionId() + " to " + target.nodeId());
                 udpCoordinator.send(target.host(), target.port(), UdpPacketType.MEMBERSHIP,
                         discoveryMessage.encode());
 
@@ -204,10 +209,10 @@ public final class MembershipControlService implements AutoCloseable {
                             + " status=" + response.directTargetId() + " accepted=" + accepted);
                     return accepted;
                 }
-            } catch (Exception exception) {
+            } catch (IOException | InterruptedException | ExecutionException | TimeoutException exception) {
                 Console.log("Commit attempt " + attempt + " failed for " + target
                         + ": " + exception.getClass().getSimpleName()
-                        + " - " + exception.getMessage());
+                        + " - " + exception.getMessage(), Constant.BG_RED);
                 pendingResponses.remove(discoveryMessage.transactionId());
             }
         }
@@ -239,7 +244,7 @@ public final class MembershipControlService implements AutoCloseable {
         String encodedMessage = ack.encode();
         Console.log("[MEMBERSHIP] Sending COMMIT_ACK txId=" + txId
                 + " accepted=" + accepted
-                + " to " + recipient);
+                + " to " + recipient.nodeId());
         udpCoordinator.send(recipient.host(), recipient.port(), UdpPacketType.MEMBERSHIP, encodedMessage);
     }
 

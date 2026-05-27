@@ -46,19 +46,21 @@ public class RecoveryUDPService implements AutoCloseable {
      */
     public void start() {
         udpCoordinator.registerRecoveryConsumer(this::handleRecoveryPacket);
-        Console.log("Recovery UDP Service started");
+        Console.log("Recovery UDP Service started", Constant.GREEN);
     }
 
     /**
      * If the current node is SUFFICIENT, returns false.
      * <p>
-     * If the current node is DEFICIENT,
+     * If the current node is DEFICIENT, self gossip then attempt recovery with
+     * known deficient nodes.
      * 
      * @param reason
      * @return
      */
     public boolean gossipSelfIfDeficient(String reason) {
         if (connectionManager.getHealthState() != HealthState.DEFICIENT) {
+            Console.log("Bro i'm sufficient ^.^");
             return false;
         }
 
@@ -70,8 +72,8 @@ public class RecoveryUDPService implements AutoCloseable {
                 Instant.now(),
                 0));
 
-        Console.log("[RECOVERY] Local node is DEFICIENT after " + reason
-                + ". Gossiping deficient state.", Constant.BG_YELLOW);
+        Console.log("[RECOVERY] Local node is DEFICIENT cuz " + reason
+                + ". Gossiping deficient state.", Constant.PURPLE);
         gossipSelfDeficient(repairEpoch, Constant.DEFAULT_GOSSIP_TTL);
         attemptWithKnownDeficientNodes();
         return true;
@@ -106,11 +108,10 @@ public class RecoveryUDPService implements AutoCloseable {
             try {
                 send(neighbor, message);
                 Console.log("Sent DEFICIENT message [" + message.messageId() + "] to " + neighbor + " success",
-                        Constant.BG_CYAN + Constant.BOLD);
+                        Constant.CYAN);
             } catch (IOException e) {
-                Console.log(
-                        "Failed to send message [" + message.messageId() + "] to " + neighbor + " because "
-                                + e.getMessage(),
+                Console.log("Failed to send message [" + message.messageId() + "] to " + neighbor + " cuz "
+                        + e.getMessage(),
                         Constant.RED);
             }
         }
@@ -126,6 +127,7 @@ public class RecoveryUDPService implements AutoCloseable {
             RecoveryMessage message = RecoveryMessage.decode(envelope.payload());
 
             if (message.type() == null) {
+                Console.log("Invalid message " + message.toString());
                 return;
             }
 
@@ -136,8 +138,7 @@ public class RecoveryUDPService implements AutoCloseable {
                 }
             }
         } catch (Exception ex) {
-            System.getLogger(RecoveryUDPService.class.getName())
-                    .log(System.Logger.Level.ERROR, "Error handling recovery packet: " + ex.getMessage(), ex);
+            Console.log("Error handling recovery packet: " + ex.getMessage(), Constant.RED);
         }
     }
 
@@ -148,10 +149,12 @@ public class RecoveryUDPService implements AutoCloseable {
      */
     private void handleDeficient(RecoveryMessage message) {
         if (!seenMessages.add(message.messageId())) {
+            Console.log("I'VE PLAYED THESE GAMES BEFORE jk seen message -> ignore");
             return;
         }
 
-        Console.log("Received DEFICIENT. Working on it.", Constant.BG_PURPLE);
+        Console.log("Received DEFICIENT. Working on it.", Constant.BG_PINK);
+
         DeficientNodeRecord record = new DeficientNodeRecord(
                 message.subject(),
                 message.neighbors().size(),
@@ -170,7 +173,8 @@ public class RecoveryUDPService implements AutoCloseable {
                             message.neighbors(), Constant.DEFAULT_GOSSIP_TTL,
                             System.currentTimeMillis(), 0));
         } catch (IOException e) {
-            Console.log("Failed to send DEFICIENT_ACK to " + message.sender() + ": " + e.getMessage(), Constant.RED);
+            Console.log("Failed to send DEFICIENT_ACK to " + message.sender().nodeId() + ": " + e.getMessage(),
+                    Constant.RED);
         }
 
         if (message.ttl() > 0) {
@@ -190,11 +194,13 @@ public class RecoveryUDPService implements AutoCloseable {
                                     System.currentTimeMillis(), message.incarnation()));
 
                     Console.log(
-                            "Gossiping DEFICIENT message [" + message + "] to " + neighbor.toString() + " success",
-                            Constant.BG_CYAN + Constant.BOLD);
+                            "Gossiping DEFICIENT message [" + message.messageId() + "] to " + neighbor.nodeId()
+                                    + " success?",
+                            Constant.CYAN + Constant.BOLD);
                 } catch (IOException e) {
                     Console.log(
-                            "Failed to gossip message [" + message + "] to " + neighbor + " because "
+                            "Failed to gossip message [" + message.messageId() + "] to " + neighbor.nodeId()
+                                    + " because "
                                     + e.getMessage(),
                             Constant.RED);
                 }

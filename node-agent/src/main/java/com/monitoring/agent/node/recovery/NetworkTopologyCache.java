@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.monitoring.agent.node.NodeAddress;
+import com.monitoring.agent.util.Console;
 
 /**
  * Temporary cache for saving network topology. The cache can know which nodes
@@ -67,6 +68,7 @@ public class NetworkTopologyCache {
      */
     public void markDeficient(DeficientNodeRecord record) {
         if (record == null || record.node() == null) {
+            Console.log("Invalid record");
             return;
         }
 

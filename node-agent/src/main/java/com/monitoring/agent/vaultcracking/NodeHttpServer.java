@@ -11,6 +11,7 @@ import java.util.concurrent.Executors;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.util.Console;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -94,9 +95,8 @@ public class NodeHttpServer {
 
             CrackingRequest request = mapper.readValue(requestBody, CrackingRequest.class);
             // sendResponse(response);
-            Console.log("Received cracking task:");
-            Console.log("Hash: " + request.getHash());
-            Console.log("Range: [" + request.getRangeStart() + ", " + request.getRangeEnd() + "]");
+            Console.log("Received cracking task:\nHash: " + request.getHash() + "\n"
+                    + "Range: [" + request.getRangeStart() + ", " + request.getRangeEnd() + "]");
 
             exchange.sendResponseHeaders(202, -1);
 
@@ -114,10 +114,11 @@ public class NodeHttpServer {
                     sendResponse(response);
 
                     if (result.found) {
-                        Console.log("PASSWORD FOUND: " + result.password);
+                        Console.log("PASSWORD FOUND: " + result.password,
+                                Constant.BG_GREEN + Constant.BOLD + Constant.UNDERLINE);
                     } else {
                         Console.log("Password not found in assigned range. Time taken: "
-                                + (System.currentTimeMillis() - startTime) + " ms");
+                                + (System.currentTimeMillis() - startTime) + " ms", Constant.PINK);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();

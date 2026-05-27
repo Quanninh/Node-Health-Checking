@@ -35,4 +35,5 @@ class ConsoleTest {
 
         assertTrue(found, "log file should contain logged message");
     }
+
 }

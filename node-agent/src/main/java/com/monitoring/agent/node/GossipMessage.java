@@ -26,15 +26,8 @@ public record GossipMessage(
      * Decreases time to live of a gossip message.
      */
     public GossipMessage decrementTtl() {
-        return new GossipMessage(
-                messageId,
-                sourceNodeId,
-                subjectNodeId,
-                messageType,
-                incarnationNumber,
-                timestamp,
-                ttl - 1,
-                details);
+        return new GossipMessage(messageId, sourceNodeId, subjectNodeId, messageType, incarnationNumber, timestamp,
+                ttl - 1, details);
     }
 
     /**
@@ -53,6 +46,14 @@ public record GossipMessage(
                 Long.parseLong(P2pJson.stringValue(json, "timestamp")),
                 P2pJson.intValue(json, "ttl"),
                 P2pJson.stringValue(json, "details"));
+    }
+
+    @Override
+    public String toString() {
+        return String.format(
+                "Gossip[%s] id=%s subject=%s source=%s ttl=%d details=%s",
+                messageType, messageId, subjectNodeId, sourceNodeId, ttl,
+                details == null ? "-" : details);
     }
 
 }

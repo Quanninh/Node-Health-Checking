@@ -224,12 +224,10 @@ public record DiscoveryMessage(
     public String toString() {
         return "DiscoveryMessage[" +
                 "type=" + type +
-                ", transactionId=" + transactionId +
-                ", sequence=" + sequence +
-                ", sender=" + sender +
+                ", txId=" + transactionId +
+                ", seq=" + sequence +
+                ", sender=" + sender.nodeId() +
                 ", isInNetwork=" + isInNetwork +
-                ", replyPort=" + replyPort +
-                ", neighborVersion=" + neighborVersion +
                 ", neighbors=" + neighbors +
                 ", directTargetId=" + directTargetId +
                 ", evictedNodeId=" + evictedNodeId +

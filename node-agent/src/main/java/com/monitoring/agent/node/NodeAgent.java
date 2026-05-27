@@ -181,9 +181,8 @@ public class NodeAgent {
             NetworkInterface networkInterface = NetworkInterface.getByName(config.multicastInterfaceName());
 
             if (networkInterface == null) {
-                throw new IllegalArgumentException(
-                        "No network interface found with name: "
-                                + config.multicastInterfaceName());
+                throw new IllegalArgumentException("No network interface found with name: "
+                        + config.multicastInterfaceName());
             }
 
             return networkInterface;
@@ -194,10 +193,9 @@ public class NodeAgent {
         NetworkInterface networkInterface = NetworkInterface.getByInetAddress(advertiseAddress);
 
         if (networkInterface == null) {
-            throw new IllegalArgumentException(
-                    "Could not resolve network interface for advertiseHost: "
-                            + config.advertiseHost()
-                            + ". Try passing --multicast-interface manually, e.g. en0 on macOS and wireless_32768 for Windows.");
+            throw new IllegalArgumentException("Could not resolve network interface for advertiseHost: "
+                    + config.advertiseHost()
+                    + ". Try passing --multicast-interface manually, e.g. en0 on macOS and wireless_32768 for Windows.");
         }
 
         return networkInterface;

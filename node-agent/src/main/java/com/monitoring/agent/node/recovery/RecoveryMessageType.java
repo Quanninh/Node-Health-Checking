@@ -67,7 +67,4 @@ public enum RecoveryMessageType {
     REWIRE_SCHEME_ACK,
     /** */
     REWIRE_SCHEME_COMMIT,
-
-    /** */
-    REWIRE_SCHEME
 }

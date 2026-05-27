@@ -58,8 +58,7 @@ public class NodeServer {
      */
     public void start() {
         server.start();
-
-        Console.log("Node server listening on " + bindHost + ":" + port, Constant.GREEN);
+        Console.log("Node server listening on " + bindHost + ":" + port, Constant.BG_GREEN);
     }
 
     /**
@@ -71,6 +70,7 @@ public class NodeServer {
     private void handlePing(HttpExchange exchange) throws IOException {
         if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
             sendResponse(exchange, 405, "Method Not Allowed");
+            Console.log("Method not allowed");
             return;
         }
 
@@ -95,6 +95,7 @@ public class NodeServer {
     private void handlePingReq(HttpExchange exchange) throws IOException {
         if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
             sendResponse(exchange, 405, "Method Not Allowed");
+            Console.log("Method not allowed");
             return;
         }
 
@@ -136,12 +137,14 @@ public class NodeServer {
     private void handleGossip(HttpExchange exchange) throws IOException {
         if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
             sendResponse(exchange, 405, "Method Not Allowed");
+            Console.log("Method not allowed");
             return;
         }
 
         if (gossipService == null) {
             sendResponse(exchange, 503,
                     "{\"error\":\"GossipService not ready\"}");
+            Console.log("Gossip service not ready");
             return;
         }
 

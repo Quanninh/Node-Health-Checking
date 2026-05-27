@@ -8,7 +8,7 @@ public class App {
 
     public static void main(String[] args) {
         try {
-            NodeAgent agent = new NodeAgent(args);  
+            NodeAgent agent = new NodeAgent(args);
         } catch (IOException e) {
             e.printStackTrace();
         } catch (Exception e) {

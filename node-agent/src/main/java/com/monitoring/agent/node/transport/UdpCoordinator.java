@@ -9,6 +9,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
+import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.util.Console;
 
 /**
@@ -39,9 +40,10 @@ public class UdpCoordinator implements AutoCloseable {
         this.port = port;
         this.bufferSize = bufferSize;
         this.executorService = Executors.newSingleThreadExecutor(runnable -> {
-            Thread t = new Thread(runnable, "UDP-Coordinator-" + port);
-            t.setDaemon(false);
-            return t;
+            Thread thread = new Thread(runnable, "UDP-Coordinator-" + port);
+            thread.setDaemon(false);
+            Console.log("New UDP-Coordinator thread created.");
+            return thread;
         });
         this.membershipExecutor = newSingleProtocolExecutor("UDP-Membership-" + port);
         this.recoveryExecutor = newSingleProtocolExecutor("UDP-Recovery-" + port);
@@ -50,9 +52,10 @@ public class UdpCoordinator implements AutoCloseable {
 
     private ExecutorService newSingleProtocolExecutor(String threadName) {
         return Executors.newSingleThreadExecutor(runnable -> {
-            Thread t = new Thread(runnable, threadName);
-            t.setDaemon(false);
-            return t;
+            Thread thread = new Thread(runnable, threadName);
+            thread.setDaemon(false);
+            Console.log("New UDP-Coordinator thread created " + threadName);
+            return thread;
         });
     }
 
@@ -65,7 +68,7 @@ public class UdpCoordinator implements AutoCloseable {
         socket = new DatagramSocket(port);
         running = true;
         executorService.submit(this::receiveLoop);
-        Console.log("UDP Coordinator started on port " + port);
+        Console.log("UDP Coordinator started on port " + port, Constant.GREEN);
     }
 
     /**
@@ -107,6 +110,8 @@ public class UdpCoordinator implements AutoCloseable {
     public void send(String targetHost, int targetPort, UdpPacketType type, String payload) throws IOException {
         byte[] bytes = UdpPacket.encode(type, payload);
 
+        Console.log("Sending to " + targetHost + ":" + targetPort + " type " + type + " payload: " + payload);
+
         DatagramPacket packet = new DatagramPacket(
                 bytes,
                 bytes.length,
@@ -137,25 +142,22 @@ public class UdpCoordinator implements AutoCloseable {
                 submit(envelope);
             } catch (SocketException ex) {
                 if (running) {
-                    System.getLogger(UdpCoordinator.class.getName())
-                            .log(System.Logger.Level.ERROR, "UDP Socket error: " + ex.getMessage(), ex);
+                    Console.log("UDP Socket error: " + ex.getMessage(), Constant.RED);
                 }
             } catch (IOException ex) {
                 if (running) {
-                    System.getLogger(UdpCoordinator.class.getName())
-                            .log(System.Logger.Level.ERROR, "UDP receive error: " + ex.getMessage(), ex);
+                    Console.log("UDP receive error: " + ex.getMessage(), Constant.RED);
                 }
             } catch (Exception ex) {
                 if (running) {
-                    System.getLogger(UdpCoordinator.class.getName())
-                            .log(System.Logger.Level.ERROR, "Unexpected error in UDP receive loop: " + ex.getMessage(),
-                                    ex);
+                    Console.log("Unexpected error in UDP receive loop: " + ex.getMessage(), Constant.RED);
                 }
             }
         }
     }
 
     private void submit(UdpEnvelope envelope) {
+        // Console.log(envelope.toString());
         if (envelope.istype(UdpPacketType.MEMBERSHIP)) {
             membershipExecutor.submit(() -> dispatch(envelope, membershipConsumer));
         } else if (envelope.istype(UdpPacketType.RECOVERY)) {
@@ -171,8 +173,7 @@ public class UdpCoordinator implements AutoCloseable {
                 consumer.accept(envelope);
             }
         } catch (Exception ex) {
-            System.getLogger(UdpCoordinator.class.getName())
-                    .log(System.Logger.Level.ERROR, "UDP dispatch error: " + ex.getMessage(), ex);
+            Console.log("UDP dispatch error: " + ex.getMessage(), Constant.RED);
         }
     }
 

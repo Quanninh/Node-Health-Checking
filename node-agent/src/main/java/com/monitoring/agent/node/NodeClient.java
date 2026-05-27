@@ -147,7 +147,7 @@ public class NodeClient {
                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .orTimeout(ackTimeoutSeconds * 2L, TimeUnit.SECONDS)
                 .thenAccept(response -> Console.log("Gossip sent to " + targetNode.nodeId()
-                        + ". statusCode=" + response.statusCode(), Constant.YELLOW))
+                        + ". statusCode=" + response.statusCode()))
                 .exceptionally(error -> {
                     Console.log("Could not send gossip to " + targetNode.nodeId() + ": " + error.getMessage(),
                             Constant.RED);

@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,8 +29,8 @@ import com.monitoring.agent.util.Console;
 
 public final class RewiringCoordinator {
 
-    private static final Duration REQUEST_TIMEOUT = Duration.ofMillis(800);
-    private static final Duration SCHEME_COMMIT_TIMEOUT = Duration.ofMillis(2_500);
+    private static final Duration REQUEST_TIMEOUT = Duration.ofMillis(2_500);
+    private static final Duration SCHEME_COMMIT_TIMEOUT = Duration.ofMillis(3_000);
     private static final int SEND_ATTEMPTS = 3;
 
     private final NodeAddress localAddress;
@@ -62,7 +63,7 @@ public final class RewiringCoordinator {
     /** Maps a RecoveryID with a RewireMessage CompletableFuture. */
     private final ConcurrentHashMap<String, CompletableFuture<RewireMessage>> pendingReplies = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, ScheduledFuture<?>> pendingSchemeCommits = new ConcurrentHashMap<>();
-    private final java.util.Set<String> expiredSchemeCommits = ConcurrentHashMap.newKeySet();
+    private final Set<String> expiredSchemeCommits = ConcurrentHashMap.newKeySet();
     private final ScheduledExecutorService schemeCommitTimeoutExecutor = Executors.newSingleThreadScheduledExecutor(
             runnable -> {
                 Thread thread = new Thread(runnable, "Rewire-Scheme-Commit-Timeout");
@@ -114,6 +115,7 @@ public final class RewiringCoordinator {
      */
     public void onDeficientNodeDiscovered(DeficientNodeRecord record) {
         if (record == null || record.node() == null) {
+            Console.log("[REWIRE] Record is invalid");
             return;
         }
 
@@ -124,6 +126,7 @@ public final class RewiringCoordinator {
 
         if (deficientNode.nodeId().equals(localAddress.nodeId())
                 || connectionManager.getHealthState() != HealthState.DEFICIENT) {
+            Console.log("[REWIRE] Deficient node is self or I am healthy -> skip");
             return;
         }
 
@@ -151,16 +154,18 @@ public final class RewiringCoordinator {
      */
     public boolean attemptRewiring(NodeAddress defA, NodeAddress defB) {
         if (!localAddress.nodeId().equals(defA.nodeId())) {
+            Console.log("[REWIRE] Self is not defA -> skip");
             return false;
         }
 
         if (defA.nodeId().equals(defB.nodeId())) {
-            Console.log("[REWIRE] Refused: defA and defB are the same node.");
+            Console.log("[REWIRE] Refused: defA and defB are the same node.", Constant.ORANGE);
             return false;
         }
 
         if (!canStartDeficientRecovery()) {
-            Console.log("[REWIRE] Refused: local node is not eligible to start deficient recovery.");
+            Console.log("[REWIRE] Refused: local node is not eligible to start deficient recovery.",
+                    Constant.ORANGE);
             return false;
         }
 
@@ -169,7 +174,8 @@ public final class RewiringCoordinator {
                 boolean directOk = tryDirectRepair(defA, defB);
 
                 if (directOk) {
-                    Console.log("[REWIRE] Direct repair succeeded: " + defA.nodeId() + " <-> " + defB.nodeId());
+                    Console.log("[REWIRE] Direct repair succeeded: " + defA.nodeId() + " <-> " + defB.nodeId(),
+                            Constant.GREEN);
                     return true;
                 }
             }
@@ -210,16 +216,19 @@ public final class RewiringCoordinator {
         }
 
         if (ack == null || ack.type() == RecoveryMessageType.REWIRE_DENY) {
+            Console.log("[REWIRE] Denied, will now backoff random");
             randomBackoff();
             return false;
         }
 
         if (ack.type() != RecoveryMessageType.REWIRE_SESSION_ACK) {
+            Console.log("[REWIRE] " + ack.type() + " is not REWIRE_SESSION_ACK");
             return false;
         }
 
         // Not the leader -> skip
         if (!localAddress.nodeId().equals(electLeader(defA, defB).nodeId())) {
+            Console.log("[REWIRE] I'm not a leader -> skip");
             return false;
         }
 
@@ -227,11 +236,11 @@ public final class RewiringCoordinator {
 
         // Tries to become the leader. If can't -> skip
         if (!becomeDeficientLeader(recoveryId)) {
-            Console.log("[DEBUG] Can't become a leader");
+            Console.log("[REWIRE_DEBUG] Can't become a leader", Constant.ORANGE);
             return false;
         }
 
-        Console.log("I'm the leader - " + localAddress);
+        Console.log("[REWIRE] I'm the leader - " + localAddress.nodeId(), Constant.BG_GREEN);
 
         List<NodeAddress> defANeighbors = connectionManager.neighborAddresses();
         List<NodeAddress> defBNeighbors = ack.defBNeighbors();
@@ -249,9 +258,13 @@ public final class RewiringCoordinator {
 
         List<NodeAddress> candidateCs = selectCandidateCs(defANeighbors, defBNeighbors);
 
+        Console.log("Candidate Cs: " + candidateCs);
+
         if (candidateCs.isEmpty()) {
-            Console.log("[REWIRE] No valid C candidate. "
-                    + "Every neighbor of defA may already be neighbor of defB.");
+            Console.log("[REWIRE] No valid C candidate. All neighbors of defA are neighbors of defB.");
+            // B might still be DEFICIENT_FELLOW, expecting timeout to do its job
+            releaseDeficientRoleIfMatching(recoveryId);
+            refreshHealthState();
             return false;
         }
 
@@ -265,6 +278,7 @@ public final class RewiringCoordinator {
                     defANeighbors, defBNeighbors,
                     null);
 
+            // NEIGHBOR_QUERY_RESPONSE handled here
             RewireMessage response = sendAndWait(c, query, REQUEST_TIMEOUT);
 
             if (response == null || response.status() != RewireStatus.ACCEPTED || response.nodeD() == null) {
@@ -276,12 +290,13 @@ public final class RewiringCoordinator {
             boolean committed = executeScheme(recoveryId, defA, defB, c, d);
 
             if (committed) {
-                Console.log("[REWIRE] Node " + defA.nodeId() + " successfully rewired with " + d.nodeId()
-                        + " while breaking edge " + c.nodeId() + "-x-" + d.nodeId());
+                Console.log("[REWIRE] " + defA.nodeId() + " rewired with " + d.nodeId()
+                        + " while breaking edge " + c.nodeId() + "-x-" + d.nodeId(), Constant.GREEN);
                 return true;
             }
         }
 
+        Console.log("[REWIRE] None of the candidate C worked", Constant.RED);
         return false;
     }
 
@@ -314,12 +329,15 @@ public final class RewiringCoordinator {
         RewireMessage response = sendAndWait(defB, request, REQUEST_TIMEOUT);
 
         if (response == null || response.status() != RewireStatus.ACCEPTED) {
+            Console.log(
+                    "[REWIRE] response is null or not ACCEPTED != " + (response == null ? "null" : response.status()));
             return false;
         }
 
         boolean localApplied = connectionManager.addIfSpace(defB, "direct rewiring recovery commit");
 
         if (!localApplied) {
+            Console.log("[REWIRE] Local applied failed");
             return false;
         }
 
@@ -339,6 +357,7 @@ public final class RewiringCoordinator {
 
         sendOnly(defB, commit);
         refreshHealthState();
+        Console.log("Direct Repait completed successfully", Constant.GREEN);
         return true;
     }
 
@@ -402,18 +421,20 @@ public final class RewiringCoordinator {
             boolean allRemoteAccepted = accepted(cAck) && accepted(dAck) && accepted(bAck);
 
             if (!allRemoteAccepted) {
-                Console.log("[REWIRE] Scheme aborted. At least one participant rejected.");
+                Console.log("[REWIRE] Scheme aborted. At least one participant rejected.", Constant.BG_RED);
                 // Rejected prematurely, no connections were made.
-                // TODO: Send abort message to C and D.
+                // TODO: Send abort message to B, C and D. (I hope timeout deals with this)
                 return false;
             }
 
-            boolean localApplied = connectionManager.addIfSpace(d, "rewiring scheme commit: defA connects to D");
+            boolean localApplied = connectionManager.addIfSpace(d,
+                    "rewiring scheme commit: defA connects to D");
 
             if (!localApplied) {
-                Console.log("[REWIRE] Scheme failed locally. defA could not add D.");
-                // TODO: Send abort message to C and D.
-                // Should we update role of A to FREE also?
+                Console.log("[REWIRE] Scheme failed locally. defA could not add D.", Constant.BG_RED);
+                // TODO: Send abort message to B, C and D. (I hope timeout deals with this)
+                releaseDeficientRoleIfMatching(recoveryId);
+                refreshHealthState();
                 return false;
             }
 
@@ -427,11 +448,13 @@ public final class RewiringCoordinator {
 
             Console.log(
                     "[REWIRE] Scheme committed. " + defA.nodeId() + " connected to " + d.nodeId() + ", " + defB.nodeId()
-                            + " connected to " + c.nodeId() + ", edge " + c.nodeId() + "-" + d.nodeId() + " removed.");
+                            + " connected to " + c.nodeId() + ", edge " + c.nodeId() + "-x-" + d.nodeId()
+                            + " removed.",
+                    Constant.GREEN);
 
             return true;
         } catch (InterruptedException | ExecutionException | TimeoutException exception) {
-            Console.log("[REWIRE] Scheme failed: " + exception.getMessage());
+            Console.log("[REWIRE] Scheme failed: " + exception.getMessage(), Constant.RED);
             return false;
         }
     }
@@ -446,6 +469,7 @@ public final class RewiringCoordinator {
      */
     private void handle(RewireMessage message) {
         if (message == null || message.type() == null) {
+            Console.log("Message is invalid");
             return;
         }
 
@@ -455,6 +479,7 @@ public final class RewiringCoordinator {
 
             if (pending != null) {
                 pending.complete(message);
+                Console.log("Idk what's going on here, but pending != null and pending.complete");
                 return;
             }
         }
@@ -470,7 +495,7 @@ public final class RewiringCoordinator {
             case REWIRING_PROPOSE -> handleRewiringPropose(message);
             case REWIRE_SCHEME_REQ -> handleRewireSchemeRequest(message);
             case REWIRE_SCHEME_COMMIT -> handleRewireSchemeCommit(message);
-            case REWIRE_SCHEME -> handleRewireSchemeCommit(message);
+            // case REWIRE_SCHEME -> handleRewireSchemeCommit(message);
             default -> {
             }
         }
@@ -494,6 +519,7 @@ public final class RewiringCoordinator {
 
     private void handleDirectCommit(RewireMessage message) {
         if (message.status() != RewireStatus.ACCEPTED) {
+            Console.log("Message denied");
             return;
         }
 
@@ -501,12 +527,8 @@ public final class RewiringCoordinator {
 
         refreshHealthState();
 
-        Console.log("[REWIRE][COMMIT] Direct repair commit from "
-                + message.sender().nodeId()
-                + " accepted="
-                + accepted
-                + ", recoveryId="
-                + message.recoveryId());
+        Console.log("[REWIRE][COMMIT] Direct repair commit from " + message.sender().nodeId()
+                + " accepted=" + accepted + ", recoveryId=" + message.recoveryId(), Constant.PINK);
     }
 
     /**
@@ -519,7 +541,7 @@ public final class RewiringCoordinator {
     private void handleSessionRequest(RewireMessage message) {
         // defB
         if (!canAcceptSessionRequest(message)) {
-            Console.log("REASON: !canAcceptSessionRequest(message)");
+            Console.log("REASON: !canAcceptSessionRequest(message)", Constant.RED);
             sendOnly(message.sender(), reply(message, RecoveryMessageType.REWIRE_DENY, false, null));
             return;
         }
@@ -528,7 +550,7 @@ public final class RewiringCoordinator {
 
         // If i am not the leader
         if (!leader.nodeId().equals(message.sender().nodeId())) {
-            Console.log("REASON:!leader.nodeId().equals(message.sender().nodeId())");
+            Console.log("REASON:!leader.nodeId().equals(message.sender().nodeId())", Constant.RED);
             // TODO:
             sendOnly(message.sender(), reply(message, RecoveryMessageType.REWIRE_ACK, true, null));
             return;
@@ -552,8 +574,7 @@ public final class RewiringCoordinator {
         if (allNeighborsOfAExistInNeighborsOfB(defANeighbors, defBNeighbors)) {
             Console.log("[REWIRE] Denied REWIRE_REQ from "
                     + message.sender().nodeId()
-                    + " because every neighbor of defA is already also neighbor of defB. "
-                    + "No valid C exists.");
+                    + " because all neighbors of defA are neighbors of defB.", Constant.ORANGE);
 
             sendOnly(message.sender(), RewireMessage.of(
                     RecoveryMessageType.REWIRE_DENY,
@@ -598,15 +619,17 @@ public final class RewiringCoordinator {
      */
     private void handleSessionCommit(RewireMessage message) {
         if (message.status() != RewireStatus.ACCEPTED) {
+            Console.log("Wrong message");
             return;
         }
 
         boolean accepted = becomeDeficientFellow(message.recoveryId());
 
         if (!accepted) {
-            Console.log("[REWIRE] Cannot become DEFICIENT_FELLOW for recoveryId="
-                    + message.recoveryId());
+            Console.log("[REWIRE] Cannot become DEFICIENT_FELLOW for recoveryId=" + message.recoveryId(), Constant.RED);
         }
+
+        scheduleSchemeCommitTimeout(message);
     }
 
     /**
@@ -620,11 +643,12 @@ public final class RewiringCoordinator {
      * @param message the rewire message
      */
     private void handleNeighborsQuery(RewireMessage message) {
-        Console.log("Just received NEIGHBORS_QUERY", Constant.BG_BLUE);
+        Console.log("[REWIRE] Just received NEIGHBORS_QUERY", Constant.BG_ORANGE);
         NodeAddress d = findCandidateD(message.nodeC(), message.defANeighbors());
 
         if (d == null) {
             sendOnly(message.sender(), reply(message, RecoveryMessageType.NEIGHBORS_QUERY_RESPONSE, false, null));
+            Console.log("Sent NEIGHBORS_QUERY_RESPONSE false because can't find D");
             return;
         }
 
@@ -636,9 +660,8 @@ public final class RewiringCoordinator {
                 d);
 
         if (!reservedByC) {
-            sendOnly(
-                    message.sender(),
-                    reply(message, RecoveryMessageType.NEIGHBORS_QUERY_RESPONSE, false, null));
+            sendOnly(message.sender(), reply(message, RecoveryMessageType.NEIGHBORS_QUERY_RESPONSE, false, null));
+            Console.log("Send NEIGHBORS_QUERY_RESPONSE false because C can't become wiring node");
             return;
         }
 
@@ -656,26 +679,24 @@ public final class RewiringCoordinator {
                 message.defBNeighbors(),
                 null);
 
+        // REWIRING_PROPOSE_ACK received here
         RewireMessage dAck = sendAndWait(d, proposal, REQUEST_TIMEOUT);
 
         if (dAck == null || dAck.status() != RewireStatus.ACCEPTED) {
             releaseRewiringReservation(message.recoveryId());
 
-            sendOnly(
-                    message.sender(),
-                    reply(message, RecoveryMessageType.NEIGHBORS_QUERY_RESPONSE, false, null));
+            sendOnly(message.sender(), reply(message, RecoveryMessageType.NEIGHBORS_QUERY_RESPONSE, false, null));
+            Console.log("Send NEIGHBORS_QUERY_RESPONSE false because dAck is false");
             return;
         }
 
-        sendOnly(
-                message.sender(),
-                reply(message, RecoveryMessageType.NEIGHBORS_QUERY_RESPONSE, true, d));
+        Console.log("Send NEIGHBORS_QUERY_RESPONSE true");
+        sendOnly(message.sender(), reply(message, RecoveryMessageType.NEIGHBORS_QUERY_RESPONSE, true, d));
     }
 
     private void handleRewiringPropose(RewireMessage message) {
-        Console.log("Just received REWIRING_PROPOSE", Constant.BG_BLUE);
-        boolean valid = message.nodeC() != null
-                && message.nodeD() != null
+        Console.log("[REWIRE] Just received REWIRING_PROPOSE", Constant.BG_ORANGE);
+        boolean valid = message.nodeC() != null && message.nodeD() != null
                 && connectionManager.containsNode(message.nodeC().nodeId())
                 && canBecomeRewiringNode(
                         message.recoveryId(),
@@ -702,7 +723,7 @@ public final class RewiringCoordinator {
     private void handleRewireSchemeCommit(RewireMessage message) {
         if (expiredSchemeCommits.remove(message.recoveryId())) {
             Console.log("[REWIRE] Ignored late scheme commit for expired recoveryId="
-                    + message.recoveryId());
+                    + message.recoveryId(), Constant.BG_RED);
             return;
         }
 
@@ -718,16 +739,11 @@ public final class RewiringCoordinator {
         releaseDeficientRoleIfMatching(message.recoveryId());
         refreshHealthState();
 
-        Console.log("[REWIRE][COMMIT] Scheme commit from "
-                + message.sender().nodeId()
-                + " accepted="
-                + accepted
-                + ", connectsTo="
-                + message.connectsTo()
-                + ", disconnectsFrom="
-                + message.disconnectsFrom()
-                + ", recoveryId="
-                + message.recoveryId());
+        Console.log("[REWIRE][COMMIT] Scheme commit from " + message.sender().nodeId()
+                + " accepted=" + accepted
+                + ", connectsTo=" + message.connectsTo()
+                + ", disconnectsFrom=" + message.disconnectsFrom()
+                + ", recoveryId=" + message.recoveryId(), Constant.GREEN);
     }
 
     private void scheduleSchemeCommitTimeout(RewireMessage message) {
@@ -754,6 +770,7 @@ public final class RewiringCoordinator {
         ScheduledFuture<?> timeout = pendingSchemeCommits.remove(recoveryId);
 
         if (timeout == null) {
+            Console.log("timeout == null");
             return;
         }
 
@@ -763,9 +780,7 @@ public final class RewiringCoordinator {
         expiredSchemeCommits.add(recoveryId);
 
         Console.log("[REWIRE] Scheme commit timed out. Released local recovery role for recoveryId="
-                + recoveryId
-                + ", recoveryRole="
-                + recoveryRole);
+                + recoveryId + ", recoveryRole=" + recoveryRole, Constant.BG_RED);
     }
 
     /**
@@ -777,8 +792,8 @@ public final class RewiringCoordinator {
      * @return
      */
     private NodeAddress findCandidateD(NodeAddress c, List<NodeAddress> defANeighbors) {
-
         if (c == null) {
+            Console.log("C is invalid");
             return null;
         }
 
@@ -789,11 +804,8 @@ public final class RewiringCoordinator {
         Collections.shuffle(localNeighborsOfC);
 
         for (NodeAddress d : localNeighborsOfC) {
-            if (d == null) {
-                continue;
-            }
-
-            if (d.nodeId().equals(c.nodeId())) {
+            if (d == null || d.nodeId().equals(c.nodeId())) {
+                Console.log("d is null or d == c -> skip");
                 continue;
             }
 
@@ -801,10 +813,12 @@ public final class RewiringCoordinator {
             boolean cAndDAdjacent = connectionManager.containsNode(d.nodeId());
 
             if (dNotInDefA && cAndDAdjacent) {
+                Console.log("D found");
                 return d;
             }
         }
 
+        Console.log("No D found");
         return null;
     }
 
@@ -817,7 +831,6 @@ public final class RewiringCoordinator {
      * @return a list of candidates for node C
      */
     private List<NodeAddress> selectCandidateCs(List<NodeAddress> defANeighbors, List<NodeAddress> defBNeighbors) {
-
         List<NodeAddress> result = defANeighbors.stream()
                 .filter(c -> !contains(defBNeighbors, c.nodeId()))
                 .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
@@ -837,13 +850,13 @@ public final class RewiringCoordinator {
             refreshHealthState();
 
             if (connectionManager.getHealthState() != HealthState.DEFICIENT) {
-                Console.log("[DEBUG] I am not DEFICIENT");
+                Console.log("[REWIRE_DEBUG] I am not DEFICIENT", Constant.ORANGE);
                 return false;
             }
 
-            Console.log("[DEBUG] Am I free OR REWIRING_NODE? "
+            Console.log("[REWIRE_DEBUG] Am I free OR REWIRING_NODE? "
                     + (recoveryRole == RecoveryRole.FREE || recoveryRole == RecoveryRole.REWIRING_NODE)
-                    + " currently: " + recoveryRole);
+                    + " currently: " + recoveryRole, Constant.ORANGE);
             return recoveryRole == RecoveryRole.FREE || recoveryRole == RecoveryRole.REWIRING_NODE;
         } finally {
             roleLock.unlock();
@@ -862,16 +875,19 @@ public final class RewiringCoordinator {
         try {
             refreshHealthState();
             if (connectionManager.getHealthState() != HealthState.DEFICIENT) {
+                Console.log("Node is not deficient");
                 return false;
             }
 
             if (recoveryRole != RecoveryRole.FREE) {
+                Console.log("Node is not free but " + recoveryRole);
                 return false;
             }
 
             recoveryRole = RecoveryRole.DEFICIENT_LEADER;
             activeDeficientRecoveryId = recoveryId;
 
+            Console.log("Node is now DEFICIENT_LEADER", Constant.GREEN);
             return true;
         } finally {
             roleLock.unlock();
@@ -890,16 +906,19 @@ public final class RewiringCoordinator {
             refreshHealthState();
 
             if (connectionManager.getHealthState() != HealthState.DEFICIENT) {
+                Console.log("Node is not deficient");
                 return false;
             }
 
             if (recoveryRole != RecoveryRole.FREE) {
+                Console.log("Node is not free but " + recoveryRole);
                 return false;
             }
 
             recoveryRole = RecoveryRole.DEFICIENT_FELLOW;
             activeDeficientRecoveryId = recoveryId;
 
+            Console.log("Node is now DEFICIENT_FELLOW", Constant.GREEN);
             return true;
         } finally {
             roleLock.unlock();
@@ -918,13 +937,16 @@ public final class RewiringCoordinator {
             refreshHealthState();
 
             if (isInitiatingDeficientRequest) {
+                Console.log("Already initiating deficient request with another node");
                 return false;
             }
 
             if (connectionManager.getHealthState() != HealthState.DEFICIENT) {
+                Console.log("Node is not deficient");
                 return false;
             }
 
+            Console.log("Node is " + recoveryRole + " == FREE?");
             return recoveryRole == RecoveryRole.FREE;
         } finally {
             roleLock.unlock();
@@ -952,27 +974,28 @@ public final class RewiringCoordinator {
             refreshHealthState();
 
             if (connectionManager.getHealthState() != HealthState.DEFICIENT) {
-                Console.log("[DEBUG] I'm not deficient");
+                Console.log("[REWIRE_DEBUG] I'm not deficient", Constant.ORANGE);
                 return false;
             }
 
             if (recoveryRole != RecoveryRole.FREE && recoveryRole != RecoveryRole.REWIRING_NODE) {
-                Console.log("[DEBUG] I'm not free or rewiring_node, currently=" + recoveryRole);
+                Console.log("[REWIRE_DEBUG] I'm not free or rewiring_node, currently=" + recoveryRole, Constant.ORANGE);
                 return false;
             }
 
             NodeAddress leader = electLeader(message.defA(), message.defB());
 
             if (!leader.nodeId().equals(message.sender().nodeId())) {
-                Console.log("[DEBUG] I'm not a leader");
+                Console.log("[REWIRE_DEBUG] I'm not a leader", Constant.ORANGE);
                 return true;
             }
 
             if (isInitiatingDeficientRequest && leader.nodeId().equals(localAddress.nodeId())) {
-                Console.log("[DEBUG] I'm already a leader for another request");
+                Console.log("[REWIRE_DEBUG] I'm already a leader for another request", Constant.ORANGE);
                 return false;
             }
 
+            Console.log("Can accept session request!", Constant.GREEN);
             return true;
         } finally {
             roleLock.unlock();
@@ -983,6 +1006,9 @@ public final class RewiringCoordinator {
         roleLock.lock();
         try {
             if (recoveryRole == RecoveryRole.DEFICIENT_FELLOW) {
+                Console.log("I'm a deficient fellow of an active recovery? "
+                        + Objects.equals(activeDeficientRecoveryId, message.recoveryId())
+                        + (message.connectsTo() != null) + " " + (message.disconnectsFrom() == null));
                 return Objects.equals(activeDeficientRecoveryId, message.recoveryId())
                         && message.connectsTo() != null
                         && message.disconnectsFrom() == null;
@@ -990,7 +1016,7 @@ public final class RewiringCoordinator {
 
             if (recoveryRole != RecoveryRole.REWIRING_NODE) {
                 // TODO: a rewiring_node can still be part of multiple rewiring scheme
-                Console.log("Can't accept scheme request becasue " + recoveryRole + " == REWIRING_NODE");
+                Console.log("Can't accept scheme request becasue " + recoveryRole + " == REWIRING_NODE", Constant.RED);
                 return false;
             }
 
@@ -1000,9 +1026,11 @@ public final class RewiringCoordinator {
             String reservedEdge = reservedEdgeByRecoveryId.get(message.recoveryId());
 
             if (reservedEdge == null) {
+                Console.log("Edge isn't reserved");
                 return false;
             }
 
+            Console.log("Is degree neutral? " + isDegreeNeutralSwap(message.connectsTo(), message.disconnectsFrom()));
             return isDegreeNeutralSwap(message.connectsTo(), message.disconnectsFrom());
         } finally {
             roleLock.unlock();
@@ -1011,8 +1039,8 @@ public final class RewiringCoordinator {
 
     private boolean canBecomeRewiringNode(String recoveryId, NodeAddress c, NodeAddress d, NodeAddress connectsTo,
             NodeAddress disconnectsFrom) {
-        Console.log("Trying to become the REWIRING_NODE. c=" + c + ", d=" + d + ", connectsTo=" + connectsTo
-                + ", disconnectsFrom=" + disconnectsFrom);
+        Console.log("[REWIRE ]Trying to become the REWIRING_NODE. c=" + c + ", d=" + d + ", connectsTo=" + connectsTo
+                + ", disconnectsFrom=" + disconnectsFrom, Constant.BG_GREEN);
 
         roleLock.lock();
         try {
@@ -1022,12 +1050,14 @@ public final class RewiringCoordinator {
             // They cannot become REWIRING_NODE in another session.
             if (recoveryRole == RecoveryRole.DEFICIENT_LEADER
                     || recoveryRole == RecoveryRole.DEFICIENT_FELLOW) {
+                Console.log("Already LEADER or FELLOW");
                 return false;
             }
 
             // Both DEFICIENT and SUFFICIENT nodes may become REWIRING_NODE,
             // but only if the operation is degree-neutral. (?)
             if (!isDegreeNeutralSwap(connectsTo, disconnectsFrom)) {
+                Console.log("Not degree neutral");
                 return false;
             }
 
@@ -1035,12 +1065,14 @@ public final class RewiringCoordinator {
             String existingRecoveryId = recoveryIdByReservedEdge.putIfAbsent(edgeKey, recoveryId);
 
             if (existingRecoveryId != null && !existingRecoveryId.equals(recoveryId)) {
+                Console.log("Incorrect recoveryID");
                 return false;
             }
 
-            reservedEdgeByRecoveryId.put(recoveryId, edgeKey);
+            // reservedEdgeByRecoveryId.put(recoveryId, edgeKey);
             // recoveryRole = RecoveryRole.REWIRING_NODE;
 
+            Console.log("Can become REWIRING_NODE, NOT reserving edge");
             return true;
         } finally {
             roleLock.unlock();
@@ -1049,8 +1081,8 @@ public final class RewiringCoordinator {
 
     private boolean tryBecomeRewiringNode(String recoveryId, NodeAddress c, NodeAddress d, NodeAddress connectsTo,
             NodeAddress disconnectsFrom) {
-        Console.log("Trying to become the REWIRING_NODE. c=" + c + ", d=" + d + ", connectsTo=" + connectsTo
-                + ", disconnectsFrom=" + disconnectsFrom);
+        Console.log("[REWIRE] Trying to become the REWIRING_NODE. c=" + c + ", d=" + d + ", connectsTo=" + connectsTo
+                + ", disconnectsFrom=" + disconnectsFrom, Constant.BG_GREEN);
 
         roleLock.lock();
         try {
@@ -1060,12 +1092,14 @@ public final class RewiringCoordinator {
             // They don't need to become REWIRING_NODE in another session.
             if (recoveryRole == RecoveryRole.DEFICIENT_LEADER
                     || recoveryRole == RecoveryRole.DEFICIENT_FELLOW) {
+                Console.log("Already LEADER or FELLOW");
                 return false;
             }
 
             // Both DEFICIENT and SUFFICIENT nodes may become REWIRING_NODE,
             // but only if the operation is degree-neutral.
             if (!isDegreeNeutralSwap(connectsTo, disconnectsFrom)) {
+                Console.log("Not degree neutral");
                 return false;
             }
 
@@ -1073,12 +1107,14 @@ public final class RewiringCoordinator {
             String existingRecoveryId = recoveryIdByReservedEdge.putIfAbsent(edgeKey, recoveryId);
 
             if (existingRecoveryId != null && !existingRecoveryId.equals(recoveryId)) {
+                Console.log("Incorrect recoveryID");
                 return false;
             }
 
             reservedEdgeByRecoveryId.put(recoveryId, edgeKey);
             recoveryRole = RecoveryRole.REWIRING_NODE;
 
+            Console.log("Has become REWIRING_NODE, reserving edge");
             return true;
         } finally {
             roleLock.unlock();
@@ -1092,17 +1128,17 @@ public final class RewiringCoordinator {
      */
     private void releaseRewiringReservation(String recoveryId) {
         roleLock.lock();
-        Console.log("RELEASING REWIRING RESERVATIONS!!!");
+        Console.log("[REWIRE] RELEASING REWIRING RESERVATIONS!!!", Constant.ORANGE);
         try {
             String edgeKey = reservedEdgeByRecoveryId.remove(recoveryId);
 
             if (edgeKey != null) {
+                Console.log("[REWIRE] ACTUALLY RELEASING YAY OMG!!! FREE NOW", Constant.GREEN);
                 recoveryIdByReservedEdge.remove(edgeKey, recoveryId);
             }
 
-            if (reservedEdgeByRecoveryId.isEmpty()
-                    && recoveryRole == RecoveryRole.REWIRING_NODE) {
-                Console.log("ACTUALLY RELEASING YAY OMG!!!");
+            if (reservedEdgeByRecoveryId.isEmpty() && recoveryRole == RecoveryRole.REWIRING_NODE) {
+                Console.log("[REWIRE] ACTUALLY RELEASING YAY OMG!!! FREE NOW", Constant.GREEN);
                 recoveryRole = RecoveryRole.FREE;
             }
 
@@ -1127,11 +1163,10 @@ public final class RewiringCoordinator {
                 activeDeficientRecoveryId = null;
             }
 
-            Console.log("[REWIRE] Recovery attempt ended. healthState="
-                    + connectionManager.getHealthState()
-                    + ", recoveryRole="
-                    + recoveryRole
-                    + ", neighbors=" + connectionManager.size() + "/" + connectionManager.getMaxNeighbors());
+            Console.log("[REWIRE] Recovery attempt ended. healthState=" + connectionManager.getHealthState()
+                    + ", recoveryRole=" + recoveryRole
+                    + ", neighbors=" + connectionManager.size() + "/" + connectionManager.getMaxNeighbors(),
+                    connectionManager.size() < connectionManager.getMaxNeighbors() ? Constant.RED : Constant.GREEN);
         } finally {
             roleLock.unlock();
         }
@@ -1258,8 +1293,7 @@ public final class RewiringCoordinator {
      * @param replyType  the message reply type
      * @param accepted   whether the original request is accepted
      * @param candidateD candidate D?
-     * @return
-     *         the reply message
+     * @return the reply message
      */
     private RewireMessage reply(RewireMessage request, RecoveryMessageType replyType, boolean accepted,
             NodeAddress candidateD) {
@@ -1317,15 +1351,39 @@ public final class RewiringCoordinator {
             CompletableFuture<RewireMessage> future = new CompletableFuture<>();
             String key = replyKey(message.recoveryId(), target);
 
+            Console.log("[REWIRE][SEND_WAIT] START" + " attempt=" + attempt
+                    + " type=" + message.type()
+                    + " recoveryId=" + message.recoveryId()
+                    + " target=" + target.nodeId()
+                    + " key=" + key, Constant.CYAN);
+
             pendingReplies.put(key, future);
 
             try {
                 sendOnly(target, message);
-                return future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+
+                RewireMessage reply = future.get(timeout.toMillis(), TimeUnit.MILLISECONDS);
+
+                Console.log("[REWIRE][SEND_WAIT] SUCCESS" + " attempt=" + attempt
+                        + " type=" + message.type()
+                        + " recoveryId=" + message.recoveryId()
+                        + " replyType=" + reply.type()
+                        + " replySender=" + reply.sender().nodeId(), Constant.GREEN);
+
+                return reply;
             } catch (InterruptedException | ExecutionException | TimeoutException exception) {
+                Console.log("[REWIRE][SEND_WAIT] FAILED" + " attempt=" + attempt
+                        + " type=" + message.type()
+                        + " recoveryId=" + message.recoveryId()
+                        + " key=" + key
+                        + " reason=" + exception.getClass().getSimpleName(), Constant.BG_RED);
+
                 pendingReplies.remove(key);
             }
         }
+
+        Console.log("[REWIRE][SEND_WAIT] GAVE UP" + " type=" + message.type()
+                + " recoveryId=" + message.recoveryId(), Constant.BOLD + Constant.BG_RED);
 
         return null;
     }
@@ -1350,16 +1408,13 @@ public final class RewiringCoordinator {
      */
     private void sendOnly(NodeAddress target, RewireMessage message) {
         try {
-            Console.log("[REWIRE]" + stageLabel(message.type())
-                    + " "
-                    + message.type()
-                    + " recoveryId="
-                    + message.recoveryId()
-                    + " to "
-                    + target.nodeId());
+            Console.log("[REWIRE]" + stageLabel(message.type()) + " " + message.type()
+                    + " recoveryId=" + message.recoveryId()
+                    + " to " + target.nodeId(), Constant.CYAN);
             udpCoordinator.send(target.host(), target.port(), UdpPacketType.REWIRING, message.encode());
         } catch (IOException exception) {
-            Console.log("[REWIRE] Failed to send " + message.type() + " to " + target + ": " + exception.getMessage());
+            Console.log("[REWIRE] Failed to send " + message.type() + " to " + target + ": " + exception.getMessage(),
+                    Constant.RED);
         }
     }
 
@@ -1385,8 +1440,7 @@ public final class RewiringCoordinator {
             return false;
         }
 
-        return addresses.stream()
-                .anyMatch(address -> address != null && address.nodeId().equals(nodeId));
+        return addresses.stream().anyMatch(address -> address != null && address.nodeId().equals(nodeId));
     }
 
     /**
@@ -1416,7 +1470,7 @@ public final class RewiringCoordinator {
 
         return switch (type) {
             case REWIRE_REQ_DIRECT, REWIRE_SESSION_REQ, REWIRE_SCHEME_REQ, NEIGHBORS_QUERY, REWIRING_PROPOSE,
-                    REWIRE_REQ, REWIRE_SCHEME ->
+                    REWIRE_REQ ->
                 "[REQ]";
             case REWIRE_REQ_DIRECT_ACK, REWIRE_SESSION_ACK, REWIRE_SCHEME_ACK, NEIGHBORS_QUERY_RESPONSE,
                     REWIRING_PROPOSE_ACK, REWIRE_ACK, REWIRE_DENY ->

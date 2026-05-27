@@ -93,14 +93,18 @@ public final class ConnectionManager {
         lock.lock();
         try {
             if (peer == null || peer.nodeId().equals(localAddress.nodeId())) {
+                Console.log(
+                        "Can't add because " + (peer == null ? "null" : peer.nodeId()) + " is null or is me");
                 return false;
             }
 
             if (neighborsById.containsKey(peer.nodeId())) {
+                Console.log("Already a neighbor");
                 return true;
             }
 
             if (neighborsById.size() >= maxNeighbors) {
+                Console.log("Full neighbors -> can't add");
                 return false;
             }
 
@@ -127,6 +131,7 @@ public final class ConnectionManager {
         try {
             NodeAddress removed = neighborsById.remove(nodeId);
             if (removed == null) {
+                Console.log("Couldn't remove " + nodeId + ".");
                 return false;
             }
 
@@ -153,28 +158,34 @@ public final class ConnectionManager {
     public CommitResult applyDirectTargetCommit(String txId, NodeAddress joiningNode, String evictedNodeId) {
         lock.lock();
         try {
-            // add returns false if already in set
+            // `add` returns false if already in set
             if (!processedTransactions.add("DIRECT:" + txId)) {
+                Console.log("duplicate direct commit ignored");
                 return new CommitResult(true, "duplicate direct commit ignored");
             }
 
             if (joiningNode == null || joiningNode.nodeId().equals(localAddress.nodeId())) {
+                Console.log("cannot add self/null joining node");
                 return new CommitResult(false, "cannot add self/null joining node");
             }
 
             if (neighborsById.containsKey(joiningNode.nodeId())) {
+                Console.log("joining node already exists");
                 return new CommitResult(true, "joining node already exists");
             }
 
             NodeAddress evicted = null;
+            // Remove evicted node if possible
             if (evictedNodeId != null && !evictedNodeId.isBlank()) {
                 evicted = neighborsById.remove(evictedNodeId);
             }
 
+            // If adding would lead to exceeding max neighbor, undo changes
             if (neighborsById.size() >= maxNeighbors) {
                 if (evicted != null) {
                     neighborsById.put(evicted.nodeId(), evicted);
                 }
+                Console.log("direct target would exceed maxNeighbors");
                 return new CommitResult(false, "direct target would exceed maxNeighbors");
             }
 
@@ -185,7 +196,7 @@ public final class ConnectionManager {
             Console.log("Node " + localAddress.nodeId()
                     + " accepted joining node " + joiningNode
                     + (evicted == null ? "" : " and evicted " + evicted)
-                    + ". neighbors=" + neighborsById.values());
+                    + ". neighbors=" + neighborsById.values(), Constant.GREEN);
             return new CommitResult(true, "direct target commit accepted");
         } finally {
             lock.unlock();
@@ -205,10 +216,12 @@ public final class ConnectionManager {
         lock.lock();
         try {
             if (!processedTransactions.add("VICTIM:" + txId + ":" + oldDirectTargetId)) {
+                Console.log("duplicate victim commit ignored");
                 return new CommitResult(true, "duplicate victim commit ignored");
             }
 
             if (joiningNode == null) {
+                Console.log("joining node is null");
                 return new CommitResult(false, "joining node is null");
             }
 
@@ -223,9 +236,7 @@ public final class ConnectionManager {
 
             version++;
             refreshHealthStateLocked();
-            Console.log("Node " + localAddress.nodeId()
-                    + " replaced old direct target " + removed
-                    + " with joining node " + joiningNode
+            Console.log(localAddress.nodeId() + " evicted " + removed + " and added " + joiningNode
                     + ". neighbors=" + neighborsById.values());
             return new CommitResult(true, "victim commit accepted");
         } finally {
@@ -246,24 +257,28 @@ public final class ConnectionManager {
 
         try {
             if (!processedTransactions.add("SMALL_JOIN:" + txId)) {
+                Console.log("Duplicate small join commit ignored");
                 return new CommitResult(true, "Duplicate small join commit ignored");
             }
 
             if (joiningNode == null) {
+                Console.log("Joining node is null");
                 return new CommitResult(false, "Joining node is null");
             }
 
             if (joiningNode.nodeId().equals(localAddress.nodeId())) {
+                Console.log("Cannot add self");
                 return new CommitResult(false, "Cannot add self");
             }
 
             if (neighborsById.containsKey(joiningNode.nodeId())) {
+                Console.log("Joining node already exists");
                 return new CommitResult(true, "Joining node already exists");
             }
 
             if (neighborsById.size() >= maxNeighbors) {
-                Console.log("Accepting " + joiningNode + " will make this node exceed neighbor limit.",
-                        Constant.BG_YELLOW);
+                Console.log("Accepting " + joiningNode + " will exceed neighbor limit.",
+                        Constant.BG_PURPLE);
                 return new CommitResult(false, "Small join target has no free neighbor slot");
             }
 
@@ -271,8 +286,7 @@ public final class ConnectionManager {
             version++;
             refreshHealthStateLocked();
 
-            Console.log("Node " + localAddress.nodeId()
-                    + " accepted small-network joining node " + joiningNode
+            Console.log("Node " + localAddress.nodeId() + " accepted small-network joining " + joiningNode
                     + ". neighbors=" + neighborsById.values());
 
             return new CommitResult(true, "small join commit accepted");
@@ -318,6 +332,15 @@ public final class ConnectionManager {
         }
     }
 
+    public List<String> neighborIds() {
+        lock.lock();
+        try {
+            return new ArrayList<>(neighborsById.keySet());
+        } finally {
+            lock.unlock();
+        }
+    }
+
     public boolean isInNetwork() {
         return isInNetwork;
     }
@@ -341,6 +364,7 @@ public final class ConnectionManager {
         lock.lock();
         try {
             if (!processedTransactions.add("REWIRE_SCHEME:" + txId)) {
+                Console.log("TxID already exists");
                 return true;
             }
 
@@ -353,7 +377,17 @@ public final class ConnectionManager {
             }
 
             if (neighborsById.size() > maxNeighbors) {
+                // maybe not rollback because trust?
+                // if (connectsTo != null) {
+                // neighborsById.remove(connectsTo.nodeId());
+                // }
+
+                // if (disconnectsFrom != null) {
+                // neighborsById.put(disconnectsFrom.nodeId(), disconnectsFrom);
+                // }
+
                 refreshHealthStateLocked();
+                Console.log("Neighbors exceeded");
                 return false;
             }
 
@@ -364,7 +398,7 @@ public final class ConnectionManager {
                     + " applied scheme. connectsTo=" + connectsTo
                     + ", disconnectsFrom=" + disconnectsFrom
                     + ", reason=" + reason
-                    + ", neighbors=" + neighborsById.values());
+                    + ", neighbors=" + neighborsById.keySet());
 
             return true;
         } finally {

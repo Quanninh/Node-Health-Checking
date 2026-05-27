@@ -225,25 +225,4 @@ public record AgentConfig(
         return values;
     }
 
-    // private static List<NodeAddress> parseNeighborList(String rawNeighbors) {
-    // List<NodeAddress> neighborList = new ArrayList<>();
-
-    // if (rawNeighbors == null || rawNeighbors.isBlank()) {
-    // return neighborList;
-    // }
-
-    // String[] nodeTokens = rawNeighbors.split(",");
-
-    // for (String token : nodeTokens) {
-    // String trimmed = token.trim();
-
-    // if (trimmed.isBlank()) {
-    // continue;
-    // }
-
-    // neighborList.add(NodeAddress.fromString(trimmed));
-    // }
-
-    // return neighborList;
-    // }
 }

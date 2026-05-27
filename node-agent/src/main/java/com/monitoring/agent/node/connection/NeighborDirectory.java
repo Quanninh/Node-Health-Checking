@@ -199,7 +199,7 @@ public class NeighborDirectory {
      * Gets the state of a node (includes #getStatus).
      * 
      * @param nodeId
-     * @return
+     * @return the NodeState
      * @see NodeState
      */
     public Optional<NodeState> getState(String nodeId) {
@@ -237,7 +237,7 @@ public class NeighborDirectory {
      * Gets the status of a node without syncing with the connection manager.
      * 
      * @param nodeId
-     * @return
+     * @return the node status
      */
     private NodeStatus getStatusWithoutSync(String nodeId) {
         NodeState state = nodeStates.get(nodeId);
@@ -286,8 +286,7 @@ public class NeighborDirectory {
         NodeState state = nodeStates.get(subjectNodeId);
 
         if (state == null) {
-            Console.log("Gossip subjectNodeId " + subjectNodeId
-                    + " is not in this node's neighborList. Message is recorded but not added.");
+            Console.log("Not a neighbor with " + subjectNodeId + " -> skip");
             return;
         }
 

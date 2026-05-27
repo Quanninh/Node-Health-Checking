@@ -30,14 +30,16 @@ public class Console {
     }
 
     public static void log(String message, String color) {
-        String lineConsole = "[" + Constant.NOW() + "] " + color + message + Constant.RESET;
+        String lineConsole = "[" + Constant.NOW() + "] " + " [" + Thread.currentThread().getStackTrace()[2] + "]"
+                + color + message + Constant.RESET;
         String line = "[" + Constant.NOW() + "] " + message;
         System.out.println(lineConsole);
         writeToFile(line);
     }
 
     public static void log(String message) {
-        System.out.println("[" + Constant.NOW() + "] " + message);
+        System.out.println(
+                "[" + Constant.NOW() + "] " + " [" + Thread.currentThread().getStackTrace()[2] + "]" + message);
         writeToFile("[" + Constant.NOW() + "] " + message);
     }
 

@@ -61,12 +61,9 @@ public class DashboardReporter {
 
         return httpClient
                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenAccept(response -> Console.log(
-                        "Registered self with dashboard. Status: " + response.statusCode(),
-                        Constant.CYAN))
+                .thenAccept(response -> Console.log("Registered self with dashboard. Status: " + response.statusCode()))
                 .exceptionally(error -> {
-                    Console.log("Could not register with dashboard: " + error.getMessage(),
-                            Constant.RED);
+                    Console.log("Could not register with dashboard: " + error.getMessage(), Constant.RED);
                     return null;
                 });
     }
@@ -114,11 +111,9 @@ public class DashboardReporter {
         return httpClient
                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .thenAccept(response -> Console
-                        .log("UNREACHABLE report sent to dashboard. Status: "
-                                + response.statusCode(), Constant.PURPLE))
+                        .log("UNREACHABLE report sent to dashboard. Status: " + response.statusCode()))
                 .exceptionally(error -> {
-                    Console.log("Could not report unreachable node to dashboard: "
-                            + error.getMessage(), Constant.RED);
+                    Console.log("Could not report UNREACHABLE node to dashboard: " + error.getMessage(), Constant.RED);
                     return null;
                 });
     }

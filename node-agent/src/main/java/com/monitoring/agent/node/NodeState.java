@@ -17,8 +17,11 @@ public class NodeState {
     private final List<Double> slidingWindowSeconds;
     private volatile NodeStatus status;
     private volatile long lastAckTimeMs;
+    @SuppressWarnings("unused")
     private volatile LocalDateTime lastAckTime;
+    @SuppressWarnings("unused")
     private volatile LocalDateTime lastSuspicionTime;
+    @SuppressWarnings("unused")
     private volatile LocalDateTime lastUnreachableTime;
     private volatile double phi;
     private volatile int incarnationNumber;
@@ -42,7 +45,7 @@ public class NodeState {
         if (status == NodeStatus.UNREACHABLE) {
             Console.log("ACK received from " + nodeAddress.nodeId()
                     + ", but it is already UNREACHABLE locally. "
-                    + "It must rejoin as a new node instance.", Constant.PURPLE);
+                    + "It must rejoin as a new node instance.", Constant.PINK);
             return;
         }
 
@@ -51,13 +54,9 @@ public class NodeState {
         if (lastAckTimeMs > 0) {
             double intervalSeconds = (now - pingSendTime) / 1000.0;
             phiDetector.updateSlidingWindow(slidingWindowSeconds, intervalSeconds);
-            // Just for make sure the elapse time is correct
 
             Console.log("ACK received from node " + nodeAddress.nodeId()
-                    + " | pingSendTimeMillis=" + pingSendTime
-                    + " | ackReceiveTimeMillis=" + now
-                    + " | elapsed=" + String.format("%.4f", intervalSeconds) + " seconds"
-                    + " | slidingWindow=" + slidingWindowSeconds, Constant.YELLOW);
+                    + " | elapsed=" + String.format("%.4f", intervalSeconds) + " seconds", Constant.PURPLE);
         }
 
         this.status = NodeStatus.ALIVE;
@@ -76,13 +75,14 @@ public class NodeState {
      */
     public synchronized void markAliveFromGossip(int messageIncarnationNumber) {
         if (messageIncarnationNumber <= this.incarnationNumber) {
+            Console.log("Older incarnation -> skip");
             return;
         }
 
         if (status == NodeStatus.UNREACHABLE) {
-            Console.log("ALIVE gossip for " + nodeAddress.nodeId()
-                    + " is newer, but local state is UNREACHABLE. Treat this as requiring JOIN/rejoin, not simple recovery.",
-                    Constant.PURPLE);
+            Console.log(
+                    "ALIVE gossip for " + nodeAddress.nodeId() + " is newer, but local state is UNREACHABLE -> skip",
+                    Constant.PINK);
             return;
         }
 
@@ -100,6 +100,7 @@ public class NodeState {
      */
     public synchronized void markSuspected(double phi) {
         if (status == NodeStatus.UNREACHABLE) {
+            Console.log("Node is unreachable -> no need to mark suspected");
             return;
         }
 
@@ -117,6 +118,7 @@ public class NodeState {
      */
     public synchronized void markSuspectedFromGossip(int messageIncarnationNumber) {
         if (status == NodeStatus.UNREACHABLE || messageIncarnationNumber < this.incarnationNumber) {
+            Console.log("Node is unreachable or old incarnation -> skip");
             return;
         }
 
@@ -132,6 +134,7 @@ public class NodeState {
      */
     public synchronized void markWarning(double phi) {
         if (status == NodeStatus.UNREACHABLE) {
+            Console.log("Node is unreachable");
             return;
         }
 
@@ -160,6 +163,7 @@ public class NodeState {
      */
     public synchronized void markUnreachableFromGossip(int messageIncarnationNumber) {
         if (messageIncarnationNumber < this.incarnationNumber) {
+            Console.log("Old incarnation -> skip");
             return;
         }
 
@@ -195,15 +199,9 @@ public class NodeState {
 
     @Override
     public String toString() {
-        return "NodeState{\n\tnodeAddress=" + Constant.CYAN + nodeAddress + Constant.RESET +
-                ", status=" + Constant.YELLOW + status + Constant.RESET +
-                ",\n\tphi=" + String.format("%.4f", phi) +
-                ", slidingWindowSeconds=" + slidingWindowSeconds +
-                ", lastAckTime=" + lastAckTime +
-                ", lastSuspicionTime=" + lastSuspicionTime +
-                ", lastUnreachableTime=" + lastUnreachableTime +
-                ", incarnationNumber=" + incarnationNumber +
-                "}";
+        return "NodeState{\n\tnodeAddress=" + Constant.CYAN + Constant.BG_RED + nodeAddress + Constant.RESET +
+                ", status=" + Constant.PURPLE + Constant.BG_RED + status + Constant.RESET +
+                "\n}";
     }
 
 }
