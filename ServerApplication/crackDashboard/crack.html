@@ -141,6 +141,8 @@
     </div>
 
     <script>
+        const DASHBOARD_URL = `${window.location.protocol}//${window.location.hostname}:6789/api`;
+        const CRACK_PASSWORD_API = `${DASHBOARD_URL}/crack-password`;
 
         async function crackPassword() {
 
@@ -166,7 +168,7 @@
 
             try {
 
-                const response = await fetch("http://localhost:6789/api/crack-password", {
+                const response = await fetch(CRACK_PASSWORD_API, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"

@@ -37,12 +37,13 @@ public class NodeHttpServer {
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final String nodeId;
 
-    private final String springResultUrl = "http://localhost:6789/api/node/result";
+    private final String springResultUrl;
 
-    public NodeHttpServer(String nodeID, int port) {
+    public NodeHttpServer(String nodeID, int port, String dashboardURL) {
         this.nodeId = nodeID;
         this.port = port;
         this.mapper = new ObjectMapper();
+        this.springResultUrl = dashboardURL + "/node/result";
 
         /**
          * Fixed thread pool for parallel cracking jobs.
