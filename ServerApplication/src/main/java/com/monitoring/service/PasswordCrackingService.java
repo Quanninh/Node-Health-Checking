@@ -116,6 +116,24 @@ public class PasswordCrackingService {
                 System.currentTimeMillis() - startTime);
     }
 
+    /**
+     * Assigns the next available password range to a node.
+     *
+     * <p>If the node accepts the task:
+     * <ul>
+     *     <li>The range is recorded as assigned</li>
+     *     <li>The active task counter is incremented</li>
+     * </ul>
+     *
+     * <p>If no ranges remain and no active tasks exist,
+     * the cracking process is marked as complete.
+     *
+     * @param node The node
+     * that will receive the next range
+     * @return {@code true} if a range was successfully assigned,
+     *         otherwise {@code false}
+     */
+
     private boolean assignNextRange(Node node) {
         if (crackingDone) {
             return false;
@@ -153,6 +171,24 @@ public class PasswordCrackingService {
         pendingRanges.offer(range);
         return false;
     }
+
+    /**
+     * Sends a password cracking task to a node through HTTP.
+     *
+     * <p>The request contains:
+     * <ul>
+     *     <li>The target hash</li>
+     *     <li>The assigned range start</li>
+     *     <li>The assigned range end</li>
+     * </ul>
+     *
+     * @param node The destination node
+     * @param hash The password hash to crack
+     * @param rangeStart The start index of the assigned range
+     * @param rangeEnd The end index of the assigned range
+     * @return {@code true} if the node accepted the task,
+     *         otherwise {@code false}
+     */
 
     private boolean sendTaskToNode(
             Node node,
@@ -206,6 +242,21 @@ public class PasswordCrackingService {
         }
     }
 
+    /**
+     * Handles the cracking result returned by a node.
+     *
+     * <p>This method:
+     * <ul>
+     *     <li>Removes the node's assigned range</li>
+     *     <li>Stores the cracking result</li>
+     *     <li>Updates active task tracking</li>
+     *     <li>Stops all cracking if the password is found</li>
+     *     <li>Assigns a new range if more work exists</li>
+     * </ul>
+     *
+     * @param response The cracking result returned by a node
+     */
+
     public void handleNodeResult(
             CrackingResponse response) {
 
@@ -252,6 +303,19 @@ public class PasswordCrackingService {
         }
     }
 
+    /**
+     * Builds randomized password search ranges.
+     *
+     * <p>The total password space is divided into smaller chunks
+     * of fixed size to distribute work evenly across nodes.
+     *
+     * <p>The resulting ranges are shuffled to improve load balancing.
+     *
+     * @param totalPasswords Total number of possible passwords
+     * @param rangeSize Number of password attempts per range
+     * @return A queue containing randomized password ranges
+     */
+
     private Queue<long[]> buildRanges(
         long totalPasswords,
         long rangeSize) {
@@ -276,6 +340,21 @@ public class PasswordCrackingService {
         return new ConcurrentLinkedQueue<>(ranges);
     }
 
+    /**
+     * Handles node failure during distributed cracking.
+     *
+     * <p>If the failed node had an assigned range:
+     * <ul>
+     *     <li>The range is returned to the pending queue</li>
+     *     <li>The active task counter is decremented</li>
+     * </ul>
+     *
+     * <p>If no pending ranges and no active tasks remain,
+     * the cracking process is marked as complete.
+     *
+     * @param nodeId The ID of the failed node
+     */
+
     public void handleNodeFailure(
         String nodeId) {
 
@@ -299,6 +378,18 @@ public class PasswordCrackingService {
             crackingDone = true;
         }
     }
+
+    /**
+     * Calculates the total number of possible passwords
+     * based on the configured character set and password length.
+     *
+     * <p>Formula:
+     * <pre>
+     * total = CHARSET.length() ^ PASSWORD_LENGTH
+     * </pre>
+     *
+     * @return Total number of possible password combinations
+     */
 
     private long getTotalPossiblePasswords() {
 
