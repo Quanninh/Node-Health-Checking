@@ -40,6 +40,7 @@ public class NodeController {
             @RequestBody FailureReport report) {
 
         nodeService.processFailureReport(report);
+        passwordCrackingService.handleNodeFailure(report.getFailedNodeId());
 
         return ResponseEntity.ok(
                 "Failure report received");

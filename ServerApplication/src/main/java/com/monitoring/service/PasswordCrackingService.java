@@ -9,11 +9,14 @@ import com.monitoring.repository.NodeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Map;
+import java.util.ArrayList;
+import java.util.Collections;
 
 @Service
 public class PasswordCrackingService {
@@ -39,6 +42,11 @@ public class PasswordCrackingService {
     private volatile String currentHash;
     private volatile boolean crackingDone = false;
 
+    private final Map<String, long[]> assignedRanges = new ConcurrentHashMap<>();
+
+
+        
+
     public PasswordCrackResponse crackPassword(
             String hash) throws Exception {
 
@@ -49,6 +57,7 @@ public class PasswordCrackingService {
         currentHash = hash;
         activeTasks.set(0);
         resultStore.clear();
+        assignedRanges.clear();
 
         pendingRanges.clear();
         pendingRanges.addAll(buildRanges(getTotalPossiblePasswords(), RANGE_SIZE));
@@ -131,7 +140,13 @@ public class PasswordCrackingService {
                 range[1]);
 
         if (accepted) {
+
+            assignedRanges.put(
+                    node.getId(),
+                    range);
+
             activeTasks.incrementAndGet();
+
             return true;
         }
 
@@ -197,6 +212,8 @@ public class PasswordCrackingService {
         System.out.println(
                 "Received result from node: "
                         + response.getNodeId());
+        
+        assignedRanges.remove(response.getNodeId());
 
         if (crackingDone && !response.isFound()) {
             System.out.println("Ignoring late not-found result from node: " + response.getNodeId());
@@ -236,10 +253,10 @@ public class PasswordCrackingService {
     }
 
     private Queue<long[]> buildRanges(
-            long totalPasswords,
-            long rangeSize) {
+        long totalPasswords,
+        long rangeSize) {
 
-        Queue<long[]> queue = new LinkedList<>();
+        List<long[]> ranges = new ArrayList<>();
 
         for (long start = 0; start < totalPasswords; start += rangeSize) {
 
@@ -247,14 +264,40 @@ public class PasswordCrackingService {
                     start + rangeSize - 1,
                     totalPasswords - 1);
 
-            queue.add(
+            ranges.add(
                     new long[] {
                             start,
                             end
                     });
         }
 
-        return queue;
+        Collections.shuffle(ranges);
+
+        return new ConcurrentLinkedQueue<>(ranges);
+    }
+
+    public void handleNodeFailure(
+        String nodeId) {
+
+        long[] range = assignedRanges.remove(nodeId);
+
+        if (range != null) {
+
+            System.out.println(
+                    "Reassigning lost range from failed node "
+                            + nodeId);
+
+            pendingRanges.offer(range);
+
+            activeTasks.updateAndGet(
+                    value -> Math.max(0, value - 1));
+        }
+
+        if (pendingRanges.isEmpty()
+                && activeTasks.get() == 0) {
+
+            crackingDone = true;
+        }
     }
 
     private long getTotalPossiblePasswords() {
