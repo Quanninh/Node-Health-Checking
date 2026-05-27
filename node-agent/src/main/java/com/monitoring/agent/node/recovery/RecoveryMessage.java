@@ -18,7 +18,7 @@ public record RecoveryMessage(
         String messageId,
         String repairEpoch,
         NodeAddress sender,
-        NodeAddress subject, // ??
+        NodeAddress subject,
         NodeAddress target,
         List<NodeAddress> neighbors,
         int ttl,

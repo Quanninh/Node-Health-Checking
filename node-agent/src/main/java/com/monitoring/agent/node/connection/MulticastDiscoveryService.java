@@ -136,11 +136,8 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                         packet.getLength(),
                         StandardCharsets.UTF_8);
 
-                Console.log("Received by Multicast Discovery Service. Raw message: " + raw, Constant.BG_PURPLE);
-
                 DiscoveryMessage message = DiscoveryMessage.decode(raw);
 
-                Console.log(message.transactionId() + message.type());
                 if (message.type() != DiscoveryMessageType.JOIN_ACK) {
                     Console.log("Not JOIN_ACK received, discarded.", Constant.PURPLE);
                     continue;
@@ -214,7 +211,7 @@ public final class MulticastDiscoveryService implements AutoCloseable {
         multicastSocket.send(packet);
 
         Console.log("Sent multicast JOIN_REQUEST txId=" + txId + ", sequence=" + sequence,
-                Constant.CYAN + Constant.BLINK);
+                Constant.CYAN);
     }
 
     /**
@@ -235,7 +232,8 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                         packet.getLength(),
                         StandardCharsets.UTF_8);
 
-                Console.log("Received by Multicast Discovery Service. Raw message: " + raw, Constant.BG_PURPLE);
+                // Console.log("Received by Multicast Discovery Service. Raw message: " + raw,
+                // Constant.BG_PURPLE);
 
                 DiscoveryMessage message = DiscoveryMessage.decode(raw);
 

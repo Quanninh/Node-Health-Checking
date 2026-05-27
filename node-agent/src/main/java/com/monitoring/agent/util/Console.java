@@ -10,7 +10,6 @@ import com.monitoring.agent.constant.Constant;
 public class Console {
 
     private static String nodeId;
-
     private static final String LOG_FILE = "log.txt";
 
     private static synchronized void writeToFile(String text) {
@@ -20,8 +19,7 @@ public class Console {
 
             out.println(nodeId + "::" + text);
 
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (IOException ignore) {
         }
     }
 

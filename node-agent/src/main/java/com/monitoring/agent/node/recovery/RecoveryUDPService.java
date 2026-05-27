@@ -49,6 +49,14 @@ public class RecoveryUDPService implements AutoCloseable {
         Console.log("Recovery UDP Service started");
     }
 
+    /**
+     * If the current node is SUFFICIENT, returns false.
+     * <p>
+     * If the current node is DEFICIENT,
+     * 
+     * @param reason
+     * @return
+     */
     public boolean gossipSelfIfDeficient(String reason) {
         if (connectionManager.getHealthState() != HealthState.DEFICIENT) {
             return false;
@@ -97,11 +105,12 @@ public class RecoveryUDPService implements AutoCloseable {
         for (NodeAddress neighbor : connectionManager.neighborAddresses()) {
             try {
                 send(neighbor, message);
-                Console.log("Sent DEFICIENT message [" + message + "] to " + neighbor + " success",
+                Console.log("Sent DEFICIENT message [" + message.messageId() + "] to " + neighbor + " success",
                         Constant.BG_CYAN + Constant.BOLD);
             } catch (IOException e) {
                 Console.log(
-                        "Failed to send message [" + message + "] to " + neighbor + " because " + e.getMessage(),
+                        "Failed to send message [" + message.messageId() + "] to " + neighbor + " because "
+                                + e.getMessage(),
                         Constant.RED);
             }
         }
@@ -181,7 +190,7 @@ public class RecoveryUDPService implements AutoCloseable {
                                     System.currentTimeMillis(), message.incarnation()));
 
                     Console.log(
-                            "Gossiping DEFICIENT message [" + message + "] to " + neighbor + " success",
+                            "Gossiping DEFICIENT message [" + message + "] to " + neighbor.toString() + " success",
                             Constant.BG_CYAN + Constant.BOLD);
                 } catch (IOException e) {
                     Console.log(
@@ -201,12 +210,8 @@ public class RecoveryUDPService implements AutoCloseable {
      * @throws IOException if sending fails
      */
     public void send(NodeAddress target, RecoveryMessage message) throws IOException {
-        Console.log("Before sending: " + message + " to " + target.toString(), Constant.BG_GREEN);
-
         String encodedMessage = message.encode();
         udpCoordinator.send(target.host(), target.port(), UdpPacketType.RECOVERY, encodedMessage);
-
-        Console.log("After sending: " + message + " to " + target.toString(), Constant.BG_GREEN);
     }
 
     @Override

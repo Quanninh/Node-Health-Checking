@@ -11,7 +11,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
-import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.GossipMessageType;
 import com.monitoring.agent.node.NodeAddress;
 import com.monitoring.agent.node.NodeState;
@@ -56,16 +55,12 @@ public class NeighborDirectory {
             return Optional.empty();
         }
 
-        Console.log("neighbors: " + neighbors + " size=" + neighbors.size() + " currentId: " + nextIndex,
-                Constant.BG_YELLOW);
         if (nextIndex >= neighbors.size()) {
             Collections.shuffle(neighbors);
             nextIndex = 0;
-            Console.log("Completed one full neighbor cycle. Shuffled reachable neighbors: " + neighbors);
         }
 
         NodeAddress selected = neighbors.get(nextIndex);
-        // nextIndex = (nextIndex + 1) % neighbors.size();
         nextIndex++;
         return Optional.of(selected);
     }
@@ -99,8 +94,6 @@ public class NeighborDirectory {
         for (String nodeId : unreachableNodeIds) {
             connectionManager.remove(nodeId, "Failure detector marked node UNREACHABLE.");
             nodeStates.remove(nodeId);
-
-            Console.log("Reached here in the code of neighbor directory", Constant.BG_BLUE);
         }
 
         if (nextIndex > connectionManager.size()) {
@@ -302,11 +295,6 @@ public class NeighborDirectory {
             case SUSPECTED -> state.markSuspectedFromGossip(incarnationNumber);
             case UNREACHABLE -> state.markUnreachableFromGossip(incarnationNumber);
             case ALIVE -> state.markAliveFromGossip(incarnationNumber);
-            // case JOIN -> {
-            // if (incarnationNumber > state.getIncarnationNumber()) {
-            // state.markAliveFromGossip(incarnationNumber);
-            // }
-            // }
         }
     }
 

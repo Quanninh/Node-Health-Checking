@@ -152,7 +152,8 @@ public class GossipService {
         }
 
         if (seenMessages.contains(message.messageId())) {
-            Console.log("Duplicate gossip message ignored: " + message.messageId());
+            Console.log("Duplicate gossip message ignored: " + message.messageId() + " from " + message.sourceNodeId()
+                    + ", type=" + message.messageType());
             return;
         }
 

@@ -1,9 +1,9 @@
 package com.monitoring.agent.node.recovery;
 
+import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.time.Instant;
 
 import com.monitoring.agent.node.NodeAddress;
 
@@ -84,7 +84,6 @@ public class NetworkTopologyCache {
         });
     }
 
-    // TODO: Clear deficient is not called anywhere
     /**
      * Marks a node as sufficient (not deficient).
      * 
@@ -94,17 +93,6 @@ public class NetworkTopologyCache {
         if (node != null) {
             deficientNodes.remove(node.nodeId());
         }
-    }
-
-    /**
-     * Gets the list of deficient nodes.
-     * 
-     * @return the list of deficient nodes
-     */
-    public Set<NodeAddress> getDeficientNodes() {
-        return deficientNodes.values().stream()
-                .map(DeficientNodeRecord::node)
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
     }
 
     /**

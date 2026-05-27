@@ -80,18 +80,13 @@ public final class MulticastJoinCoordinator {
                         txId + ":small:" + directTarget.nodeId());
 
                 if (!committed) {
-                    Console.log("Small-network commit failed for "
-                            + directTarget + committed, Constant.BG_BLUE);
+                    Console.log("Small-network commit failed for " + directTarget + committed, Constant.BG_BLUE);
                     continue;
                 }
 
-                connectionManager.addIfSpace(
-                        directTarget,
-                        "small-network committed join");
+                connectionManager.addIfSpace(directTarget, "small-network committed join");
 
-                Console.log("Small-network bidirectional join established between "
-                        + localAddress.nodeId()
-                        + " and "
+                Console.log("Small-network bidirectional join established between " + localAddress.nodeId() + " and "
                         + directTarget.nodeId());
 
                 continue;
@@ -105,45 +100,30 @@ public final class MulticastJoinCoordinator {
                     txId + ":direct:" + directTarget.nodeId());
 
             if (!directCommitted) {
-                Console.log("Direct target commit failed for "
-                        + directTarget);
+                Console.log("Direct target commit failed for " + directTarget);
                 continue;
             }
 
             boolean victimCommitted = membershipControlService.commitVictim(
-                    victim,
-                    localAddress,
-                    directTarget,
-                    txId + ":victim:" + victim.nodeId());
+                    victim, localAddress, directTarget, txId + ":victim:" + victim.nodeId());
 
             if (!victimCommitted) {
-                Console.log("Victim commit failed for "
-                        + victim
-                        + ". Failure detector/repair should fix this later.");
+                Console.log("Victim commit failed for " + victim + ". Failure detector/repair should fix this later.");
                 continue;
             }
 
-            connectionManager.addIfSpace(
-                    directTarget,
-                    "scaled join direct target");
+            connectionManager.addIfSpace(directTarget, "scaled join direct target");
 
-            connectionManager.addIfSpace(
-                    victim,
-                    "scaled join evicted handover");
+            connectionManager.addIfSpace(victim, "scaled join evicted handover");
 
-            Console.log("Node "
-                    + localAddress.nodeId()
-                    + " successfully connected with direct target "
-                    + directTarget
-                    + " and handed over evicted node "
-                    + victim);
+            Console.log("Node " + localAddress.nodeId()
+                    + " successfully connected with direct target " + directTarget
+                    + " and handed over evicted node " + victim);
         }
 
-        Console.log("Hybrid join complete. Current neighbors="
-                + connectionManager.neighborAddresses());
+        Console.log("Hybrid join complete. Current neighbors=" + connectionManager.neighborAddresses());
 
-        connectionManager.setInNetwork(
-                !connectionManager.neighborAddresses().isEmpty());
+        connectionManager.setInNetwork(!connectionManager.neighborAddresses().isEmpty());
     }
 
 }

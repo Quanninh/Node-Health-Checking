@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.NodeAddress;
 import com.monitoring.agent.node.connection.ConnectionManager;
 import com.monitoring.agent.node.transport.UdpCoordinator;
@@ -39,12 +40,13 @@ public final class RewiringCoordinator {
 
     /**
      * Used while this node is sending REWIRE_REQ and waiting for reply.
-     *
+     * <p>
      * Requirement:
+     * <p>
      * While defA is waiting for REWIRE_ACK, if it receives another REWIRE_REQ,
      * it must deny immediately.
      */
-    private volatile boolean initiatingDeficientRequest = false;
+    private volatile boolean isInitiatingDeficientRequest = false;
 
     /**
      * One node may be REWIRING_NODE for multiple recovery sessions,
@@ -91,6 +93,13 @@ public final class RewiringCoordinator {
         });
     }
 
+    /**
+     * This function is called when the node receives a deficient record from
+     * another node. The local node will marks the other node as deficient, and
+     * attempts rewiring with that node.
+     * 
+     * @param record the deficient node record
+     */
     public void onDeficientNodeDiscovered(DeficientNodeRecord record) {
         if (record == null || record.node() == null) {
             return;
@@ -158,6 +167,15 @@ public final class RewiringCoordinator {
         }
     }
 
+    /**
+     * Attempts a full rewiring between two deficient nodes. They will first
+     * initiate the rewiring session by sending REWIRE_SESSION_REQ. This node will
+     * try to get the LEADER role, because only the LEADER can continue the process.
+     * 
+     * @param defA
+     * @param defB
+     * @return
+     */
     private boolean runFullRewiring(NodeAddress defA, NodeAddress defB) {
         String requestId = UUID.randomUUID().toString();
 
@@ -242,14 +260,8 @@ public final class RewiringCoordinator {
             boolean committed = executeScheme(recoveryId, defA, defB, c, d);
 
             if (committed) {
-                Console.log("[REWIRE] Node "
-                        + defA.nodeId()
-                        + " successfully rewired with "
-                        + d.nodeId()
-                        + " while breaking edge "
-                        + c.nodeId()
-                        + "-"
-                        + d.nodeId());
+                Console.log("[REWIRE] Node " + defA.nodeId() + " successfully rewired with " + d.nodeId()
+                        + " while breaking edge " + c.nodeId() + "-x-" + d.nodeId());
                 return true;
             }
         }
@@ -353,18 +365,14 @@ public final class RewiringCoordinator {
      *         otherwise {@code false}
      */
     private boolean executeScheme(String recoveryId, NodeAddress defA, NodeAddress defB, NodeAddress c, NodeAddress d) {
+        RewireMessage toC = RewireMessage.of(RecoveryMessageType.REWIRE_SCHEME_REQ, recoveryId, localAddress,
+                defA, defB, c, d, defB, d, List.of(), List.of(), null);
 
-        RewireMessage toC = RewireMessage.of(RecoveryMessageType.REWIRE_SCHEME_REQ, recoveryId, localAddress, defA,
-                defB,
-                c, d, defB, d, List.of(), List.of(), null);
+        RewireMessage toD = RewireMessage.of(RecoveryMessageType.REWIRE_SCHEME_REQ, recoveryId, localAddress,
+                defA, defB, c, d, defA, c, List.of(), List.of(), null);
 
-        RewireMessage toD = RewireMessage.of(RecoveryMessageType.REWIRE_SCHEME_REQ, recoveryId, localAddress, defA,
-                defB,
-                c, d, defA, c, List.of(), List.of(), null);
-
-        RewireMessage toB = RewireMessage.of(RecoveryMessageType.REWIRE_SCHEME_REQ, recoveryId, localAddress, defA,
-                defB,
-                c, d, c, null, List.of(), List.of(), null);
+        RewireMessage toB = RewireMessage.of(RecoveryMessageType.REWIRE_SCHEME_REQ, recoveryId, localAddress,
+                defA, defB, c, d, c, null, List.of(), List.of(), null);
 
         CompletableFuture<RewireMessage> ackC = sendAsync(c, toC);
         CompletableFuture<RewireMessage> ackD = sendAsync(d, toD);
@@ -485,13 +493,15 @@ public final class RewiringCoordinator {
     }
 
     /**
-     * Handles when the node receives a REWIRE_REQ. If the node can accept the
+     * Handles when the node receives a REWIRE_REQ or REWIRE_SESSION_REQ. If the
+     * node can accept the
      * deficient node as a neighbor, sends back REWIRE_ACK, otherwise, REWIRE_DENY.
      * 
      * @param message the REWIRE_REQ message
      */
     private void handleSessionRequest(RewireMessage message) {
         if (!canAcceptSessionRequest(message)) {
+            Console.log("REASON: !canAcceptSessionRequest(message)");
             sendOnly(message.sender(), reply(message, RecoveryMessageType.REWIRE_DENY, false, null));
             return;
         }
@@ -499,6 +509,7 @@ public final class RewiringCoordinator {
         NodeAddress leader = electLeader(message.defA(), message.defB());
 
         if (!leader.nodeId().equals(message.sender().nodeId())) {
+            Console.log("REASON:!leader.nodeId().equals(message.sender().nodeId())");
             sendOnly(message.sender(), reply(message, RecoveryMessageType.REWIRE_DENY, false, null));
             return;
         }
@@ -576,15 +587,22 @@ public final class RewiringCoordinator {
         }
     }
 
+    /**
+     * When received a NEIGHBOR_QUERY message. Assume this is node C.
+     * <p>
+     * Node C finds a candidate node D which is a neighbor of C but not of A. Then,
+     * C tries to become the rewiring node, which will connects to defB and
+     * disconnects from D. If possible, C will sends a REWIRING_PROPOSE to D, and if
+     * D accepts, C returns a NEIGHBOR_QUERY_ACK back to defA with D's address.
+     * 
+     * @param message the rewire message
+     */
     private void handleNeighborsQuery(RewireMessage message) {
-        NodeAddress d = findCandidateD(
-                message.nodeC(),
-                message.defANeighbors());
+        Console.log("Just received NEIGHBORS_QUERY", Constant.BG_BLUE);
+        NodeAddress d = findCandidateD(message.nodeC(), message.defANeighbors());
 
         if (d == null) {
-            sendOnly(
-                    message.sender(),
-                    reply(message, RecoveryMessageType.NEIGHBORS_QUERY_RESPONSE, false, null));
+            sendOnly(message.sender(), reply(message, RecoveryMessageType.NEIGHBORS_QUERY_RESPONSE, false, null));
             return;
         }
 
@@ -633,6 +651,7 @@ public final class RewiringCoordinator {
     }
 
     private void handleRewiringPropose(RewireMessage message) {
+        Console.log("Just received REWIRING_PROPOSE", Constant.BG_BLUE);
         boolean valid = message.nodeC() != null
                 && message.nodeD() != null
                 && connectionManager.containsNode(message.nodeC().nodeId())
@@ -748,10 +767,14 @@ public final class RewiringCoordinator {
             refreshHealthState();
 
             if (connectionManager.getHealthState() != HealthState.DEFICIENT) {
+                Console.log("[DEBUG] I am not DEFICIENT");
                 return false;
             }
 
-            return recoveryRole == RecoveryRole.FREE;
+            Console.log("[DEBUG] Am I free OR REWIRING_NODE? "
+                    + (recoveryRole == RecoveryRole.FREE || recoveryRole == RecoveryRole.REWIRING_NODE)
+                    + " currently: " + recoveryRole);
+            return recoveryRole == RecoveryRole.FREE || recoveryRole == RecoveryRole.REWIRING_NODE;
         } finally {
             roleLock.unlock();
         }
@@ -823,7 +846,7 @@ public final class RewiringCoordinator {
         try {
             refreshHealthState();
 
-            if (initiatingDeficientRequest) {
+            if (isInitiatingDeficientRequest) {
                 return false;
             }
 
@@ -837,6 +860,21 @@ public final class RewiringCoordinator {
         }
     }
 
+    /**
+     * If node is SUFFICIENT -> {@code false}
+     * <p>
+     * If node if not FREE -> {@code false}
+     * <p>
+     * If node is not LEADER -> {@code false}
+     * <p>
+     * If node is already initiating a request and node is a LEADER -> {@code false}
+     * <p>
+     * {@code TRUE} if node if DEFICIENT, FREE, now a LEADER and NOT initiating any
+     * requests.
+     * 
+     * @param message
+     * @return
+     */
     private boolean canAcceptSessionRequest(RewireMessage message) {
         roleLock.lock();
         try {
@@ -856,7 +894,7 @@ public final class RewiringCoordinator {
                 return false;
             }
 
-            if (initiatingDeficientRequest && leader.nodeId().equals(localAddress.nodeId())) {
+            if (isInitiatingDeficientRequest && leader.nodeId().equals(localAddress.nodeId())) {
                 return false;
             }
 
@@ -893,24 +931,22 @@ public final class RewiringCoordinator {
 
     private boolean tryBecomeRewiringNode(String recoveryId, NodeAddress c, NodeAddress d, NodeAddress connectsTo,
             NodeAddress disconnectsFrom) {
+        Console.log("Trying to become the REWIRING_NODE. c=" + c + ", d=" + d + ", connectsTo=" + connectsTo
+                + ", disconnectsFrom=" + disconnectsFrom);
 
         roleLock.lock();
         try {
             refreshHealthState();
 
-            /*
-             * DEFICIENT_LEADER and DEFICIENT_FELLOW are exclusive.
-             * They cannot become REWIRING_NODE in another session.
-             */
+            // DEFICIENT_LEADER and DEFICIENT_FELLOW are exclusive.
+            // They cannot become REWIRING_NODE in another session.
             if (recoveryRole == RecoveryRole.DEFICIENT_LEADER
                     || recoveryRole == RecoveryRole.DEFICIENT_FELLOW) {
                 return false;
             }
 
-            /*
-             * Both DEFICIENT and SUFFICIENT nodes may become REWIRING_NODE,
-             * but only if the operation is degree-neutral. (?)
-             */
+            // Both DEFICIENT and SUFFICIENT nodes may become REWIRING_NODE,
+            // but only if the operation is degree-neutral. (?)
             if (!isDegreeNeutralSwap(connectsTo, disconnectsFrom)) {
                 return false;
             }
@@ -932,11 +968,13 @@ public final class RewiringCoordinator {
     }
 
     /**
+     * Releases any edges from the reservation list for the recovery scheme.
      * 
-     * @param recoveryId
+     * @param recoveryId the recovery ID
      */
     private void releaseRewiringReservation(String recoveryId) {
         roleLock.lock();
+        Console.log("RELEASING REWIRING RESERVATIONS!!!");
         try {
             String edgeKey = reservedEdgeByRecoveryId.remove(recoveryId);
 
@@ -946,6 +984,7 @@ public final class RewiringCoordinator {
 
             if (reservedEdgeByRecoveryId.isEmpty()
                     && recoveryRole == RecoveryRole.REWIRING_NODE) {
+                Console.log("ACTUALLY RELEASING YAY OMG!!!");
                 recoveryRole = RecoveryRole.FREE;
             }
 
@@ -974,23 +1013,26 @@ public final class RewiringCoordinator {
                     + connectionManager.getHealthState()
                     + ", recoveryRole="
                     + recoveryRole
-                    + ", neighbors="
-                    + connectionManager.size()
-                    + "/"
-                    + connectionManager.getMaxNeighbors());
+                    + ", neighbors=" + connectionManager.size() + "/" + connectionManager.getMaxNeighbors());
         } finally {
             roleLock.unlock();
         }
     }
 
-    // TODO: Not yet understand
-    // idea: return back to FREE state if having enough neighbor nodes after the
-    // fixing scheme
+    /**
+     * Change the node role back to FREE after the recovery scheme.
+     * 
+     * @param recoveryId the recovery ID
+     */
     private void releaseDeficientRoleIfMatching(String recoveryId) {
         roleLock.lock();
         try {
+            // TODO: This seems problematic!
+            // Recovery Role should be reversed even if the node is still deficient after
+            // the process.
             if (Objects.equals(activeDeficientRecoveryId, recoveryId)
-                    && connectionManager.size() == connectionManager.getMaxNeighbors()) {
+            // && connectionManager.size() == connectionManager.getMaxNeighbors()) {
+            ) {
                 recoveryRole = RecoveryRole.FREE;
                 activeDeficientRecoveryId = null;
             }
@@ -1030,7 +1072,7 @@ public final class RewiringCoordinator {
     private void markInitiatingDeficientRequest(boolean value) {
         roleLock.lock();
         try {
-            initiatingDeficientRequest = value;
+            isInitiatingDeficientRequest = value;
         } finally {
             roleLock.unlock();
         }
