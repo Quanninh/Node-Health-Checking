@@ -116,7 +116,7 @@ public class NodeAgent {
 
         repairCache = new NetworkTopologyCache();
 
-        rewiringCoordinator = new RewiringCoordinator(localAddress, connectionManager, repairCache,
+        rewiringCoordinator = new RewiringCoordinator(localAddress, connectionManager,
                 udpCoordinator);
 
         recoveryUdpService = new RecoveryUDPService(localAddress, repairCache, connectionManager,

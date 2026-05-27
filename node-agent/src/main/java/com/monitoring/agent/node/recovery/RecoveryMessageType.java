@@ -8,14 +8,17 @@ public enum RecoveryMessageType {
 
     /** Requests a direct rewire. */
     REWIRE_REQ_DIRECT,
-    /** 
-     * The receiver sends back to the sender of REWIRE_REQ_DIRECT in case of success.
-     * Once that sender receives this, it adds the receiver node to its neighbor list
+    /**
+     * The receiver sends back to the sender of REWIRE_REQ_DIRECT in case of
+     * success.
+     * Once that sender receives this, it adds the receiver node to its neighbor
+     * list
      * and send REWIRE_DIRECT_COMMIT to the receiver.
      */
     REWIRE_REQ_DIRECT_ACK,
     /**
-     * Message sent to the node that receives REWIRE_REQ_DIRECT. Once it received this message,
+     * Message sent to the node that receives REWIRE_REQ_DIRECT. Once it received
+     * this message,
      * it updates its neighbor list if successful.
      */
     REWIRE_DIRECT_COMMIT,
@@ -26,13 +29,15 @@ public enum RecoveryMessageType {
      */
     REWIRE_SESSION_REQ,
     /**
-     * If the receiver of REWIRE_SESSION_REQ can become DEFICIENT_FELLOW, it 
-     * send back this message to sender. The sender then will become the DEFICIENT_LEADER
+     * If the receiver of REWIRE_SESSION_REQ can become DEFICIENT_FELLOW, it
+     * send back this message to sender. The sender then will become the
+     * DEFICIENT_LEADER
      * and sends REWIRE_SESSION_COMMIT.
      */
     REWIRE_SESSION_ACK,
     /**
-     * Message sent to the node that receives REWIRE_SESSION_REQ. Once it received this message,
+     * Message sent to the node that receives REWIRE_SESSION_REQ. Once it received
+     * this message,
      * it becomes DEFICIENT_FELLOW.
      */
     REWIRE_SESSION_COMMIT,
@@ -51,7 +56,7 @@ public enum RecoveryMessageType {
     /** Returns the neighbor list. */
     NEIGHBORS_QUERY_RESPONSE,
 
-    /** */
+    /** Asks if node D wants to join the rewiring */
     REWIRING_PROPOSE,
     /** */
     REWIRING_PROPOSE_ACK,
