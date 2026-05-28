@@ -141,7 +141,9 @@
     </div>
 
     <script>
-        const DASHBOARD_URL = `${window.location.protocol}//${window.location.hostname}:6789/api`;
+        const DASHBOARD_URL = window.location.protocol === "file:"
+            ? "http://localhost:6789/api"
+            : `${window.location.protocol}//${window.location.hostname}:6789/api`;
         const CRACK_PASSWORD_API = `${DASHBOARD_URL}/crack-password`;
 
         async function crackPassword() {

@@ -9,7 +9,9 @@
  * then this dashboard reads from Spring Boot REST API.
  */
 
-const DASHBOARD_URL = `${window.location.protocol}//${window.location.hostname}:6789/api`;
+const DASHBOARD_URL = window.location.protocol === "file:"
+    ? "http://localhost:6789/api"
+    : `${window.location.protocol}//${window.location.hostname}:6789/api`;
 const API = `${DASHBOARD_URL}/nodes`;
 const FAILURE_REPORTS_API = `${DASHBOARD_URL}/failure-reports`;
 const REFRESH_INTERVAL_MS = 2000;
