@@ -64,9 +64,49 @@ while True:
             G.add_edges_from(edges)
             plt.clf()
             pos = nx.circular_layout(nodes)
-            nx.draw(G, pos, with_labels=True, arrows=True, node_size=2000, font_size=12)
-            plt.title("Live Graph Viewer")
+            # nx.draw(G, pos, with_labels=True, arrows=True, node_size=3000, font_size=12, node_color="#98FF98", edgecolors="#B2B2B2", linewidths=2, width=2.5, arrowsize=25)
+            NODE_SIZE = 4000
+
+            # Draw nodes
+            nx.draw_networkx_nodes(
+                G,
+                pos,
+                node_size=NODE_SIZE,
+                node_color="#98FF98",
+                edgecolors="#B2B2B2",
+                linewidths=2
+            )
+
+            # Draw edges
+            nx.draw_networkx_edges(
+                G,
+                pos,
+                width=2.5,
+                arrows=True,
+                arrowsize=25
+            )
+
+            # Draw labels with dynamic font sizes
+            for node, (x, y) in pos.items():
+                label = str(node)
+
+                # Auto-scale font size based on label length
+                font_size = max(6, min(26, int(26 - len(label) * 2)))
+
+                plt.text(
+                    x,
+                    y,
+                    label,
+                    fontsize=font_size,
+                    ha="center",
+                    va="center",
+                    color="black",
+                    fontweight="bold"
+                )
             plt.draw()
+            plt.axis("off")
+            plt.margins(0.2)
+            plt.tight_layout()
             plt.pause(0.1)
             print("Graph updated")
         plt.pause(1)
