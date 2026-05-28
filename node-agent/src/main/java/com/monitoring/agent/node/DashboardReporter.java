@@ -8,8 +8,10 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import com.monitoring.agent.constant.Constant;
+import com.monitoring.agent.node.connection.ConnectionManager;
 import com.monitoring.agent.util.Console;
 
 /**
@@ -21,13 +23,15 @@ public class DashboardReporter {
     private final String localNodeId;
     private final String dashboardUrl;
     private final HttpClient httpClient;
+    private final ConnectionManager connectionManager;
 
-    public DashboardReporter(String localNodeId, String dashboardUrl) {
+    public DashboardReporter(String localNodeId, String dashboardUrl, ConnectionManager connectionManager) {
         this.localNodeId = localNodeId;
         this.dashboardUrl = removeTrailingSlash(dashboardUrl);
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
+        this.connectionManager = connectionManager;
     }
 
     /**
@@ -42,15 +46,19 @@ public class DashboardReporter {
         // crackingport -> I don't understand why we need crackingport so I will comment
         // it and let the cracking port uses the same as p2p port -> this is just for
         // testing
+        String neighborsJson = connectionManager.neighborIds().stream().map(id -> "\"" + id + "\"")
+                .collect(Collectors.joining(", "));
+
         String json = """
                 {
-                  "id": "%s",
-                  "ipAddress": "%s",
-                  "p2pPort": %d,
-                  "crackingPort": %d,
-                  "status": "UP"
+                    "id": "%s",
+                    "ipAddress": "%s",
+                    "p2pPort": %d,
+                    "crackingPort": %d,
+                    "status": "UP",
+                    "neighbors": [%s]
                 }
-                """.formatted(localNodeId, advertiseHost, p2pPort, crackingPort);
+                """.formatted(localNodeId, advertiseHost, p2pPort, crackingPort, neighborsJson);
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(dashboardUrl + "/heartbeat"))

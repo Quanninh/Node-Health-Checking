@@ -3,6 +3,9 @@ package com.monitoring.agent.node;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.time.Duration;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import com.monitoring.agent.node.agent.AgentConfig;
 import com.monitoring.agent.node.connection.ConnectionManager;
@@ -72,7 +75,9 @@ public class NodeAgent {
                 localAddress,
                 config.maxNeighbors());
 
-        dashboardReporter = new DashboardReporter(config.nodeId(), config.dashboardUrl());
+        nodeServer.setConnectionManager(connectionManager);
+
+        dashboardReporter = new DashboardReporter(config.nodeId(), config.dashboardUrl(), connectionManager);
 
         phiDetector = new PhiAccrualFailure(
                 config.phiWindowSize(),
@@ -162,8 +167,18 @@ public class NodeAgent {
 
         joinCoordinator.joinNetwork();
 
-        dashboardReporter.reportSelfAlive(config.advertiseHost(), nodeServer.getPort(),
-                crackingServer.getPort());
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+        scheduler.scheduleAtFixedRate(() -> {
+            try {
+                dashboardReporter.reportSelfAlive(config.advertiseHost(), nodeServer.getPort(),
+                        crackingServer.getPort());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }, 0, 10, TimeUnit.SECONDS);
+        // dashboardReporter.reportSelfAlive(config.advertiseHost(),
+        // nodeServer.getPort(),
+        // crackingServer.getPort());
 
         failureDetector.start();
 

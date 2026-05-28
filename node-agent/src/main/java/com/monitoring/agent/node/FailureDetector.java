@@ -137,33 +137,34 @@ public class FailureDetector {
     private void handleDirectPingFailure(NodeAddress targetNode) {
         List<NodeAddress> helperNodes = neighborDirectory.selectHelperNodes(targetNode);
 
-        long pingSendTime = System.currentTimeMillis();
+        // long pingSendTime = System.currentTimeMillis();
 
         Console.log("Direct ping failed for " + targetNode.nodeId() + ". helperNodes: " + helperNodes, Constant.RED);
 
-        if (helperNodes.isEmpty()) {
-            handleNoAckAfterDirectAndIndirect(targetNode);
-            return;
-        }
+        // if (helperNodes.isEmpty()) {
+        handleNoAckAfterDirectAndIndirect(targetNode);
+        // return;
+        // }
 
-        List<CompletableFuture<Boolean>> helperChecks = helperNodes.stream()
-                .map(helperNode -> nodeClient.pingReq(helperNode, targetNode))
-                .toList();
+        // List<CompletableFuture<Boolean>> helperChecks = helperNodes.stream()
+        // .map(helperNode -> nodeClient.pingReq(helperNode, targetNode))
+        // .toList();
 
-        CompletableFuture
-                .allOf(helperChecks.toArray(CompletableFuture[]::new))
-                .thenAccept(ignored -> {
-                    boolean anyHelperReceivedAck = helperChecks.stream()
-                            .anyMatch(CompletableFuture::join);
+        // CompletableFuture
+        // .allOf(helperChecks.toArray(CompletableFuture[]::new))
+        // .thenAccept(ignored -> {
+        // boolean anyHelperReceivedAck = helperChecks.stream()
+        // .anyMatch(CompletableFuture::join);
 
-                    if (anyHelperReceivedAck) {
-                        handleAckReceived(targetNode, "indirect ping-req by helperNodes", pingSendTime);
-                    } else {
-                        handleNoAckAfterDirectAndIndirect(targetNode);
-                    }
+        // if (anyHelperReceivedAck) {
+        // handleAckReceived(targetNode, "indirect ping-req by helperNodes",
+        // pingSendTime);
+        // } else {
+        // handleNoAckAfterDirectAndIndirect(targetNode);
+        // }
 
-                    printLocalNodeStates();
-                });
+        // printLocalNodeStates();
+        // });
     }
 
     /**

@@ -11,6 +11,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import com.monitoring.agent.constant.Constant;
+import com.monitoring.agent.node.connection.ConnectionManager;
 import com.monitoring.agent.util.Console;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
@@ -26,6 +27,7 @@ public class NodeServer {
     private final NodeClient nodeClient;
     private final HttpServer server;
     private volatile GossipService gossipService;
+    private ConnectionManager connectionManager = null;
 
     public NodeServer(String nodeId, String bindHost, int port, NodeClient nodeClient) throws IOException {
         this.nodeId = nodeId;
@@ -53,6 +55,10 @@ public class NodeServer {
         this.gossipService = gossipService;
     }
 
+    public void setConnectionManager(ConnectionManager connectionManager) {
+        this.connectionManager = connectionManager;
+    }
+
     /**
      * Starts the node server to listen to HTTP requests.
      */
@@ -74,6 +80,10 @@ public class NodeServer {
             return;
         }
 
+        String requestBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+
+        String senderNodeId = extractJsonValue(requestBody, "senderNodeId");
+
         String responseJson = """
                 {
                   "type": "ACK",
@@ -82,7 +92,9 @@ public class NodeServer {
                 }
                 """.formatted(nodeId, LocalDateTime.now());
 
-        sendResponse(exchange, 200, responseJson);
+        int statusCode = (connectionManager != null && connectionManager.containsNode(senderNodeId)) ? 200 : 225;
+
+        sendResponse(exchange, statusCode, responseJson);
     }
 
     /**

@@ -746,7 +746,8 @@ public final class RewiringCoordinator {
                         message.nodeC(),
                         message.nodeD(),
                         message.connectsTo(),
-                        message.disconnectsFrom())), Constant.BG_PINK);
+                        message.disconnectsFrom())),
+                Constant.BG_PINK);
 
         sendOnly(
                 message.sender(),
@@ -898,10 +899,12 @@ public final class RewiringCoordinator {
                 return false;
             }
 
-            Console.log("[REWIRE_DEBUG] Am I free OR REWIRING_NODE? "
-                    + (recoveryRole == RecoveryRole.FREE || recoveryRole == RecoveryRole.REWIRING_NODE)
+            Console.log("[REWIRE_DEBUG] Am I free OR DEFICIENT_LEADER/FELLOW? "
+                    + (recoveryRole == RecoveryRole.FREE || recoveryRole == RecoveryRole.DEFICIENT_LEADER
+                            || recoveryRole == RecoveryRole.DEFICIENT_FELLOW)
                     + " currently: " + recoveryRole, Constant.ORANGE);
-            return recoveryRole == RecoveryRole.FREE || recoveryRole == RecoveryRole.REWIRING_NODE;
+            return recoveryRole == RecoveryRole.FREE || recoveryRole == RecoveryRole.DEFICIENT_LEADER
+                    || recoveryRole == RecoveryRole.DEFICIENT_FELLOW;
         } finally {
             roleLock.unlock();
         }

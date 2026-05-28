@@ -9,6 +9,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import com.monitoring.agent.constant.Constant;
+import com.monitoring.agent.node.connection.ConnectionManager;
 import com.monitoring.agent.util.Console;
 
 /**
@@ -19,6 +20,7 @@ public class NodeClient {
     private final String localNodeId;
     private final int ackTimeoutSeconds;
     private final HttpClient httpClient;
+    private ConnectionManager connectionManager;
 
     public NodeClient(String localNodeId, int ackTimeoutSeconds) {
         this.localNodeId = localNodeId;
@@ -26,6 +28,10 @@ public class NodeClient {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(ackTimeoutSeconds))
                 .build();
+    }
+
+    public void setConnectionManager(ConnectionManager connectionManager) {
+        this.connectionManager = connectionManager;
     }
 
     /**
@@ -54,7 +60,15 @@ public class NodeClient {
         return httpClient
                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .orTimeout(ackTimeoutSeconds, TimeUnit.SECONDS)
-                .thenApply(response -> response.statusCode() >= 200 && response.statusCode() < 300)
+                .thenApply(response -> {
+                    if (response.statusCode() == 225) {
+                        connectionManager.remove(targetNode.nodeId(),
+                                "The ping target should not be a neighbor of " + localNodeId);
+                        // return false;
+                    }
+
+                    return response.statusCode() >= 200 && response.statusCode() < 300;
+                })
                 .exceptionally(error -> false);
     }
 

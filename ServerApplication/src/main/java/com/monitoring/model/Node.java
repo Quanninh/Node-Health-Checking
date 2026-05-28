@@ -1,9 +1,14 @@
 package com.monitoring.model;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 
 @Entity
@@ -12,16 +17,15 @@ public class Node {
 
     @Id
     private String id;
-
     private String ipAddress;
-
     private LocalDateTime lastHeartbeat;
-
     private String status;
-
     private int crackingPort;
-
     private int p2pPort;
+
+    @ElementCollection
+    @CollectionTable(name = "node_neighbors", joinColumns = @JoinColumn(name = "node_id"))
+    private List<String> neighbors = new ArrayList<>();
 
     public Node() {
     }
@@ -73,4 +77,13 @@ public class Node {
     public void setP2pPort(int p2pPort) {
         this.p2pPort = p2pPort;
     }
+
+    public List<String> getNeighbors() {
+        return neighbors;
+    }
+
+    public void setNeighbors(List<String> neighbors) {
+        this.neighbors = neighbors;
+    }
+
 }

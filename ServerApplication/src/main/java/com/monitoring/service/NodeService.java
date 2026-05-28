@@ -1,6 +1,8 @@
 package com.monitoring.service;
 
+import java.io.PrintWriter;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,21 +30,17 @@ public class NodeService {
      */
     public void processHeartbeat(Node incomingNode) {
 
-        Node node = nodeRepository
-                .findById(incomingNode.getId())
-                .orElse(new Node());
+        Node node = nodeRepository.findById(incomingNode.getId()).orElse(new Node());
 
         node.setId(incomingNode.getId());
-
         node.setIpAddress(incomingNode.getIpAddress());
-
         node.setP2pPort(incomingNode.getP2pPort());
-
         node.setStatus("UP");
-
         node.setLastHeartbeat(LocalDateTime.now());
-
         node.setCrackingPort(incomingNode.getCrackingPort());
+        node.setNeighbors(incomingNode.getNeighbors() != null ? incomingNode.getNeighbors() : new ArrayList<>());
+
+        writeGraphFile();
 
         nodeRepository.save(node);
 
@@ -50,6 +48,34 @@ public class NodeService {
                 "[" + LocalDateTime.now() + "] "
                         + "Heartbeat received from "
                         + node.getId());
+    }
+
+    public void writeGraphFile() {
+        List<Node> nodes = nodeRepository.findAll();
+
+        try (PrintWriter writer = new PrintWriter("graph.txt")) {
+
+            // Write nodes
+            for (Node node : nodes) {
+                if (node.getStatus().equals("UP")) {
+                    writer.println(node.getId());
+                }
+            }
+
+            // Write edges
+            for (Node node : nodes) {
+                if (node.getNeighbors() == null || !node.getStatus().equals("UP")) {
+                    continue;
+                }
+
+                for (String neighbor : node.getNeighbors()) {
+                    writer.println(node.getId() + " " + neighbor);
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -144,7 +170,6 @@ public class NodeService {
     }
 
     public List<Node> getAllNodes() {
-
         return nodeRepository.findAll();
     }
 
