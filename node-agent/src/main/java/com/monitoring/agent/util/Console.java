@@ -4,6 +4,9 @@ import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 
 import com.monitoring.agent.constant.Constant;
 
@@ -11,6 +14,7 @@ public class Console {
 
     private static String nodeId;
     private static final String LOG_FILE = "log.txt";
+    private static final String LOG_CSV = "packet_log.csv";
 
     private static synchronized void writeToFile(String text) {
         try (FileWriter fw = new FileWriter(LOG_FILE, true);
@@ -20,6 +24,26 @@ public class Console {
             out.println(nodeId + "::" + text);
 
         } catch (IOException ignore) {
+        }
+    }
+
+    public static synchronized void logPacket(String timestamp, String sender, String receiver, String type,
+            String message) {
+        try {
+            Files.writeString(
+                    Path.of(LOG_CSV),
+                    String.format(
+                            "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"%n",
+                            timestamp,
+                            sender,
+                            receiver,
+                            type,
+                            message.replace("\"", "\"\"")),
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.APPEND);
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

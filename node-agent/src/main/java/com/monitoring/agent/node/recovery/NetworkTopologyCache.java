@@ -29,6 +29,7 @@ public class NetworkTopologyCache {
      * @param nodeId    the node
      * @param neighbors its neighbor
      */
+    @Deprecated
     public void storeNeighbors(String nodeId, Set<NodeAddress> neighbors) {
         adjacencyCache.put(nodeId, neighbors);
     }
@@ -39,6 +40,7 @@ public class NetworkTopologyCache {
      * @param nodeId the node
      * @return its neighbors
      */
+    @Deprecated
     public Set<NodeAddress> neighborsOf(String nodeId) {
         return adjacencyCache.getOrDefault(nodeId, Set.of());
     }
@@ -48,6 +50,7 @@ public class NetworkTopologyCache {
      * 
      * @return whether the two nodes are adjacent
      */
+    @Deprecated
     public boolean areAdjacent(String a, String b) {
         return neighborsOf(a).stream().anyMatch(n -> n.nodeId().equals(b));
     }

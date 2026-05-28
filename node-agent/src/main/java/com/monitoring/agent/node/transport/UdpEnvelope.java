@@ -6,6 +6,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.monitoring.agent.constant.Constant;
+
 /**
  * A UDP wrapper for a UDP packet.
  * 
@@ -23,9 +25,6 @@ public record UdpEnvelope(
     // Verify if this packet belongs to the project
     private static final String PROTOCOL = "NODE HEALTH CHECKING";
     private static final int VERSION = 1;
-
-    private static final String FIELD_SEPARATOR = "&";
-    private static final String KEY_VALUE_SEPARATOR = "=";
 
     /**
      * Wraps a message with a UDP envelope.
@@ -59,11 +58,11 @@ public record UdpEnvelope(
 
         for (Map.Entry<String, String> entry : values.entrySet()) {
             if (!builder.isEmpty()) {
-                builder.append(FIELD_SEPARATOR);
+                builder.append(Constant.FIELD_SEPARATOR);
             }
 
             builder.append(url(entry.getKey()))
-                    .append(KEY_VALUE_SEPARATOR)
+                    .append(Constant.KEY_VALUE_SEPARATOR)
                     .append(url(entry.getValue()));
         }
 
@@ -79,10 +78,10 @@ public record UdpEnvelope(
     public static UdpEnvelope decode(String raw) {
         Map<String, String> values = new LinkedHashMap<>();
 
-        for (String pair : raw.split(FIELD_SEPARATOR)) {
-            int index = pair.indexOf(KEY_VALUE_SEPARATOR);
+        for (String pair : raw.split(Constant.FIELD_SEPARATOR)) {
+            int index = pair.indexOf(Constant.KEY_VALUE_SEPARATOR);
 
-            // No KEY_VALUE_SEPARATOR => no valid key-value pair -> skip
+            // No Constant.KEY_VALUE_SEPARATOR => no valid key-value pair -> skip
             if (index < 0) {
                 continue;
             }

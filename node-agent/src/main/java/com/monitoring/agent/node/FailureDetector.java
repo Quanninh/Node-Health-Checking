@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import com.monitoring.agent.constant.Constant;
 import static com.monitoring.agent.constant.Constant.UNREACHABLE_CLEANUP_INTERVAL_SECONDS;
 import com.monitoring.agent.node.connection.NeighborDirectory;
+import com.monitoring.agent.node.recovery.NetworkTopologyCache;
 import com.monitoring.agent.node.recovery.RecoveryUDPService;
 import com.monitoring.agent.util.Console;
 
@@ -29,6 +30,7 @@ public class FailureDetector {
     private final int probeIntervalSeconds;
     private final ScheduledExecutorService scheduler;
     private final double unreachableThreshold;
+    private final NetworkTopologyCache networkTopologyCache;
 
     public FailureDetector(
             String localNodeId,
@@ -39,7 +41,8 @@ public class FailureDetector {
             GossipService gossipService,
             RecoveryUDPService recoveryUdpService,
             int probeIntervalSeconds,
-            double unreachableThreshold) {
+            double unreachableThreshold,
+            NetworkTopologyCache networkTopologyCache) {
         this.localNodeId = localNodeId;
         this.neighborDirectory = neighborDirectory;
         this.nodeClient = nodeClient;
@@ -50,6 +53,7 @@ public class FailureDetector {
         this.probeIntervalSeconds = probeIntervalSeconds;
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
         this.unreachableThreshold = unreachableThreshold;
+        this.networkTopologyCache = networkTopologyCache;
     }
 
     /**
@@ -88,6 +92,7 @@ public class FailureDetector {
     private void removeUnreachableNeighborsSafely() {
         try {
             neighborDirectory.removeUnreachableNeighbors();
+
             recoveryUdpService.gossipSelfIfDeficient("unreachable neighbor cleanup");
         } catch (Exception exception) {
             Console.log("Unreachable-neighbor cleanup error: " + exception.getMessage(), Constant.RED);
@@ -276,6 +281,7 @@ public class FailureDetector {
 
         if (previousStatus != NodeStatus.UNREACHABLE) {
             gossipService.gossipUnreachable(targetNode);
+            networkTopologyCache.clearDeficient(targetNode);
             dashboardReporter.reportFailure(targetNode, phi, unreachableThreshold);
         }
     }

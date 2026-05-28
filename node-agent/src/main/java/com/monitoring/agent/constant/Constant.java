@@ -26,6 +26,10 @@ public final class Constant {
 
     public static final int DEFAULT_GOSSIP_TTL = 3;
 
+    public static final String FIELD_SEPARATOR = "&";
+    public static final String KEY_VALUE_SEPARATOR = "=";
+    public static final String LIST_SEPARATOR = ",";
+
     private static final Dotenv dotenv = Dotenv.load();
     public static final boolean ANSI_ENABLED = Boolean.parseBoolean(dotenv.get("ANSI_ENABLED", "false"));
 

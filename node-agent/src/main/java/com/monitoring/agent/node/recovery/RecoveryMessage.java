@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.NodeAddress;
 
 /**
@@ -24,10 +25,6 @@ public record RecoveryMessage(
         int ttl,
         long timestamp,
         int incarnation) {
-
-    private static final String FIELD_SEPARATOR = "&";
-    private static final String KEY_VALUE_SEPARATOR = "=";
-    private static final String LIST_SEPARATOR = ",";
 
     /**
      * Encodes the message into a string.
@@ -52,11 +49,11 @@ public record RecoveryMessage(
 
         for (Map.Entry<String, String> entry : values.entrySet()) {
             if (!builder.isEmpty()) {
-                builder.append(FIELD_SEPARATOR);
+                builder.append(Constant.FIELD_SEPARATOR);
             }
 
             builder.append(url(entry.getKey()))
-                    .append(KEY_VALUE_SEPARATOR)
+                    .append(Constant.KEY_VALUE_SEPARATOR)
                     .append(url(entry.getValue()));
         }
 
@@ -72,8 +69,8 @@ public record RecoveryMessage(
     public static RecoveryMessage decode(String raw) {
         Map<String, String> values = new HashMap<>();
 
-        for (String pair : raw.split(FIELD_SEPARATOR)) {
-            int index = pair.indexOf(KEY_VALUE_SEPARATOR);
+        for (String pair : raw.split(Constant.FIELD_SEPARATOR)) {
+            int index = pair.indexOf(Constant.KEY_VALUE_SEPARATOR);
 
             if (index < 0) {
                 continue;
@@ -126,7 +123,7 @@ public record RecoveryMessage(
 
         return addresses.stream()
                 .map(NodeAddress::toString)
-                .reduce((a, b) -> a + LIST_SEPARATOR + b)
+                .reduce((a, b) -> a + Constant.LIST_SEPARATOR + b)
                 .orElse("");
     }
 
@@ -135,7 +132,7 @@ public record RecoveryMessage(
             return List.of();
         }
 
-        return java.util.Arrays.stream(raw.split(LIST_SEPARATOR))
+        return java.util.Arrays.stream(raw.split(Constant.LIST_SEPARATOR))
                 .filter(token -> !token.isBlank())
                 .map(NodeAddress::fromString)
                 .toList();

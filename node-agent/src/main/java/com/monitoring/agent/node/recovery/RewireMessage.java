@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.NodeAddress;
 
 /**
@@ -42,10 +43,6 @@ public record RewireMessage(
         List<NodeAddress> defBNeighbors,
         RewireStatus status,
         long timestamp) {
-
-    private static final String FIELD_SEPARATOR = "&";
-    private static final String KEY_VALUE_SEPARATOR = "=";
-    private static final String LIST_SEPARATOR = ",";
 
     /**
      * Returns a rewire message with parameters.
@@ -90,19 +87,19 @@ public record RewireMessage(
      */
     public String encode() {
         return "type=" + url(type.name())
-                + FIELD_SEPARATOR + "messageId=" + url(messageId)
-                + FIELD_SEPARATOR + "recoveryId=" + url(recoveryId)
-                + FIELD_SEPARATOR + "sender=" + url(addressToString(sender))
-                + FIELD_SEPARATOR + "defA=" + url(addressToString(defA))
-                + FIELD_SEPARATOR + "defB=" + url(addressToString(defB))
-                + FIELD_SEPARATOR + "nodeC=" + url(addressToString(nodeC))
-                + FIELD_SEPARATOR + "nodeD=" + url(addressToString(nodeD))
-                + FIELD_SEPARATOR + "connectsTo=" + url(addressToString(connectsTo))
-                + FIELD_SEPARATOR + "disconnectsFrom=" + url(addressToString(disconnectsFrom))
-                + FIELD_SEPARATOR + "defANeighbors=" + url(encodeList(defANeighbors))
-                + FIELD_SEPARATOR + "defBNeighbors=" + url(encodeList(defBNeighbors))
-                + FIELD_SEPARATOR + "status=" + url(status == null ? "" : status.name())
-                + FIELD_SEPARATOR + "timestamp=" + timestamp;
+                + Constant.FIELD_SEPARATOR + "messageId=" + url(messageId)
+                + Constant.FIELD_SEPARATOR + "recoveryId=" + url(recoveryId)
+                + Constant.FIELD_SEPARATOR + "sender=" + url(addressToString(sender))
+                + Constant.FIELD_SEPARATOR + "defA=" + url(addressToString(defA))
+                + Constant.FIELD_SEPARATOR + "defB=" + url(addressToString(defB))
+                + Constant.FIELD_SEPARATOR + "nodeC=" + url(addressToString(nodeC))
+                + Constant.FIELD_SEPARATOR + "nodeD=" + url(addressToString(nodeD))
+                + Constant.FIELD_SEPARATOR + "connectsTo=" + url(addressToString(connectsTo))
+                + Constant.FIELD_SEPARATOR + "disconnectsFrom=" + url(addressToString(disconnectsFrom))
+                + Constant.FIELD_SEPARATOR + "defANeighbors=" + url(encodeList(defANeighbors))
+                + Constant.FIELD_SEPARATOR + "defBNeighbors=" + url(encodeList(defBNeighbors))
+                + Constant.FIELD_SEPARATOR + "status=" + url(status == null ? "" : status.name())
+                + Constant.FIELD_SEPARATOR + "timestamp=" + timestamp;
     }
 
     /**
@@ -139,8 +136,8 @@ public record RewireMessage(
      * @return the value
      */
     private static String value(String raw, String key) {
-        for (String pair : raw.split(FIELD_SEPARATOR)) {
-            int index = pair.indexOf(KEY_VALUE_SEPARATOR);
+        for (String pair : raw.split(Constant.FIELD_SEPARATOR)) {
+            int index = pair.indexOf(Constant.KEY_VALUE_SEPARATOR);
             if (index < 0) {
                 continue;
             }
@@ -207,7 +204,7 @@ public record RewireMessage(
 
         return addresses.stream()
                 .map(NodeAddress::toString)
-                .reduce((a, b) -> a + LIST_SEPARATOR + b)
+                .reduce((a, b) -> a + Constant.LIST_SEPARATOR + b)
                 .orElse("");
     }
 
@@ -224,7 +221,7 @@ public record RewireMessage(
 
         List<NodeAddress> result = new ArrayList<>();
 
-        for (String token : raw.split(LIST_SEPARATOR)) {
+        for (String token : raw.split(Constant.LIST_SEPARATOR)) {
             if (!token.isBlank()) {
                 result.add(NodeAddress.fromString(token));
             }

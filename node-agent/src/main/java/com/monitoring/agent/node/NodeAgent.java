@@ -40,7 +40,7 @@ public class NodeAgent {
     private final MulticastJoinCoordinator joinCoordinator;
 
     private final RecoveryUDPService recoveryUdpService;
-    private final NetworkTopologyCache repairCache;
+    private final NetworkTopologyCache networkTopologyCache;
     private final RewiringCoordinator rewiringCoordinator;
     private final NodeHttpServer crackingServer;
 
@@ -114,12 +114,12 @@ public class NodeAgent {
                 discoveryService,
                 membershipControlService);
 
-        repairCache = new NetworkTopologyCache();
+        networkTopologyCache = new NetworkTopologyCache();
 
-        rewiringCoordinator = new RewiringCoordinator(localAddress, connectionManager,
+        rewiringCoordinator = new RewiringCoordinator(localAddress, connectionManager, networkTopologyCache,
                 udpCoordinator);
 
-        recoveryUdpService = new RecoveryUDPService(localAddress, repairCache, connectionManager,
+        recoveryUdpService = new RecoveryUDPService(localAddress, networkTopologyCache, connectionManager,
                 udpCoordinator,
                 rewiringCoordinator);
 
@@ -142,7 +142,8 @@ public class NodeAgent {
                 gossipService,
                 recoveryUdpService,
                 config.probeIntervalSeconds(),
-                config.unreachableThreshold());
+                config.unreachableThreshold(),
+                networkTopologyCache);
 
         crackingServer = new NodeHttpServer(config.nodeId(), config.crackingPort(), config.dashboardUrl());
 

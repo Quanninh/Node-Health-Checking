@@ -44,8 +44,12 @@ public enum RecoveryMessageType {
 
     /** Requests a full rewire. */
     REWIRE_REQ,
-    /** Acknowledges that the requested rewire can be carried out. */
-    REWIRE_ACK,
+    /**
+     * No one is sending REWIRE_ACK. No one is expecting REWIRE_ACK. Acknowledges
+     * that the requested rewire can be
+     * carried out.
+     */
+    // REWIRE_ACK,
     /** Denies the requested rewire. */
     REWIRE_DENY,
     /** Confirms that the current request will be carried out. */

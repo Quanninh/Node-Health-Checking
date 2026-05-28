@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.NodeAddress;
 
 /**
@@ -39,10 +40,6 @@ public record DiscoveryMessage(
         String directTargetId,
         String evictedNodeId) {
 
-    private static final String FIELD_SEPARATOR = "&";
-    private static final String KEY_VALUE_PAIR_SEPARATOR = "=";
-    private static final String NEIGHBOR_LIST_SEPARATOR = ",";
-
     /**
      * Encodes the message into a string.
      * 
@@ -67,13 +64,14 @@ public record DiscoveryMessage(
         StringBuilder builder = new StringBuilder();
 
         for (Map.Entry<String, String> entry : values.entrySet()) {
-            // Only put the FIELD_SEPARATOR between entries, not before the first one.
+            // Only put the Constant.FIELD_SEPARATOR between entries, not before the first
+            // one.
             if (!builder.isEmpty()) {
-                builder.append(FIELD_SEPARATOR);
+                builder.append(Constant.FIELD_SEPARATOR);
             }
 
             builder.append(url(entry.getKey()))
-                    .append(KEY_VALUE_PAIR_SEPARATOR)
+                    .append(Constant.KEY_VALUE_SEPARATOR)
                     .append(url(entry.getValue()));
         }
 
@@ -89,8 +87,8 @@ public record DiscoveryMessage(
     public static DiscoveryMessage decode(String raw) {
         Map<String, String> values = new HashMap<>();
 
-        for (String pair : raw.split(FIELD_SEPARATOR)) {
-            int index = pair.indexOf(KEY_VALUE_PAIR_SEPARATOR);
+        for (String pair : raw.split(Constant.FIELD_SEPARATOR)) {
+            int index = pair.indexOf(Constant.KEY_VALUE_SEPARATOR);
 
             if (index < 0) {
                 continue;
@@ -132,7 +130,7 @@ public record DiscoveryMessage(
 
         return neighbors.stream()
                 .map(NodeAddress::toString)
-                .reduce((a, b) -> a + NEIGHBOR_LIST_SEPARATOR + b)
+                .reduce((a, b) -> a + Constant.LIST_SEPARATOR + b)
                 .orElse("");
     }
 
@@ -149,7 +147,7 @@ public record DiscoveryMessage(
 
         List<NodeAddress> result = new ArrayList<>();
 
-        for (String token : raw.split(NEIGHBOR_LIST_SEPARATOR)) {
+        for (String token : raw.split(Constant.LIST_SEPARATOR)) {
             if (!token.isBlank()) {
                 result.add(NodeAddress.fromString(token));
             }

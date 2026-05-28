@@ -10,6 +10,7 @@ import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 import com.monitoring.agent.constant.Constant;
+import com.monitoring.agent.node.NodeAddress;
 import com.monitoring.agent.util.Console;
 
 /**
@@ -107,16 +108,19 @@ public class UdpCoordinator implements AutoCloseable {
      * @param payload    the packet payload
      * @throws IOException if sending fails
      */
-    public void send(String targetHost, int targetPort, UdpPacketType type, String payload) throws IOException {
+    public void send(NodeAddress localAddress, NodeAddress target, UdpPacketType type,
+            String payload) throws IOException {
         byte[] bytes = UdpPacket.encode(type, payload);
 
-        Console.log("Sending to " + targetHost + ":" + targetPort + " type " + type + " payload: " + payload);
+        Console.log("Sending to " + target.toString() + " type " + type + " payload: " + payload);
 
         DatagramPacket packet = new DatagramPacket(
                 bytes,
                 bytes.length,
-                InetAddress.getByName(targetHost),
-                targetPort);
+                InetAddress.getByName(target.host()),
+                target.port());
+
+        Console.logPacket(Constant.NOW(), localAddress.nodeId(), target.nodeId(), type.toString(), payload);
 
         // Create a temporary socket to send (avoids blocking the main socket)
         try (DatagramSocket sendSocket = new DatagramSocket()) {
@@ -157,7 +161,7 @@ public class UdpCoordinator implements AutoCloseable {
     }
 
     private void submit(UdpEnvelope envelope) {
-        // Console.log(envelope.toString());
+        Console.log("RECEIVED: " + envelope.payload());
         if (envelope.istype(UdpPacketType.MEMBERSHIP)) {
             membershipExecutor.submit(() -> dispatch(envelope, membershipConsumer));
         } else if (envelope.istype(UdpPacketType.RECOVERY)) {

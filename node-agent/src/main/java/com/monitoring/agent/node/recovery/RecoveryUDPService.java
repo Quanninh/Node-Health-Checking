@@ -177,7 +177,9 @@ public class RecoveryUDPService implements AutoCloseable {
                     Constant.RED);
         }
 
-        if (message.ttl() > 0) {
+        // Don't gossip if message is about me and I'm healthy
+        if (message.ttl() > 0 && !(message.subject() == localAddress
+                && connectionManager.getHealthState() == HealthState.SUFFICIENT)) {
             // Gossip to neighbors
             for (NodeAddress neighbor : connectionManager.neighborAddresses()) {
                 if (neighbor.nodeId().equals(localAddress.nodeId())
@@ -217,7 +219,7 @@ public class RecoveryUDPService implements AutoCloseable {
      */
     public void send(NodeAddress target, RecoveryMessage message) throws IOException {
         String encodedMessage = message.encode();
-        udpCoordinator.send(target.host(), target.port(), UdpPacketType.RECOVERY, encodedMessage);
+        udpCoordinator.send(localAddress, target, UdpPacketType.RECOVERY, encodedMessage);
     }
 
     @Override

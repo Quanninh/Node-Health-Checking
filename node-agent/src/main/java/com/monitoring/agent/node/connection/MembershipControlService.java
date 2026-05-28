@@ -196,8 +196,7 @@ public final class MembershipControlService implements AutoCloseable {
                 // Send command via UdpCoordinator (payload is wrapped in UdpEnvelope)
                 Console.log("[MEMBERSHIP] Sending " + discoveryMessage.type()
                         + " txId=" + discoveryMessage.transactionId() + " to " + target.nodeId());
-                udpCoordinator.send(target.host(), target.port(), UdpPacketType.MEMBERSHIP,
-                        discoveryMessage.encode());
+                udpCoordinator.send(localAddress, target, UdpPacketType.MEMBERSHIP, discoveryMessage.encode());
 
                 // Wait for the response with a timeout
                 DiscoveryMessage response = responseFuture.get(700, TimeUnit.MILLISECONDS);
@@ -245,7 +244,7 @@ public final class MembershipControlService implements AutoCloseable {
         Console.log("[MEMBERSHIP] Sending COMMIT_ACK txId=" + txId
                 + " accepted=" + accepted
                 + " to " + recipient.nodeId());
-        udpCoordinator.send(recipient.host(), recipient.port(), UdpPacketType.MEMBERSHIP, encodedMessage);
+        udpCoordinator.send(localAddress, recipient, UdpPacketType.MEMBERSHIP, encodedMessage);
     }
 
     @Override
