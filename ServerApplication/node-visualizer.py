@@ -83,7 +83,10 @@ while True:
                 pos,
                 width=2.5,
                 arrows=True,
-                arrowsize=25
+                arrowsize=25,
+                arrowstyle='-|>',
+                min_source_margin=30,
+                min_target_margin=30
             )
 
             # Draw labels with dynamic font sizes
