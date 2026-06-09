@@ -80,7 +80,7 @@ distributed systems, node health checking, failure detection, heartbeat, false p
 \section{Introduction}
 \label{sec:introduction}
 
-Distributed systems consist of multiple nodes connecting to eachother and working with eachother to perform tasks and provide reliable services.
+Distributed systems consist of multiple nodes connecting to each other and working with each other to perform tasks and provide reliable services.
 In such systems, the readiness of a node is very important because individual nodes may become disconnected, unresponsive, or fail completely.
 If these failures are not detected and handled quickly, they may affect communication between nodes and reduce the reliability of the system.
 \newline
@@ -91,12 +91,13 @@ Based on the detected condition of the network, the system can identify healthy 
 When a node or connection problem occurs, the system applies algorithms to remove failed nodes or unstable connections and reorganize the remaining connections to maintain progess of the network.
 \newline
 
+\section{Problem Statement}
+\label{sec:problem_statement}
 Many health checking systems rely on a centralized structure, where a single central entity collects information and makes decisions for the entire network.
 Although this approach is simple to manage, it may introduce a bottleneck and a single point of failure.
 To address this limitation, this project adopts a decentralized approach.
 Instead of depending entirely on one central controller, nodes participate in monitoring one another and responding to failures.
 A dashboard may be used as a visual aid to observe the system state, but the health checking and recovery logic remain decentralized.
-
 
 \section{...}
 \label{sec:second}
