@@ -165,7 +165,9 @@ The proposed node health-checking system is influenced by both SWIM and the $\ph
 By combining these two ideas, the proposed approach aims to improve both scalability and accuracy. SWIM contributes a scalable architecture for distributed membership checking, while the $\phi$ accrual detector contributes an adaptive decision mechanism for handling delay and message loss. Therefore, the system can avoid immediately deleting a node after a single missed heartbeat and can instead move through health states such as healthy, suspected, and failed based on both cooperative probing and suspicion-level evaluation.
 \section{Proposed Approach}
 \label{sec:proposed_approach}
-Present the high-level design of your node health-checking system. Explain the roles of monitored nodes, health-check agents, the server or coordinator, and the membership control component. Describe the data exchanged between components and how node state transitions are made.
+Present the high-level design of your node health-checking system.
+Explain the roles of monitored nodes, health-check agents, the server or coordinator, and the membership control component.
+Describe the data exchanged between components and how node state transitions are made.
 
 \subsection{Complete Architectural Diagram}
 \label{subsec:architecture}
