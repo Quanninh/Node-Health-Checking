@@ -94,7 +94,21 @@ Node Health Checking
 
 
 \begin{abstract}
-Summarize the problem, proposed node health-checking approach, implementation, and main evaluation result in 150--250 words. State what failure scenarios are handled, how false positives are reduced, and what evidence shows the system works.
+Distributed systems depend on multiple interconnected nodes to communicate and cooperate reliably.
+However, node failures, unstable connections, and disconnections can affect system availability if they are not detected and handled properly.
+Many node health checking systems use a centralized approach because it is easier to implement, but this design creates a single point of failure when the central entity becomes unavailable.
+This report presents a decentralized node health checking system that detects and repairs node and connection problems without relying on a central controller.
+
+The proposed system uses a decentralized structure in which nodes monitor one another using phi-accrual failure detection.
+Each node calculates a phi value and compares it with a predefined threshold to determine whether another node or connection is suspicious or failed.
+When a problem is detected, the system applies repair and rewiring algorithms to restore the network topology.
+Each node attempts to maintain a fixed number of neighbors, denoted as \textit{k}, and new nodes can join the network through a joining algorithm.
+
+The system was implemented in Java using Spring Boot.
+PostgreSQL and a dashboard were used only for visualization and observation, while the health checking mechanism can operate independently through terminal output.
+Testing was performed with up to eight nodes, covering joining, termination, disconnection, and unstable connection scenarios.
+Overall, the system demonstrates that decentralized node health checking can reduce dependency on a central entity and improve fault tolerance.
+
 \end{abstract}
 
 \begin{IEEEkeywords}
