@@ -174,8 +174,14 @@ Describe the concrete health-checking algorithm used by the system. Include the 
 
 \subsection{Handling False Positives}
 \label{subsec:false_positives}
-Currently, if a node is falsely detected as failed, it will simply be deleted from the network. Our solution for that node to work again is to terminate the current program and set up a cron task on the device 
-to have it join the network as a new member.
+Although the proposed approach significantly reduces false-positive detections, rare cases may still occur under severe network congestion or temporary network partitions, where the health-checking process is disrupted. 
+In such situations, a healthy node may be incorrectly classified as \textbf{UNREACHABLE}.
+\newline
+To maintain consistency of the network topology, nodes classified as \textbf{UNREACHABLE} are removed from the active membership view and treated as departed members. 
+Once connectivity is restored, the affected node is required to rejoin the network through the standard membership protocol, thereby rebuilding its neighbor relationships and restoring its participation in the system.
+\newline
+In this prototype, automatic process recovery is considered a deployment-level concern rather than a responsibility of the distributed protocol itself. 
+The protocol only determines when a node should be considered unreachable and subsequently rejoin the network. In a production environment, this mechanism can be complemented by external supervisors such as systemd, Docker restart policies, Kubernetes controllers, or watchdog services to automatically restart failed node processes.
 
 \section{Implementation Details}
 \label{sec:implementation}
