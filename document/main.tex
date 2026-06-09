@@ -22,95 +22,155 @@
     
 \begin{document}
 
-\title{Report Title
+\title{Node Health Checking and Distributed Systems Design
 \thanks{}
 }
 
 
+% \author{
+% \IEEEauthorblockN{Nguyen Ha Khai}  
+% \IEEEauthorblockA{Matriculation number: 10423053  \\  
+% \textit{Vietnamese-German University}}
+
+% \and  
+% \IEEEauthorblockN{Nguyen Duy Khanh}  
+% \IEEEauthorblockA{Matriculation number: 10423056 \\  
+% \textit{Vietnamese-German University}}
+
+% \and  
+% \IEEEauthorblockN{Vo Minh Duy}  
+% \IEEEauthorblockA{Matriculation number: 10423028 \\  
+% \textit{Vietnamese-German University}}  
+
+% \and  
+% \IEEEauthorblockN{Ninh Hoang Quan}  
+% \IEEEauthorblockA{Matriculation number: 10423097 \\  
+% \textit{Vietnamese-German University}}  
+
+% \and  
+% \IEEEauthorblockN{To Huynh Phuc}  
+% \IEEEauthorblockA{Matriculation number: 10423093 \\  
+% \textit{Vietnamese-German University}}  
+% }
+
 \author{
-\IEEEauthorblockN{Nguyen Ha Khai}  
-\IEEEauthorblockA{Matriculation number:  \\  
-\textit{Vietnamese-German University}}  
-\and  
-\IEEEauthorblockN{Student 2}  
-\IEEEauthorblockA{Matriculation number:  \\  
-\textit{Vietnamese-German University}}  
-\and  
-\IEEEauthorblockN{Student 3}  
-\IEEEauthorblockA{Matriculation number:  \\  
-\textit{Vietnamese-German University}}  
+\IEEEauthorblockN{
+Nguyen Ha Khai\IEEEauthorrefmark{1},
+Nguyen Duy Khanh\IEEEauthorrefmark{1},
+Vo Minh Duy\IEEEauthorrefmark{1},
+Ninh Hoang Quan\IEEEauthorrefmark{1},
+To Huynh Phuc\IEEEauthorrefmark{1}
 }
-
-
+\IEEEauthorblockA{
+\IEEEauthorrefmark{1}Vietnamese-German University\\
+Matriculation numbers: 10423053, 10423056, 10423028, 10423097, 10423093
+}
+}
 
 \maketitle
 
 
 
 \begin{abstract}
-In This Part You Write The Abstract Of Your Report.
+Summarize the problem, proposed node health-checking approach, implementation, and main evaluation result in 150--250 words. State what failure scenarios are handled, how false positives are reduced, and what evidence shows the system works.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Note Your Keywords Here.
+distributed systems, node health checking, failure detection, heartbeat, false positives, fault tolerance
 \end{IEEEkeywords}
 
 
 \section{Introduction}
 \label{sec:introduction}
-In This Part You Write The Introduction Of Your Report.
+Introduce the motivation for node health checking in distributed systems. Explain why timely and accurate failure detection matters for availability, recovery, membership management, and request routing. End this section with a short summary of your contribution.
 
+\section{Problem Statement}
+\label{sec:problem_statement}
+Define the exact problem solved by the project: detecting unhealthy or unreachable nodes in a distributed system and updating the system view without incorrectly removing healthy nodes. Describe the assumptions about nodes, network communication, monitoring intervals, and membership updates.
 
-\section{...}
-\label{sec:second}
-In This Part You Write The Second Part Of Your Report.
+\subsection{Requirements and Objectives}
+\label{subsec:requirements}
+List the functional and non-functional requirements. Include detection latency, false-positive reduction, scalability with number of nodes, simplicity of deployment, and observability of node states.
 
-\subsection{Subsection 1}
+\subsection{Failure Models}
+\label{subsec:failure_models}
+Explicitly define the failure models considered in this report:
 \begin{itemize}
-    \item bullet point 1 
-    \item bullet point 2
-    \item bullet point 3
+    \item \textbf{Crash failure:} a node stops executing and no longer sends responses.
+    \item \textbf{Network partition:} a node is alive but temporarily unreachable from one or more monitors.
+    \item \textbf{Message loss:} heartbeat or health-check messages are dropped by the network.
+    \item \textbf{Delay failure:} a node responds too slowly because of load, garbage collection, or network congestion.
+    \item \textbf{Recovery:} a failed or unreachable node becomes healthy again and must rejoin the active membership view.
 \end{itemize}
+State which failures are fully handled, partially handled, or outside the project scope.
 
+\section{Related Work}
+\label{sec:related_work}
+Discuss existing approaches to failure detection and membership management in distributed systems. Compare heartbeat-based detection, timeout-based failure detectors, gossip-style membership protocols, and centralized monitoring. Explain which ideas influenced your design.
 
-\subsection{Subsection 2}
-\begin{itemize}
-    \item bullet point 1 
-    \item bullet point 2
-    \item bullet point 3
-\end{itemize}
+\section{Proposed Approach}
+\label{sec:proposed_approach}
+Present the high-level design of your node health-checking system. Explain the roles of monitored nodes, health-check agents, the server or coordinator, and the membership control component. Describe the data exchanged between components and how node state transitions are made.
 
-\subsection{Subsection 3}
-\begin{itemize}
-    \item bullet point 1 
-    \item bullet point 2
-    \item bullet point 3
-\end{itemize}
+\subsection{Complete Architectural Diagram}
+\label{subsec:architecture}
+Fig.~\ref{fig:architecture} shows the complete architecture of the proposed system. Replace the placeholder image with the final architecture diagram when it is ready.
 
-\subsection{Subsection 4}
-\subsection{Subsection 5}
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.9\textwidth]{Sample.jpeg}
+    \caption{Complete architectural diagram of the node health-checking system.}
+    \label{fig:architecture}
+\end{figure*}
 
+\subsection{Specific Algorithm}
+\label{subsec:algorithm}
+Describe the concrete health-checking algorithm used by the system. Include the heartbeat interval, timeout threshold, retry count, state transition rules, and membership update policy.
 
+\begin{enumerate}
+    \item Each node or monitor periodically sends a health-check request.
+    \item A successful response marks the target node as healthy and refreshes its last-seen timestamp.
+    \item A missed response increases the target node's suspicion counter.
+    \item A node is marked suspected only after the configured retry threshold is reached.
+    \item A suspected node is marked failed if it remains unreachable after the failure timeout.
+    \item A failed node is restored to healthy after it responds successfully for a configured number of checks.
+\end{enumerate}
 
-\section{...}
-\label{sec:Third}
-In This Part You Write The Third Part Of Your Report.
+\subsection{Handling False Positives}
+\label{subsec:false_positives}
+Explain how the design avoids incorrectly marking healthy nodes as failed. Discuss retry thresholds, suspicion states, grace periods, multiple observations before removal, and recovery rules. If your implementation uses configurable timeouts, state the selected values and justify them.
 
-\subsection{Subsection 1}
-\subsection{Subsection 2}
-\subsection{Subsection 3}
-\subsection{Subsection 4}
-\subsection{Subsection 5}
+\section{Implementation Details}
+\label{sec:implementation}
+Explain how the proposed approach is implemented in the project. Mention the programming language, major modules, communication mechanism, configuration files, and how nodes are started and monitored.
 
+\subsection{Node Agent}
+\label{subsec:node_agent}
+Describe the responsibilities of the node agent, including sending or responding to health checks, reporting status, and interacting with the membership control service.
 
+\subsection{Server Application}
+\label{subsec:server_application}
+Describe the server-side logic, including node registration, state storage, graph or topology handling, and health-status aggregation.
 
+\subsection{Membership Control}
+\label{subsec:membership_control}
+Explain how membership updates are triggered after node state changes. Describe how the system adds, removes, or restores nodes in the active membership view.
 
+\section{Evaluation}
+\label{sec:evaluation}
+Describe how the system is evaluated. Define the test environment, number of nodes, failure scenarios, workload, network conditions, and metrics.
 
+\subsection{Evaluation Metrics}
+\label{subsec:evaluation_metrics}
+Use metrics such as detection latency, false-positive rate, recovery time, message overhead, CPU usage, and memory usage.
 
+\subsection{Experimental Scenarios}
+\label{subsec:experimental_scenarios}
+List the experiments: normal operation, node crash, delayed response, temporary network loss, node recovery, and multiple simultaneous failures.
 
-
-
-
+\section{Experimental Results}
+\label{sec:experimental_results}
+Present the measured results using tables, charts, and short analysis. Compare observed behavior against the requirements from Section~\ref{subsec:requirements}. Explain any unexpected behavior and limitations.
 
 \section{Teamwork}
 \label{sec:teamwork}
@@ -118,54 +178,21 @@ In This Part You Write The Third Part Of Your Report.
 \begin{table}[h]
     \centering
     \caption{Task Distribution}
-    \begin{tabular}{|c|p{4cm}|p{3.3cm}|}
+    \begin{tabular}{|c|p{3.6cm}|p{3.2cm}|}
         \hline
-        \textbf{No} & \textbf{Task Description}           & \textbf{Responsible Member(s)} \\ \hline 
-        1           & Task 1                         & Student 1\\ \hline
-        2           & Task 2                         & Student 2\\ \hline
-        3           & Task 3                         & Student 3\\ \hline
-    
-        
+        \textbf{No} & \textbf{Task Description} & \textbf{Responsible Member(s)} \\ \hline
+        1 & Problem analysis and failure model definitions & Student name(s) \\ \hline
+        2 & Health-checking algorithm and false-positive handling & Student name(s) \\ \hline
+        3 & Node agent implementation & Student name(s) \\ \hline
+        4 & Server application and membership control & Student name(s) \\ \hline
+        5 & Evaluation, experiments, and report writing & Student name(s) \\ \hline
     \end{tabular}
     \label{tab:task_distribution}
 \end{table}
 
-\vspace{5em}
-
-
-
-
-
-
-\begin{figure}[h]
-    \centering
-    \includegraphics[width=5cm, height=4cm]{Sample.jpeg}
-    \caption{Sample Image}
-    \label{fig:process_flow}
-\end{figure}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-\section{ Conclusions and Future Work}
-
-In This Part You Write The Conclusion Of Your Report.
+\section{Conclusion and Future Work}
+\label{sec:conclusion}
+Summarize the final system, the main design decisions, and the experimental findings. Explain what worked well, what limitations remain, and what could be improved, such as adaptive timeouts, decentralized monitoring, or stronger partition handling.
 
 
 
