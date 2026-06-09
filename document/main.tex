@@ -174,7 +174,8 @@ Describe the concrete health-checking algorithm used by the system. Include the 
 
 \subsection{Handling False Positives}
 \label{subsec:false_positives}
-Currently, 
+Currently, if a node is falsely detected as failed, it will simply be deleted from the network. Our solution for that node to work again is to terminate the current program and set up a cron task on the device 
+to have it join the network as a new member.
 
 \section{Implementation Details}
 \label{sec:implementation}
