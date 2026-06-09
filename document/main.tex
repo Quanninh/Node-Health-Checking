@@ -163,7 +163,7 @@ Although this model is simple, it is not flexible enough for dynamic distributed
 The $\phi$ accrual failure detector was proposed to improve of flexibility of failure detection by returning a continuous suspicion level instead of a boolean result. 
 This allows the system or developer to interpret the monitoring information using different thresholds depending on the required trade-off between fast detection and false-positive reduction. 
 A lower threshold can detect failures more quickly, while a higher threshold can reduce incorrect failure decisions. 
-Experimental results from the original work show that the $\phi$ accrual failure detector performs comparably to other adaptive failure detection mechanisms, while providing greater flexibility for applications \cite{phi}.
+Experimental results from the original work show that the $\phi$ accrual failure detector performs comparably to other adaptive failure detection mechanisms, while providing greater flexibility for applications \cite{hayashibaraAccrualFailureDetector2004}.
 
 Traditional heartbeating protocols may also suffer from scalability problems and false-positive failure detection. 
 If every node monitors every other node, the number of heartbeat messages increases rapidly as the system grows. 
@@ -172,7 +172,7 @@ SWIM addresses these issues by separating failure detection from membership diss
 In each protocol period, a node selects another node and sends a direct ping. 
 If no acknowledgement is received, it asks several helper nodes to perform indirect probes. 
 This indirect checking mechanism reduces the probability of falsely declaring a node failed because another node may still be able to reach the target. 
-SWIM also disseminates membership changes using an infection-style, or gossip-style, approach, allowing updates about joins, leaves, and failures to spread through the system with low per-node message overhead \cite{swim}.
+SWIM also disseminates membership changes using an infection-style, or gossip-style, approach, allowing updates about joins, leaves, and failures to spread through the system with low per-node message overhead \cite{dasSWIMScalableWeaklyconsistent2002}.
 
 \section{Proposed Approach}
 \label{sec:proposed_approach}
@@ -281,17 +281,9 @@ Summarize the final system, the main design decisions, and the experimental find
 
 
 
-\begin{thebibliography}{00}
- 
-\bibitem {b1} Joshua Knowles, Weijie Zheng , “ GECCO '24 companion: proceedings of the genetic and evolutionary computation conference companion ” , Melbourne VIC Australia, pp. 1432—1459, August 2024.
-
-\bibitem{b2} Wikipedia, ``Genetic algorithm''. Retrieved 28 January 2025, from \url{https://en.wikipedia.org/wiki/Genetic_algorithm}.
-
-\bibitem {b3} Dinesh Bajracharya, " A review on Java hashmap and treemap ", International Journal of Engineering Applied Sciences and Technology, vol.5, pp. 134-138, May 2020.
-
-\bibitem {b4} Lawrence Premkumar , Praveen Mohan, " Beginning JavaFX ", Apress Berkeley, CA, 26 October 2010.
-
-\end{thebibliography}
+% ====== BIBLIOGRAPHY SETUP HERE ======
+\bibliographystyle{IEEEtran}     % Uses the IEEE citation style
+\bibliography{references}        % Links to references.bib (OMIT the ".bib" extension here)
 
 
  
