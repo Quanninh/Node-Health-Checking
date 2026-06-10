@@ -389,9 +389,9 @@ This guide will show you how to set up Zotero, join our shared Group Library, an
 *This plugin is required to format citations perfectly for IEEEtran and to auto-update our `.bib` file.*
 
 1. Download the latest version of the plugin from this link: [Better BibTeX Installation Guide](https://retorque.re) (Look for the `.xpi` file download).
-2. In Zotero Desktop, go to the top menu and select `Tools` -> `Add-ons`.
+2. In Zotero Desktop, go to the top menu and select `Tools` -> `Add-ons` / `Plug-in`.
 3. Click the **gear icon** in the top-right corner of the Add-ons manager window.
-4. Select **Install Add-on From File...** and choose the `.xpi` file you just downloaded.
+4. Select **Install Add-on From File...** and choose the `.xpi` file you just downloaded / Or drag it into the panel. Actually you should download this online from a github
 5. Click **Install Now**, then **restart Zotero** when prompted.
 
 ---
