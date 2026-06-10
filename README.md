@@ -370,8 +370,8 @@ This guide will show you how to set up Zotero, join our shared Group Library, an
 1. Go to [Zotero.org](https://zotero.org) and register for a free account.
 2. Download and install **Zotero Desktop** for your operating system.
 3. Open Zotero Desktop and log in:
-   * **Windows/Linux**: Go to `Edit` -> `Preferences` -> `Sync`.
-   * **Mac**: Go to `Zotero` -> `Settings` -> `Sync`.
+   * **Windows/Linux**: Go to `Sync` on the top right corner.
+   * **Mac**: Go to `Sync` on the top right corner.
    * Enter your username and password, then click **Set Up Syncing**.
 
 ---
