@@ -163,7 +163,7 @@ State which failures are fully handled, partially handled, or outside the projec
 % Discuss existing approaches to failure detection and membership management in distributed systems. Compare heartbeat-based detection, timeout-based failure detectors, gossip-style membership protocols, and centralized monitoring. Explain which ideas influenced your design.
 Failure detection is one of the fundamental problem for fault tolerance in distributed system because node may crash in any time. 
 Traditional binary failure detectors classify a node only as "alive" or "unreachable" based on whether it responds within a timeout.
-\newline
+
 Although this model is simple, it is not flexible enough for dynamic distributed environments as this can cause false positives when a 
 healthy node responds late due to network congestion, packet loss, high CPU usage, or temporary connection problems \cite{chandraUnreliableFailureDetectors1996,chenQualityServiceFailure2002}.
 \subsection{\texorpdfstring{$\phi$}{phi} Accrual Calculation}
