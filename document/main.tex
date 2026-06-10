@@ -161,12 +161,14 @@ State which failures are fully handled, partially handled, or outside the projec
 \section{Related Work}
 \label{sec:related_work}
 % Discuss existing approaches to failure detection and membership management in distributed systems. Compare heartbeat-based detection, timeout-based failure detectors, gossip-style membership protocols, and centralized monitoring. Explain which ideas influenced your design.
+\subsection{Failure detection}
 Failure detection is one of the fundamental problem for fault tolerance in distributed system because node may crash in any time. 
 Traditional binary failure detectors classify a node only as "alive" or "unreachable" based on whether it responds within a timeout.
 
 Although this model is simple, it is not flexible enough for dynamic distributed environments as this can cause false positives when a 
 healthy node responds late due to network congestion, packet loss, high CPU usage, or temporary connection problems \cite{chandraUnreliableFailureDetectors1996}.
-\subsection{\texorpdfstring{$\phi$}{phi} Accrual Calculation}
+
+\subsubsection{\texorpdfstring{$\phi$}{phi} Accrual Calculation}
 
 Hayashibara et al.~\cite{hayashibaraAccrualFailureDetector2004} proposed the \texorpdfstring{$\phi$}{phi} accrual failure detector to improve the flexibility of failure detection.
 Instead of returning a boolean result, such as ``alive'' or ``unreachable'', the detector outputs a continuous suspicion level.
@@ -174,7 +176,7 @@ This allows the system or developer to interpret the monitoring information usin
 A lower threshold can detect failures more quickly, while a higher threshold can reduce incorrect failure decisions. 
 Experimental results from the original work show that the $\phi$ accrual failure detector performs comparably to other adaptive failure detection mechanisms, while providing greater flexibility for applications \cite{hayashibaraAccrualFailureDetector2004}.
 
-\subsection{SWIM protocol}
+\subsubsection{SWIM protocol}
 
 Traditional heartbeating protocols may also suffer from scalability problems and false-positive failure detection. 
 If every node monitors every other node, the number of heartbeat messages increases rapidly as the system grows.
@@ -189,6 +191,21 @@ If any helper node receives an acknowledgement from the target, it forwards this
 This indirect checking mechanism reduces false-positive failure detection because the decision is not based on only one communication path. 
 A node is considered failed only when both the direct probe and the indirect probes fail. 
 SWIM also disseminates membership changes using an infection-style, or gossip-style, approach, allowing updates about joins, leaves, suspicions, and failures to spread through the system with low per-node message overhead.
+
+\subsection{System Design}
+
+System architecture is another important design consideration. 
+A common approach for coordinating distributed applications is to introduce a dedicated coordination service, such as ZooKeeper \cite{huntZooKeeperWaitfreeCoordination}. 
+ZooKeeper is a replicated coordination service consisting of multiple servers, one of which acts as the leader. 
+Clients may connect to any server in the ensemble, where read operations are served locally while write operations are forwarded to the leader, ordered, and replicated across the remaining servers.
+
+This architecture provides strong consistency guarantees, high availability, and good scalability for read-dominated workloads. 
+However, it also introduces a logically centralized coordination layer that must be maintained separately from the application nodes. 
+This increases deployment and operational complexity and makes membership management dependent on a dedicated coordination ensemble.
+
+For this reason, our system adopts a decentralized design instead. 
+Rather than relying on an external coordination service, membership management, failure detection, and topology maintenance are distributed across the participating nodes themselves.
+
 
 \section{Proposed Approach}
 \label{sec:proposed_approach}
