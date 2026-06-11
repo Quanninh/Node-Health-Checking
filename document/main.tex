@@ -340,6 +340,10 @@ Describe how the system is evaluated. Define the test environment, number of nod
 \label{subsec:evaluation_metrics}
 Use metrics such as detection latency, false-positive rate, recovery time, message overhead, CPU usage, and memory usage.
 
+\subsection{Experimental Scenarios}
+\label{subsec:experimental_scenarios}
+List the experiments: normal operation, node crash, delayed response, temporary network loss, node recovery, and multiple simultaneous failures.
+
 \section{Methodology}
 \label{sec:methodology}
 
@@ -389,7 +393,7 @@ The mean response time and standard deviation are calculated as:
 \end{equation}
 
 \begin{equation}
-\sigma = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(x_i - \mu)^2}
+    \sigma = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(x_i - \mu)^2}
 \end{equation}
 
 where $n$ is the number of samples, $x_i$ is a recorded response time, $\mu$ is the average response time, and $\sigma$ represents response-time variation.
@@ -433,10 +437,6 @@ $\phi \geq T_3$ & Unreachable \\ \hline
 Through this combination of indirect verification and adaptive suspicion calculation, the proposed method can reduce false-positive failure detection caused by temporary delay, message loss, or unstable direct connections.
 ```
 
-
-\subsection{Experimental Scenarios}
-\label{subsec:experimental_scenarios}
-List the experiments: normal operation, node crash, delayed response, temporary network loss, node recovery, and multiple simultaneous failures.
 
 \section{Experimental Results}
 \label{sec:experimental_results}
