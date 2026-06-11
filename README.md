@@ -357,7 +357,66 @@ monitoring-system/monitoring-system/
     └── index.html
 ```
 
-## Web service for running server on the cloud
-https://node-health-checking-10.onrender.com
+<!-- ## Web service for running server on the cloud
+https://node-health-checking-10.onrender.com -->
+
+# Team Citation Guide: Zotero & LaTeX Setup
+
+This guide will show you how to set up Zotero, join our shared Group Library, and use the **Better BibTeX** plugin to automatically update your LaTeX references.
+
+---
+
+## Step 1: Create a Zotero Account & Install the App
+1. Go to [Zotero.org](https://zotero.org) and register for a free account.
+2. Download and install **Zotero Desktop** for your operating system.
+3. Open Zotero Desktop and log in:
+   * **Windows/Linux**: Go to `Sync` on the top right corner.
+   * **Mac**: Go to `Sync` on the top right corner.
+   * Enter your username and password, then click **Set Up Syncing**.
+
+---
+
+## Step 2: Join the Shared Group Library
+1. Check your email or Zotero inbox for the group invitation link sent by the project manager.
+2. Click the link and accept the invitation to join the private group.
+3. Open your Zotero Desktop app and click the **green circular arrow icon** (top-right corner) to force a sync.
+4. You will now see a new section called **Group Libraries** in your left-hand sidebar. 
+5. **Rule:** All references for our paper must be dragged or saved directly into this shared group folder, *not* your personal "My Library".
+
+---
+
+## Step 3: Install the "Better BibTeX" Plugin
+*This plugin is required to format citations perfectly for IEEEtran and to auto-update our `.bib` file.*
+
+1. Download the latest version of the plugin from this link: [Better BibTeX Installation Guide](https://retorque.re) (Look for the `.xpi` file download).
+2. In Zotero Desktop, go to the top menu and select `Tools` -> `Add-ons` / `Plug-in`.
+3. Click the **gear icon** in the top-right corner of the Add-ons manager window.
+4. Select **Install Add-on From File...** and choose the `.xpi` file you just downloaded / Or drag it into the panel. Actually you should download this online from a github
+5. Click **Install Now**, then **restart Zotero** when prompted.
+
+---
+
+## Step 4: Export & Sync the References to LaTeX
+
+For writing locally (VS Code, TeXstudio, Offline Editors)
+1. Right-click our shared folder under **Group Libraries** in Zotero.
+2. Select **Export Collection...**
+3. Set the options exactly as follows:
+   * **Format:** `Better BibTeX`
+   * **Keep updated:** Check this box (Crucial! This auto-syncs changes).
+4. Save the file directly into your local LaTeX project folder as `references.bib`.
+
+---
+
+## Step 5: How to Use Citations in Your LaTeX Code
+To use these references, make sure your `.tex` main file includes the following lines right before the `\end{document}` tag:
+
+```latex
+\(\bibliographystyle{IEEEtran} \bibliography{references.bib} \end{document} \%\%\)MAGIT_PARSER_PROTECT%%```
+
+To cite a paper in the text, find the citation key in Zotero (provided by Better BibTeX, usually looks like `authorYearTitle`) and use:
+```latex
+\(\cite{authorYearTitle} \%\%\)MAGIT_PARSER_PROTECT%%```
+
 
 

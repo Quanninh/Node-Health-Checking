@@ -35,3 +35,5 @@ target/
 *.toc
 *.xdv
 document/*.pdf
+*.bib
+
