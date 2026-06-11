@@ -340,6 +340,100 @@ Describe how the system is evaluated. Define the test environment, number of nod
 \label{subsec:evaluation_metrics}
 Use metrics such as detection latency, false-positive rate, recovery time, message overhead, CPU usage, and memory usage.
 
+\section{Methodology}
+\label{sec:methodology}
+
+This section describes the methodology used in the proposed decentralized node health-checking system.
+As illustrated in Fig.~\ref{fig:phi_pipeline}, the methodology combines indirect heartbeat verification with the $\phi$ accrual failure detector.
+The indirect heartbeat mechanism reduces false-positive failure detection by allowing neighbor nodes to verify a suspicious node, while the $\phi$ accrual detector provides an adaptive suspicion value based on recent response-time behavior.
+
+\begin{figure*}[!t]
+    \centering
+    \includegraphics[width=0.95\textwidth]{Pipeline failure detection.png}
+    \caption{Pipeline of indirect heartbeat verification and $\phi$ accrual failure detection.}
+    \label{fig:phi_pipeline}
+\end{figure*}
+
+\subsection{Indirect Heartbeat Verification}
+\label{subsec:indirect_heartbeat_verification}
+
+Each node maintains a neighbor list containing the nodes with which it has a direct bidirectional connection.
+When node $B$ checks node $A$, it first sends a direct ping and waits for an acknowledgement.
+If node $A$ responds within the expected time, the response time is recorded and node $A$ is considered reachable.
+
+If node $B$ does not receive an acknowledgement, it does not immediately mark node $A$ as failed.
+Instead, node $B$ requests other neighbors, such as nodes $C$ and $E$, to ping node $A$ on its behalf.
+If any helper node receives an acknowledgement from node $A$, it notifies node $B$, and node $A$ is treated as alive.
+In this case, the problem is considered a possible connection issue between nodes $A$ and $B$ rather than a complete node failure.
+
+If both the direct ping and indirect pings fail, the system proceeds to the $\phi$ accrual calculation.
+
+\subsection{\texorpdfstring{$\phi$}{phi} Accrual Calculation}
+\label{subsec:phi_accrual_calculation}
+
+The $\phi$ accrual detector avoids making a binary alive-or-dead decision based only on a fixed timeout.
+Instead, it computes a continuous suspicion value, $\phi$, using recent response-time samples.
+To adapt to changing network conditions, the system stores response times in a sliding window.
+When a new sample is added and the window is full, the oldest sample is removed.
+
+Let the response-time samples in the sliding window be:
+
+\begin{equation}
+X = \{x_1, x_2, x_3, \ldots, x_n\}
+\end{equation}
+
+The mean response time and standard deviation are calculated as:
+
+\begin{equation}
+\mu = \frac{1}{n}\sum_{i=1}^{n}x_i
+\end{equation}
+
+\begin{equation}
+\sigma = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(x_i - \mu)^2}
+\end{equation}
+
+where $n$ is the number of samples, $x_i$ is a recorded response time, $\mu$ is the average response time, and $\sigma$ represents response-time variation.
+
+Let $t$ be the current waiting time since the ping was sent.
+The probability that a normal response time is greater than $t$ is defined as:
+
+\begin{equation}
+P(T > t) = 1 - F(t)
+\end{equation}
+
+where $F(t)$ is the cumulative distribution function of the response-time distribution.
+The suspicion value is then calculated as:
+
+\begin{equation}
+\phi(t) = -\log_{10}(P(T > t)) = -\log_{10}(1 - F(t))
+\end{equation}
+
+A higher $\phi$ value means that the current waiting time is more unusual compared with recent response-time history, so the target node is more likely to be unreachable.
+
+\subsection{Node State Classification}
+\label{subsec:node_state_classification}
+
+After calculating $\phi$, the system compares it with predefined thresholds to classify the target node.
+The thresholds are configurable, allowing the developer to balance fast failure detection against false-positive reduction.
+
+\begin{table}[h]
+\centering
+\caption{Node state classification based on $\phi$ value}
+\label{tab:phi_classification}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{$\phi$ Value Range} & \textbf{Node State} \\ \hline
+$\phi < T_1$ & Alive \\ \hline
+$T_1 \leq \phi < T_2$ & Warning \\ \hline
+$T_2 \leq \phi < T_3$ & Suspected \\ \hline
+$\phi \geq T_3$ & Unreachable \\ \hline
+\end{tabular}
+\end{table}
+
+Through this combination of indirect verification and adaptive suspicion calculation, the proposed method can reduce false-positive failure detection caused by temporary delay, message loss, or unstable direct connections.
+```
+
+
 \subsection{Experimental Scenarios}
 \label{subsec:experimental_scenarios}
 List the experiments: normal operation, node crash, delayed response, temporary network loss, node recovery, and multiple simultaneous failures.
