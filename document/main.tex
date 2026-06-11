@@ -162,44 +162,21 @@ State which failures are fully handled, partially handled, or outside the projec
 \label{sec:related_work}
 % Discuss existing approaches to failure detection and membership management in distributed systems. Compare heartbeat-based detection, timeout-based failure detectors, gossip-style membership protocols, and centralized monitoring. Explain which ideas influenced your design.
 Failure detection is one of the fundamental problem for fault tolerance in distributed system because node may crash in any time. 
-Traditional failure detection often use a binary output, such as "alive" or "unreachable".
-In this model, a monitoring node sends a heartbeat or ping message to another node and waits for a response.
-If the target node reponds within the expected timeout, the monitoring node considers it "alive". 
-This means that the target node is still reachable and can continue participating the system.
-However, if the target node does not repond before the timeout expires, the target node will be considered as a failed node.
-\newline
-Although this model is simple, it is not flexible enough for dynamic distributed environments. A missing reponse does not always mean that
-the target node has crashed. The node may still be running, but its reponse may be delayed because of network congestion, packet loss, high CPU usage, or temporary connection problem.
-Therefore, a binary detector may incorrectly classify a healthy node as unreachable. This is called "False Positive Failure Detection", also called false postive.
-In large distributed system, false positive are dangerous because they may cause the system to remove the healthy nodes, reduce availability and trigger unnecessary recovery operations.
-
-\subsection{\texorpdfstring{$\phi$}{phi} Accrual Calculation}
-
-Hayashibara et al.~\cite{hayashibaraAccrualFailureDetector2004} proposed the \texorpdfstring{$\phi$}{phi} accrual failure detector to improve the flexibility of failure detection.
-Instead of returning a boolean result, such as ``alive'' or ``unreachable'', the detector outputs a continuous suspicion level.
+Early works on traditional failure detection often use a binary output, such as “alive” or “unreachable”. 
+Although this model is simple, it is not flexible enough for dynamic distributed environments, where message delay, packet loss, or temporary network congestion may cause a healthy node to be falsely suspected. 
+The $\phi$ accrual failure detector was proposed to improve of flexibility of failure detection by returning a continuous suspicion level instead of a boolean result. 
 This allows the system or developer to interpret the monitoring information using different thresholds depending on the required trade-off between fast detection and false-positive reduction. 
 A lower threshold can detect failures more quickly, while a higher threshold can reduce incorrect failure decisions. 
 Experimental results from the original work show that the $\phi$ accrual failure detector performs comparably to other adaptive failure detection mechanisms, while providing greater flexibility for applications \cite{hayashibaraAccrualFailureDetector2004}.
 
-\subsection{SWIM protocol}
-
 Traditional heartbeating protocols may also suffer from scalability problems and false-positive failure detection. 
-If every node monitors every other node, the number of heartbeat messages increases rapidly as the system grows.
-Assume that the system has $n$ nodes. 
-In an all-to-all heartbeat design, each node sends heartbeat messages to the other $n-1$ nodes, so the total number of heartbeat messages in one checking period is $n(n-1)$. 
-Therefore, the message complexity is $O(n^2)$. 
-This quadratic growth creates high network overhead in large distributed systems. 
+If every node monitors every other node, the number of heartbeat messages increases rapidly as the system grows. 
 In addition, if a node misses a heartbeat only because of temporary network problems, it may incorrectly mark another node as failed. 
-Das et al.~\cite{dasSWIMScalableWeaklyconsistent2002} proposed SWIM to address these issues by separating failure detection from membership dissemination and using efficient peer-to-peer probing. 
-In each protocol period, a node selects one target node from its membership or neighbor list and sends a direct ping. 
-If the target replies with an acknowledgement, it is considered reachable. 
-If no acknowledgement is received within the timeout, the probing node does not immediately declare the target as failed. 
-Instead, it asks several helper nodes to perform indirect probes to the same target. 
-If any helper node receives an acknowledgement from the target, it forwards this information back to the original probing node, showing that the target is still alive.
-
-This indirect checking mechanism reduces false-positive failure detection because the decision is not based on only one communication path. 
-A node is considered failed only when both the direct probe and the indirect probes fail. 
-SWIM also disseminates membership changes using an infection-style, or gossip-style, approach, allowing updates about joins, leaves, suspicions, and failures to spread through the system with low per-node message overhead.
+SWIM addresses these issues by separating failure detection from membership dissemination and by using efficient peer-to-peer probing. 
+In each protocol period, a node selects another node and sends a direct ping. 
+If no acknowledgement is received, it asks several helper nodes to perform indirect probes. 
+This indirect checking mechanism reduces the probability of falsely declaring a node failed because another node may still be able to reach the target. 
+SWIM also disseminates membership changes using an infection-style, or gossip-style, approach, allowing updates about joins, leaves, and failures to spread through the system with low per-node message overhead \cite{dasSWIMScalableWeaklyconsistent2002}.
 
 \section{Proposed Approach}
 \label{sec:proposed_approach}
