@@ -134,7 +134,7 @@ When a node or connection problem occurs, the system applies algorithms to remov
 
 \section{Problem Statement}
 \label{sec:problem_statement}
-Many health checking systems rely on a centralized structure, where a single central entity collects information and makes decisions for the entire network.
+Many health checking systems rely on a centralized structure \cite{1Server}\cite{ApacheHadoop335}\cite{MonitorNodeHealth}, where a single central entity collects information and makes decisions for the entire network.
 Although this approach is simple to manage, it may introduce a bottleneck and a single point of failure.
 To address this limitation, this project adopts a decentralized approach.
 Instead of depending entirely on one central controller, nodes participate in monitoring one another and responding to failures.
@@ -466,8 +466,6 @@ Summarize the final system, the main design decisions, and the experimental find
 
 % ====== BIBLIOGRAPHY SETUP HERE ======
 \bibliographystyle{IEEEtran}     % Uses the IEEE citation style
-\bibliography{references}        % Links to references.bib (OMIT the ".bib" extension here)
+\bibliography{references.bib}        % Links to references.bib (OMIT the ".bib" extension here)
 
-
- 
- \end{document}
+\end{document}
