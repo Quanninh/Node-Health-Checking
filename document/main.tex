@@ -27,7 +27,9 @@
 \begin{document}
 
 \title{
-Decentralized Node Health Checking with Gossip-Based Failure Detection \& Topology Recovery
+Distributed System Project Report
+
+Node Health Checking
 \thanks{}
 }
 
@@ -330,6 +332,18 @@ Describe the server-side logic, including node registration, state storage, grap
 \label{subsec:membership_control}
 Explain how membership updates are triggered after node state changes. Describe how the system adds, removes, or restores nodes in the active membership view.
 
+\section{Evaluation}
+\label{sec:evaluation}
+Describe how the system is evaluated. Define the test environment, number of nodes, failure scenarios, workload, network conditions, and metrics.
+
+\subsection{Evaluation Metrics}
+\label{subsec:evaluation_metrics}
+Use metrics such as detection latency, false-positive rate, recovery time, message overhead, CPU usage, and memory usage.
+
+\subsection{Experimental Scenarios}
+\label{subsec:experimental_scenarios}
+List the experiments: normal operation, node crash, delayed response, temporary network loss, node recovery, and multiple simultaneous failures.
+
 \section{Methodology}
 \label{sec:methodology}
 
@@ -348,23 +362,29 @@ The indirect heartbeat mechanism reduces false-positive failure detection by all
 \label{subsec:indirect_heartbeat_verification}
 
 Each node maintains a neighbor list containing the nodes with which it has a direct bidirectional connection.
-When node $B$ checks node $A$, it first sends a direct ping and waits for an acknowledgement.
-If node $A$ responds within the expected time, the response time is recorded and node $A$ is considered reachable.
+When a node wants to check the availability of one of its neighbors, it sends a ping message and waits for an acknowledgement.
+For example, if node $B$ wants to check node $A$, node $B$ sends a direct ping request to node $A$.
+If node $A$ replies within the expected time range, node $B$ records the response time and classifies node $A$ as reachable.
+This successful response also becomes part of the historical response-time data used later by the $\phi$ accrual detector.
 
-If node $B$ does not receive an acknowledgement, it does not immediately mark node $A$ as failed.
-Instead, node $B$ requests other neighbors, such as nodes $C$ and $E$, to ping node $A$ on its behalf.
+However, if node $B$ does not receive an acknowledgement, it does not immediately mark node $A$ as failed.
+Instead, the system uses indirect heartbeat verification. Specifically, node $B$ requests other nodes in its neighbor list to verify node $A$, such as nodes $C$ and $E$, to ping node $A$ on its behalf.
 If any helper node receives an acknowledgement from node $A$, it notifies node $B$, and node $A$ is treated as alive.
 In this case, the problem is considered a possible connection issue between nodes $A$ and $B$ rather than a complete node failure.
 
-If both the direct ping and indirect pings fail, the system proceeds to the $\phi$ accrual calculation.
+If neither the direct ping nor the indirect pings receive a response from node $A$, the system has stronger evidence that node $A$ may be unreachable. 
+At this stage, the system does not rely only on the missing acknowledgements. Instead, it applies the $\phi$ accrual failure detector to calculate a suspicion value based on recent response-time history.
 
 \subsection{\texorpdfstring{$\phi$}{phi} Accrual Calculation}
 \label{subsec:phi_accrual_calculation}
 
-The $\phi$ accrual detector avoids making a binary alive-or-dead decision based only on a fixed timeout.
-Instead, it computes a continuous suspicion value, $\phi$, using recent response-time samples.
-To adapt to changing network conditions, the system stores response times in a sliding window.
-When a new sample is added and the window is full, the oldest sample is removed.
+The $\phi$ accrual detector avoids making a binary alive-or-dead decision based solely on a fixed timeout. Instead, it calculates a continuous suspicion value, $\phi$.
+
+To make this decision, the detector relies on historical response-time data to determine whether the current waiting time is normal or abnormal. Each time a ping is sent and an acknowledgement is successfully received, the system records the response time. 
+These recorded samples represent the recent communication behavior between nodes.
+
+To keep the detector adaptive, response-time samples are stored in a sliding window. This window operates like a queue: when a new response-time sample is recorded, it is added to the window. If the window has already reached its maximum size, the oldest sample is removed. 
+As a result, the window always contains the most recent response-time samples.
 
 Let the response-time samples in the sliding window be:
 
@@ -383,7 +403,9 @@ The mean response time and standard deviation are calculated as:
 \end{equation}
 
 where $n$ is the number of samples, $x_i$ is a recorded response time, $\mu$ is the average response time, and $\sigma$ represents response-time variation.
+These values are then used to estimate the response-time distribution for the $\phi$ calculation.
 
+After the response-time distribution is estimated from the sliding window, the system calculates how unusual the current waiting time is.
 Let $t$ be the current waiting time since the ping was sent.
 The probability that a normal response time is greater than $t$ is defined as:
 
@@ -403,8 +425,11 @@ A higher $\phi$ value means that the current waiting time is more unusual compar
 \subsection{Node State Classification}
 \label{subsec:node_state_classification}
 
-After calculating $\phi$, the system compares it with predefined thresholds to classify the target node.
-The thresholds are configurable, allowing the developer to balance fast failure detection against false-positive reduction.
+The final output of the methodology is the classification of the monitored node. 
+After the $\phi$ value is calculated, the system compares it with predefined thresholds. 
+These thresholds are configurable by the developer depending on how sensitive the failure detection process should be. 
+A lower threshold can detect unreachable nodes faster, but may increase false positives. 
+A higher threshold can reduce false positives, but may delay failure classification.
 
 \begin{table}[h]
 \centering
@@ -422,18 +447,6 @@ $\phi \geq T_3$ & Unreachable \\ \hline
 
 Through this combination of indirect verification and adaptive suspicion calculation, the proposed method can reduce false-positive failure detection caused by temporary delay, message loss, or unstable direct connections.
 ```
-
-\section{Evaluation}
-\label{sec:evaluation}
-Describe how the system is evaluated. Define the test environment, number of nodes, failure scenarios, workload, network conditions, and metrics.
-
-\subsection{Evaluation Metrics}
-\label{subsec:evaluation_metrics}
-Use metrics such as detection latency, false-positive rate, recovery time, message overhead, CPU usage, and memory usage.
-
-\subsection{Experimental Scenarios}
-\label{subsec:experimental_scenarios}
-List the experiments: normal operation, node crash, delayed response, temporary network loss, node recovery, and multiple simultaneous failures.
 
 
 \section{Experimental Results}
