@@ -223,11 +223,8 @@ For this reason, our system adopts a decentralized design instead.
 Rather than relying on an external coordination service, membership management, failure detection, and topology maintenance are distributed across the participating nodes themselves.
 
 
-\section{Proposed Approach}
+\section{Proposed Approach} % present algorithm
 \label{sec:proposed_approach}
-% Present the high-level design of your node health-checking system.
-% Explain the roles of monitored nodes, health-check agents, the server or coordinator, and the membership control component.
-% Describe the data exchanged between components and how node state transitions are made.
 
 \subsection{Complete Architectural Diagram}
 \label{subsec:architecture}
@@ -298,7 +295,7 @@ Fig.~\ref{fig:architecture} shows the complete architecture of the proposed syst
 \label{fig:architecture}
 \end{figure*}
 % NOTE: add something to lead to these algo, algo will be divided into three subsections
-\subsection{Hybrid SWIMPHI}
+\subsection{Failure Detection: Hybrid SWIMPHI}
 \label{subsec:hybrid_swimphi}
 The proposed node health-checking system is influenced by both SWIM and the $\phi$ accrual failure detector. 
 From SWIM, the system adopts the idea of decentralized peer-to-peer checking and helper-based indirect probing. 
@@ -412,6 +409,12 @@ $\phi \geq T_3$ & Unreachable \\ \hline
 Through this combination of indirect verification and adaptive suspicion calculation, the proposed method can reduce false-positive failure detection caused by temporary delay, message loss, or unstable direct connections.
 ```
 
+\subsection{Neighbor Discovery: FINDNEMO}
+\label{subsec:node_discovery}
+
+\subsection{Self-healing Topology: KUBO viet va dat ten}
+\label{subsec:node_deletion}
+
 \subsection{Handling False Positives}
 \label{subsec:false_positives}
 Although the proposed approach significantly reduces false-positive detections, rare cases may still occur under severe network congestion or temporary network partitions, where the health-checking process is disrupted. 
@@ -423,7 +426,7 @@ Once connectivity is restored, the affected node is required to rejoin the netwo
 In this prototype, automatic process recovery is considered a deployment-level concern rather than a responsibility of the distributed protocol itself. 
 The protocol only determines when a node should be considered unreachable and subsequently rejoin the network. In a production environment, this mechanism can be complemented by external supervisors such as systemd, Docker restart policies, Kubernetes controllers, or watchdog services to automatically restart failed node processes.
 
-\section{Implementation Details}
+\section{Implementation Details} % show best code and explain
 \label{sec:implementation}
 Explain how the proposed approach is implemented in the project. Mention the programming language, major modules, communication mechanism, configuration files, and how nodes are started and monitored.
 
@@ -431,13 +434,19 @@ Explain how the proposed approach is implemented in the project. Mention the pro
 \label{subsec:node_agent}
 Describe the responsibilities of the node agent, including sending or responding to health checks, reporting status, and interacting with the membership control service.
 
+\subsubsection{Failure Detection: Hybrid SWIMPHI}
+\label{subsubsec: swimphi_code}
+
+\subsubsection{Neighbor Discovery: FINDNEMO}
+\label{subsubsec:node_discovery_code}
+
+\subsubsection{Self-healing Topology: KUBO viet va dat ten}
+\label{subsubsec:node_deletion_code}
+
 \subsection{Server Application}
 \label{subsec:server_application}
 Describe the server-side logic, including node registration, state storage, graph or topology handling, and health-status aggregation.
 
-\subsection{Membership Control}
-\label{subsec:membership_control}
-Explain how membership updates are triggered after node state changes. Describe how the system adds, removes, or restores nodes in the active membership view.
 
 \section{Teamwork}
 \label{sec:teamwork}
