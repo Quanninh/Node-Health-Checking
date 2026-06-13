@@ -132,6 +132,24 @@ In this project, health checking focuses on detecting the up or down status of e
 Based on the detected condition of the network, the system can identify healthy nodes, suspicious nodes, and failed nodes.
 When a node or connection problem occurs, the system applies algorithms to remove failed nodes or unstable connections and reorganize the remaining connections to maintain progess of the network.
 
+\subsection{Background}
+\label{subsec:background}
+
+\subsection{Motivation}
+\label{subsec:motivation}
+
+\subsection{Reasearch Gap}
+\label{subsec:research_gap}
+
+Existing decentralized monitoring approaches effectively detect node failures through heartbeat- or gossip-based mechanisms. 
+However, many solutions focus primarily on failure detection and information dissemination, while topology maintenance and autonomous recovery are addressed as separate concerns. 
+For example, Das et al. \cite{dasSWIMScalableWeaklyconsistent2002} designed SWIM, a scalable membership and failure detection protocol that efficiently disseminates failure information in distributed systems. 
+Nevertheless, the protocol does not provide an integrated mechanism for autonomous topology repair following node failures. 
+Consequently, limited attention has been given to unified frameworks that combine dynamic membership management, failure detection, gossip dissemination, and self-healing topology repair within a single decentralized architecture.
+
+\subsection{Contributions}
+\label{subsec:contribution}
+
 \section{Problem Statement}
 \label{sec:problem_statement}
 Many health checking systems rely on a centralized structure \cite{1Server}\cite{ApacheHadoop335}\cite{MonitorNodeHealth}, where a single central entity collects information and makes decisions for the entire network.
@@ -431,7 +449,7 @@ Explain how membership updates are triggered after node state changes. Describe 
         \hline
         \textbf{No} & \textbf{Task Description} & \textbf{Responsible Member(s)} \\ \hline
         1 & Problem analysis and failure model definitions & All team members \\ \hline
-        2 & Health-checking algorithm and false-positive handling & Khanh, Khai, Phuc \\ \hline
+        2 & Health-checking algorithm and system design & Khanh, Khai, Phuc \\ \hline
         3 & Node agent implementation & All team members \\ \hline
         4 & Server application and membership control & Quan, Duy \\ \hline
         5 & Evaluation, experiments, and report writing & All team members \\ \hline
