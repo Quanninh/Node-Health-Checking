@@ -126,13 +126,11 @@ distributed systems, node health checking, failure detection, heartbeat, false p
 Distributed systems consist of multiple nodes connecting to each other and working with each other to perform tasks and provide reliable services.
 In such systems, the readiness of a node is very important because individual nodes may become disconnected, unresponsive, or fail completely.
 If these failures are not detected and handled quickly, they may affect communication between nodes and reduce the reliability of the system.
-\newline
 
 Node health checking is the process of monitoring if nodes are still active and responsive in the network.
 In this project, health checking focuses on detecting the up or down status of each node through communication between connected nodes.
 Based on the detected condition of the network, the system can identify healthy nodes, suspicious nodes, and failed nodes.
 When a node or connection problem occurs, the system applies algorithms to remove failed nodes or unstable connections and reorganize the remaining connections to maintain progess of the network.
-\newline
 
 \section{Problem Statement}
 \label{sec:problem_statement}
@@ -142,21 +140,21 @@ To address this limitation, this project adopts a decentralized approach.
 Instead of depending entirely on one central controller, nodes participate in monitoring one another and responding to failures.
 A dashboard may be used as a visual aid to observe the system state, but the health checking and recovery logic remain decentralized.
 
-\section{...}
-\label{sec:second}
-In This Part You Write The Second Part Of Your Report.
+% \section{...}
+% \label{sec:second}
+% In This Part You Write The Second Part Of Your Report.
 
-\subsection{Failure Models}
-\label{subsec:failure_models}
-Explicitly define the failure models considered in this report:
-\begin{itemize}
-    \item \textbf{Crash failure:} a node stops executing and no longer sends responses.
-    \item \textbf{Network partition:} a node is alive but temporarily unreachable from one or more monitors.
-    \item \textbf{Message loss:} heartbeat or health-check messages are dropped by the network.
-    \item \textbf{Delay failure:} a node responds too slowly because of load, garbage collection, or network congestion.
-    \item \textbf{Recovery:} a failed or unreachable node becomes healthy again and must rejoin the active membership view.
-\end{itemize}
-State which failures are fully handled, partially handled, or outside the project scope.
+% \subsection{Failure Models}
+% \label{subsec:failure_models}
+% Explicitly define the failure models considered in this report:
+% \begin{itemize}
+%     \item \textbf{Crash failure:} a node stops executing and no longer sends responses.
+%     \item \textbf{Network partition:} a node is alive but temporarily unreachable from one or more monitors.
+%     \item \textbf{Message loss:} heartbeat or health-check messages are dropped by the network.
+%     \item \textbf{Delay failure:} a node responds too slowly because of load, garbage collection, or network congestion.
+%     \item \textbf{Recovery:} a failed or unreachable node becomes healthy again and must rejoin the active membership view.
+% \end{itemize}
+% State which failures are fully handled, partially handled, or outside the project scope.
 
 \section{Related Work}
 \label{sec:related_work}
@@ -212,17 +210,7 @@ Rather than relying on an external coordination service, membership management, 
 % Present the high-level design of your node health-checking system.
 % Explain the roles of monitored nodes, health-check agents, the server or coordinator, and the membership control component.
 % Describe the data exchanged between components and how node state transitions are made.
-The proposed node health-checking system is influenced by both SWIM and the $\phi$ accrual failure detector. 
-From SWIM, the system adopts the idea of decentralized peer-to-peer checking and helper-based indirect probing. 
-This allows more than one node to participate in checking the status of a target node and reduces dependence on a single monitoring component. 
-From the $\phi$ accrual detector, the system adopts the idea of using timing history and a continuous suspicion value instead of making an immediate binary decision after one missed response. 
-In the proposed design, a target node is first checked through heartbeat or ping messages. 
-If the target does not respond, helper nodes from the neighbor list can be used to verify whether the problem is a real node failure or only a local communication problem. 
-After that, the $\phi$ value is used to evaluate the seriousness of the failure suspicion based on the response-time history.
 
-By combining these two ideas, the proposed approach aims to improve both scalability and accuracy. 
-SWIM contributes a scalable architecture for distributed membership checking, while the $\phi$ accrual detector contributes an adaptive decision mechanism for handling delay and message loss. 
-Therefore, the system can avoid immediately deleting a node after a single missed heartbeat and can instead move through health states such as healthy, suspected, and failed based on both cooperative probing and suspicion-level evaluation.
 \subsection{Complete Architectural Diagram}
 \label{subsec:architecture}
 Fig.~\ref{fig:architecture} shows the complete architecture of the proposed system. Replace the placeholder image with the final architecture diagram when it is ready.
@@ -291,64 +279,22 @@ Fig.~\ref{fig:architecture} shows the complete architecture of the proposed syst
 \caption{Complete architectural diagram of the node health-checking system.}
 \label{fig:architecture}
 \end{figure*}
+% NOTE: add something to lead to these algo, algo will be divided into three subsections
+\subsection{Hybrid SWIMPHI}
+\label{subsec:hybrid_swimphi}
+The proposed node health-checking system is influenced by both SWIM and the $\phi$ accrual failure detector. 
+From SWIM, the system adopts the idea of decentralized peer-to-peer checking and helper-based indirect probing. 
+This allows more than one node to participate in checking the status of a target node and reduces dependence on a single monitoring component. 
+From the $\phi$ accrual detector, the system adopts the idea of using timing history and a continuous suspicion value instead of making an immediate binary decision after one missed response. 
+In the proposed design, a target node is first checked through heartbeat or ping messages. 
+If the target does not respond, helper nodes from the neighbor list can be used to verify whether the problem is a real node failure or only a local communication problem. 
+After that, the $\phi$ value is used to evaluate the seriousness of the failure suspicion based on the response-time history.
 
-\subsection{Specific Algorithm}
-\label{subsec:algorithm}
-Describe the concrete health-checking algorithm used by the system. Include the heartbeat interval, timeout threshold, retry count, state transition rules, and membership update policy.
+By combining these two ideas, the proposed approach aims to improve both scalability and accuracy. 
+SWIM contributes a scalable architecture for distributed membership checking, while the $\phi$ accrual detector contributes an adaptive decision mechanism for handling delay and message loss. 
+Therefore, the system can avoid immediately deleting a node after a single missed heartbeat and can instead move through health states such as healthy, suspected, and failed based on both cooperative probing and suspicion-level evaluation.
 
-\begin{enumerate}
-    \item Each node or monitor periodically sends a health-check request.
-    \item A successful response marks the target node as healthy and refreshes its last-seen timestamp.
-    \item A missed response increases the target node's suspicion counter.
-    \item A node is marked suspected only after the configured retry threshold is reached.
-    \item A suspected node is marked failed if it remains unreachable after the failure timeout.
-    \item A failed node is restored to healthy after it responds successfully for a configured number of checks.
-\end{enumerate}
-
-\subsection{Handling False Positives}
-\label{subsec:false_positives}
-Although the proposed approach significantly reduces false-positive detections, rare cases may still occur under severe network congestion or temporary network partitions, where the health-checking process is disrupted. 
-In such situations, a healthy node may be incorrectly classified as \textbf{UNREACHABLE}.
-\newline
-To maintain consistency of the network topology, nodes classified as \textbf{UNREACHABLE} are removed from the active membership view and treated as departed members. 
-Once connectivity is restored, the affected node is required to rejoin the network through the standard membership protocol, thereby rebuilding its neighbor relationships and restoring its participation in the system.
-\newline
-In this prototype, automatic process recovery is considered a deployment-level concern rather than a responsibility of the distributed protocol itself. 
-The protocol only determines when a node should be considered unreachable and subsequently rejoin the network. In a production environment, this mechanism can be complemented by external supervisors such as systemd, Docker restart policies, Kubernetes controllers, or watchdog services to automatically restart failed node processes.
-
-\section{Implementation Details}
-\label{sec:implementation}
-Explain how the proposed approach is implemented in the project. Mention the programming language, major modules, communication mechanism, configuration files, and how nodes are started and monitored.
-
-\subsection{Node Agent}
-\label{subsec:node_agent}
-Describe the responsibilities of the node agent, including sending or responding to health checks, reporting status, and interacting with the membership control service.
-
-\subsection{Server Application}
-\label{subsec:server_application}
-Describe the server-side logic, including node registration, state storage, graph or topology handling, and health-status aggregation.
-
-\subsection{Membership Control}
-\label{subsec:membership_control}
-Explain how membership updates are triggered after node state changes. Describe how the system adds, removes, or restores nodes in the active membership view.
-
-\section{Evaluation}
-\label{sec:evaluation}
-Describe how the system is evaluated. Define the test environment, number of nodes, failure scenarios, workload, network conditions, and metrics.
-
-\subsection{Evaluation Metrics}
-\label{subsec:evaluation_metrics}
-Use metrics such as detection latency, false-positive rate, recovery time, message overhead, CPU usage, and memory usage.
-
-\subsection{Experimental Scenarios}
-\label{subsec:experimental_scenarios}
-List the experiments: normal operation, node crash, delayed response, temporary network loss, node recovery, and multiple simultaneous failures.
-
-\section{Methodology}
-\label{sec:methodology}
-
-This section describes the methodology used in the proposed decentralized node health-checking system.
-As illustrated in Fig.~\ref{fig:phi_pipeline}, the methodology combines indirect heartbeat verification with the $\phi$ accrual failure detector.
+As illustrated in Fig.~\ref{fig:phi_pipeline}, the algorithm combines indirect heartbeat verification with the $\phi$ accrual failure detector.
 The indirect heartbeat mechanism reduces false-positive failure detection by allowing neighbor nodes to verify a suspicious node, while the $\phi$ accrual detector provides an adaptive suspicion value based on recent response-time behavior.
 
 \begin{figure*}[!t]
@@ -358,8 +304,8 @@ The indirect heartbeat mechanism reduces false-positive failure detection by all
     \label{fig:phi_pipeline}
 \end{figure*}
 
-\subsection{Indirect Heartbeat Verification}
-\label{subsec:indirect_heartbeat_verification}
+\subsubsection{Indirect Heartbeat Verification}
+\label{subsubsec:indirect_heartbeat_verification}
 
 Each node maintains a neighbor list containing the nodes with which it has a direct bidirectional connection.
 When a node wants to check the availability of one of its neighbors, it sends a ping message and waits for an acknowledgement.
@@ -375,8 +321,8 @@ In this case, the problem is considered a possible connection issue between node
 If neither the direct ping nor the indirect pings receive a response from node $A$, the system has stronger evidence that node $A$ may be unreachable. 
 At this stage, the system does not rely only on the missing acknowledgements. Instead, it applies the $\phi$ accrual failure detector to calculate a suspicion value based on recent response-time history.
 
-\subsection{\texorpdfstring{$\phi$}{phi} Accrual Calculation}
-\label{subsec:phi_accrual_calculation}
+\subsubsection{\texorpdfstring{$\phi$}{phi} Accrual Calculation}
+\label{subsubsec:phi_accrual_calculation}
 
 The $\phi$ accrual detector avoids making a binary alive-or-dead decision based solely on a fixed timeout. Instead, it calculates a continuous suspicion value, $\phi$.
 
@@ -422,8 +368,8 @@ The suspicion value is then calculated as:
 
 A higher $\phi$ value means that the current waiting time is more unusual compared with recent response-time history, so the target node is more likely to be unreachable.
 
-\subsection{Node State Classification}
-\label{subsec:node_state_classification}
+\subsubsection{Node State Classification}
+\label{subsubsec:node_state_classification}
 
 The final output of the methodology is the classification of the monitored node. 
 After the $\phi$ value is calculated, the system compares it with predefined thresholds. 
@@ -448,10 +394,32 @@ $\phi \geq T_3$ & Unreachable \\ \hline
 Through this combination of indirect verification and adaptive suspicion calculation, the proposed method can reduce false-positive failure detection caused by temporary delay, message loss, or unstable direct connections.
 ```
 
+\subsection{Handling False Positives}
+\label{subsec:false_positives}
+Although the proposed approach significantly reduces false-positive detections, rare cases may still occur under severe network congestion or temporary network partitions, where the health-checking process is disrupted. 
+In such situations, a healthy node may be incorrectly classified as \textbf{UNREACHABLE}.
 
-\section{Experimental Results}
-\label{sec:experimental_results}
-Present the measured results using tables, charts, and short analysis. Compare observed behavior against the requirements from Section~\ref{subsec:requirements}. Explain any unexpected behavior and limitations.
+To maintain consistency of the network topology, nodes classified as \textbf{UNREACHABLE} are removed from the active membership view and treated as departed members. 
+Once connectivity is restored, the affected node is required to rejoin the network through the standard membership protocol, thereby rebuilding its neighbor relationships and restoring its participation in the system.
+
+In this prototype, automatic process recovery is considered a deployment-level concern rather than a responsibility of the distributed protocol itself. 
+The protocol only determines when a node should be considered unreachable and subsequently rejoin the network. In a production environment, this mechanism can be complemented by external supervisors such as systemd, Docker restart policies, Kubernetes controllers, or watchdog services to automatically restart failed node processes.
+
+\section{Implementation Details}
+\label{sec:implementation}
+Explain how the proposed approach is implemented in the project. Mention the programming language, major modules, communication mechanism, configuration files, and how nodes are started and monitored.
+
+\subsection{Node Agent}
+\label{subsec:node_agent}
+Describe the responsibilities of the node agent, including sending or responding to health checks, reporting status, and interacting with the membership control service.
+
+\subsection{Server Application}
+\label{subsec:server_application}
+Describe the server-side logic, including node registration, state storage, graph or topology handling, and health-status aggregation.
+
+\subsection{Membership Control}
+\label{subsec:membership_control}
+Explain how membership updates are triggered after node state changes. Describe how the system adds, removes, or restores nodes in the active membership view.
 
 \section{Teamwork}
 \label{sec:teamwork}
@@ -471,14 +439,26 @@ Present the measured results using tables, charts, and short analysis. Compare o
     \label{tab:task_distribution}
 \end{table}
 
+\section{Evaluation \& Experimental Results}
+\label{sec:evaluation_and_experimental_results}
+Describe how the system is evaluated. Define the test environment, number of nodes, failure scenarios, workload, network conditions, and metrics.
+
+\subsection{Evaluation Metrics}
+\label{subsec:evaluation_metrics}
+Use metrics such as detection latency, false-positive rate, recovery time, message overhead, CPU usage, and memory usage.
+
+\subsection{Experimental Scenarios}
+\label{subsec:experimental_scenarios}
+List the experiments: normal operation, node crash, delayed response, temporary network loss, node recovery, and multiple simultaneous failures.
+
 \section{Conclusion and Future Work}
 \label{sec:conclusion}
 Summarize the final system, the main design decisions, and the experimental findings. Explain what worked well, what limitations remain, and what could be improved, such as adaptive timeouts, decentralized monitoring, or stronger partition handling.
 
-
-
 % ====== BIBLIOGRAPHY SETUP HERE ======
 \bibliographystyle{IEEEtran}     % Uses the IEEE citation style
-\bibliography{references.bib}        % Links to references.bib (OMIT the ".bib" extension here)
+\bibliography{references}        % Links to references.bib (OMIT the ".bib" extension here)
 
-\end{document}
+
+
+ \end{document}
