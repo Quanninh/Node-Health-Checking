@@ -409,8 +409,19 @@ $\phi \geq T_3$ & Unreachable \\ \hline
 Through this combination of indirect verification and adaptive suspicion calculation, the proposed method can reduce false-positive failure detection caused by temporary delay, message loss, or unstable direct connections.
 ```
 
-\subsection{Neighbor Discovery: FINDNEMO}
+\subsection{Neighbor Discovery: FINDING NEMO}
 \label{subsec:node_discovery}
+
+FINDING NEMO, short for \textit{Finding Neighbors and Evicted Members of their Own}, is the neighbor discovery and network joining algorithm proposed in this work. 
+The name reflects the fact that a joining node must identify both prospective neighbors and any existing members that are evicted by those neighbors during the joining process, as discussed later in this section. 
+To facilitate understanding of the algorithm, several terms and system rules are first defined as follows:
+
+\begin{enumerate}
+\item \textbf{Neighbor}: A bidirectional relationship established between two nodes in the network. If node A is a neighbor of node B, then node B is also considered a neighbor of node A.
+
+\item \textbf{Neighbor List}: A local data structure maintained by each node that stores information about its neighbors, such as their network addresses. The neighbor list has a fixed capacity of $k$, where $k$ is an even number. To maintain network connectivity and resilience, each node attempts to keep its neighbor list as full as possible whenever sufficient peers are available.
+
+\end{enumerate}
 
 \subsection{Self-healing Topology: KUBO viet va dat ten}
 \label{subsec:node_deletion}
