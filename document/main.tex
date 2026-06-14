@@ -282,7 +282,31 @@ Rather than relying on an external coordination service, membership management, 
 
 \subsection{Complete Architectural Diagram}
 \label{subsec:architecture}
-Fig.~\ref{fig:architecture} shows the complete architecture of the proposed system. Replace the placeholder image with the final architecture diagram when it is ready.
+During operation, the nodes also generate status reports containing node information and health-checking results.
+These reports are sent to the server in JSON format.
+The server-side application receives the submitted node information through a POST request and forwards it to the controller.
+The controller acts as the entry point of the application layer.
+After receiving the data, it passes the information to the service layer, where the data is processed and prepared for storage.
+The service layer then communicates with the repository layer, which is responsible for storing the processed records in the database.
+
+The database is used to store node information, node status, and failure reports.
+This allows the system to keep a history of node activities and health-checking events.
+However, the database is not part of the core decentralized health-checking mechanism.
+It is mainly used to support visualization, inspection, and analysis through the dashboard.
+
+The dashboard provides a visual interface for observing the current state of the system.
+When the dashboard needs updated node information, it sends a GET request to the controller.
+The controller receives the request and forwards it to the service layer.
+The service layer processes the request and retrieves the required information through the repository layer.
+The repository then fetches the data from the database and returns it back through the same application layers.
+Finally, the dashboard displays the received information in a readable format using HTML and CSS.
+
+An important characteristic of this architecture is that the health-checking logic is not dependent on the dashboard or the database.
+The nodes remain interconnected and continue performing health checks on their neighbors even if the server, dashboard, or database becomes unavailable.
+Therefore, the server-side components are used mainly for reporting, storage, and visualization, while the actual node health-checking process remains decentralized.
+
+Fig.~\ref{fig:architecture} shows the complete architecture of the proposed system.
+
 
 % \begin{figure*}[t]
 %     \centering
