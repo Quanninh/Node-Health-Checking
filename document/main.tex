@@ -119,10 +119,8 @@ Overall, the system demonstrates that decentralized node health checking can red
 distributed systems, node health checking, failure detection, heartbeat, false positives, fault tolerance
 \end{IEEEkeywords}
 
-
 \section{Introduction}
 \label{sec:introduction}
-
 Distributed systems consist of multiple nodes connecting to each other and working with each other to perform tasks and provide reliable services.
 In such systems, the readiness of a node is very important because individual nodes may become disconnected, unresponsive, or fail completely.
 If these failures are not detected and handled quickly, they may affect communication between nodes and reduce the reliability of the system.
@@ -135,8 +133,31 @@ When a node or connection problem occurs, the system applies algorithms to remov
 \subsection{Background}
 \label{subsec:background}
 
+A node health checking system is used to observe the status of nodes in a distributed system.
+A node may be considered healthy when it can respond to health check messages within an acceptable time, and unhealthy when it stops responding, becomes unreachable, or behaves abnormally due to network or system issues.
+The common centralized approach uses a dedicated monitoring component to check the status of all nodes.
+In this model, nodes usually report their status to a central service, or the central service periodically sends health check requests to each node.
+The centralized model has several advantages.
+It is easier to design, easier to visualize, and simpler to maintain because all health information is collected in one place.
+However, this also means that the reliability of the whole monitoring mechanism depends heavily on the central component.
+If the central monitor fails, becomes disconnected, or is overloaded, the system may no longer be able to detect failures correctly.
+In contrast, a decentralized node health checking system distributes the monitoring responsibility among the nodes themselves.
+Each node maintains relationships with a limited number of neighboring nodes and performs health checks on those neighbors.
+This creates a distributed monitoring structure where no single node is responsible for the entire system.
+The relationship between nodes becomes an important part of the design because it determines how monitoring responsibility is shared, how failures are detected, and how the system can recover when connections are lost.
+
 \subsection{Motivation}
 \label{subsec:motivation}
+
+The main motivation for this project is the single point of failure problem found in traditional centralized node health checking systems.
+While centralized monitoring is practical for small or simple systems, it becomes less reliable when the central component is unavailable.
+A failure in the monitoring service can prevent the system from detecting node failures, even though the actual distributed nodes may still be capable of communicating with one another.
+A decentralized design reduces this dependency by allowing nodes to monitor each other directly.
+This improves fault tolerance because the failure of one monitoring node does not stop the entire health checking process.
+It also improves availability because the system can continue operating as long as enough node relationships remain active.
+By distributing the health checking responsibility, the system avoids relying on a single central authority and becomes more resilient to partial failures.
+This project is therefore motivated by the need for a node health checking mechanism that can continue functioning even when some components fail.
+The design focuses on maintaining node relationships, detecting unhealthy nodes, and supporting recovery without depending entirely on a centralized monitor.
 
 \subsection{Reasearch Gap}
 \label{subsec:research_gap}
@@ -149,6 +170,48 @@ Consequently, limited attention has been given to unified frameworks that combin
 
 \subsection{Contributions}
 \label{subsec:contribution}
+
+This project presents a decentralized node health-checking system designed to reduce the single point of failure problem found in traditional centralized monitoring approaches.
+Instead of depending on one central monitor to observe the entire system, the proposed design distributes the health-checking responsibility among the nodes themselves.
+Each node monitors a limited number of neighboring nodes and participates in maintaining the overall health-checking structure.
+
+The main contributions of this project are as follows:
+\begin{itemize}
+\item \textbf{Decentralized node health-checking design:}
+
+The project proposes a neighbor-based monitoring structure where each node is responsible for checking the health status of a small set of other nodes.
+This avoids relying on a single centralized monitor for failure detection.
+
+\item \textbf{Node relationship and membership management:}
+
+The system maintains relationships between nodes so that each node can monitor and be monitored by others.
+When a node joins, fails, or becomes unreachable, the system attempts to update the node relationships to preserve the health-checking structure.
+
+\item \textbf{Failure detection mechanism:}
+
+The system implements a health-checking mechanism that allows nodes to detect unreachable or failed neighbors based on their responses.
+This supports the identification of crash failures, temporary disconnections, delayed responses, and recovery situations.
+
+\item \textbf{Repair and rewiring support:}
+
+When a monitored node becomes unavailable, the system attempts to repair the affected node relationships by replacing failed or unreachable neighbors.
+This helps the system continue operating even when individual nodes fail.
+
+\item \textbf{Optional visualization support:}
+
+The project includes a server application and dashboard for observing node status and failure events.
+However, this component is used only for visualization and does not act as the central authority for the health-checking logic.
+Therefore, the decentralized health-checking process can continue even without the dashboard or database.
+
+\item \textbf{Experimental evaluation under failure scenarios:}
+
+The system is evaluated using several scenarios, including normal operation, node joining, node crash, temporary network loss, unstable connection, node recovery, and dashboard or database unavailability.
+These experiments demonstrate whether the system can detect failures and maintain node relationships without depending on a single centralized monitor.
+
+\end{itemize}
+
+Overall, the contribution of this project is a working prototype of a decentralized node health-checking system that improves fault tolerance and availability by distributing monitoring responsibility across multiple nodes. The system demonstrates how node relationships, failure detection, and recovery mechanisms can be combined to reduce dependency on a central monitoring component.
+
 
 \section{Problem Statement}
 \label{sec:problem_statement}
