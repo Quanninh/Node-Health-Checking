@@ -15,9 +15,35 @@
 \usepackage{subfigure}
 \usepackage{graphicx}
 \usepackage{tikz}
+\usepackage{listings}
 \usepackage{circuitikz}
 \usetikzlibrary{arrows.meta}
 
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
 
 \pgfplotsset{compat=1.18}
 
@@ -201,7 +227,8 @@ These experiments demonstrate whether the system can detect failures and maintai
 
 \end{itemize}
 
-Overall, the contribution of this project is a working prototype of a decentralized node health-checking system that improves fault tolerance and availability by distributing monitoring responsibility across multiple nodes. The system demonstrates how node relationships, failure detection, and recovery mechanisms can be combined to reduce dependency on a central monitoring component.
+Overall, the contribution of this project is a working prototype of a decentralized node health-checking system that improves fault tolerance and availability by distributing monitoring responsibility across multiple nodes.
+The system demonstrates how node relationships, failure detection, and recovery mechanisms can be combined to reduce dependency on a central monitoring component.
 
 
 \section{Problem Statement}
@@ -500,7 +527,127 @@ Explain how the proposed approach is implemented in the project. Mention the pro
 Describe the responsibilities of the node agent, including sending or responding to health checks, reporting status, and interacting with the membership control service.
 
 \subsubsection{Failure Detection: Hybrid SWIMPHI}
-\label{subsubsec: swimphi_code}
+\label{subsubsec:swimphi_code}    
+ 
+
+The SWIMPHI is implemented by the \texttt{FailureDetector} class, which combines periodic heartbeat probing inspired by SWIM with adaptive suspicion estimation from the $\phi$ Accrual Failure Detector. 
+
+As shown in Listing~\ref{lst:scheduler}, the
+\texttt{FailureDetector} uses a
+\texttt{ScheduledExecutorService} to schedule periodic
+monitoring tasks. The primary task performs heartbeat probing
+at configurable intervals, enabling each node to continuously
+monitor the availability of its neighbors and detect potential failures in a timely manner.
+
+\begin{lstlisting}[language=Java,
+caption={Scheduling periodic failure-detection tasks},
+label={lst:scheduler}]
+scheduler.scheduleAtFixedRate(
+    this::runOneProbeSafely,
+    probeIntervalSeconds,
+    probeIntervalSeconds,
+    TimeUnit.SECONDS);
+\end{lstlisting}
+
+During each monitoring cycle, the node selects a target
+neighbor from the \texttt{NeighborDirectory} and sends a
+heartbeat request through the \texttt{NodeClient}. The
+implementation uses Java's \texttt{CompletableFuture}
+framework to perform non-blocking communication, allowing
+monitoring operations to continue without waiting for network
+responses.
+
+\begin{lstlisting}[language=Java,
+caption={Heartbeat probing and ACK processing},
+label={lst:heartbeat}]
+Optional<NodeAddress> selectedTarget =
+    neighborDirectory.nextTargetNode();
+
+nodeClient.ping(targetNode)
+    .thenAccept(ackReceived -> {
+        if (ackReceived) {
+            handleAckReceived(
+                targetNode,
+                "direct ping",
+                pingSendTime);
+        } else {
+            handleDirectPingFailure(
+                targetNode);
+        }
+    });
+\end{lstlisting}
+
+When an acknowledgment (ACK) is received, the monitored node
+is marked as \textit{ALIVE}. The detector records the
+heartbeat arrival time and updates a sliding window of
+historical heartbeat intervals maintained for that neighbor.
+These observations are subsequently used by the
+$\phi$ Accrual Failure Detector to model normal communication
+behavior.
+
+If no acknowledgment is received, the detector evaluates the
+target node using the $\phi$ Accrual algorithm. The
+implementation computes a dynamic suspicion value based on
+the elapsed time since the last successful heartbeat and the
+historical distribution of heartbeat intervals.
+
+\begin{lstlisting}[language=Java,
+caption={Phi Accrual suspicion calculation},
+label={lst:phi}]
+double phi = phiDetector.calculatePhi(
+    state.getSlidingWindowSeconds(),
+    state.getLastAckTimeMs(),
+    System.currentTimeMillis());
+
+NodeStatus phiStatus =
+    phiDetector.determineStatus(phi);
+\end{lstlisting}
+
+ During the initial monitoring period, the detector may not
+have accumulated sufficient heartbeat observations to perform
+reliable $\phi$ estimation. In the current implementation,
+the Phi Accrual Failure Detector requires at least two
+historical heartbeat intervals before meaningful statistical
+analysis can be performed. To address this cold-start problem,
+the system temporarily employs a conservative timeout-based
+strategy. Specifically, a node is not classified as
+\textit{UNREACHABLE} unless it remains unresponsive for a
+duration substantially longer than the configured probe
+interval. This grace period allows the detector to collect
+adequate heartbeat samples and establish a baseline of normal
+communication behavior, thereby reducing the likelihood of
+false-positive failure detections for newly joined nodes.
+
+The computed $\phi$ value is mapped to one of four node
+states: \textit{ALIVE}, \textit{WARNING},
+\textit{SUSPECTED}, or \textit{UNREACHABLE}.
+When a node transitions to either the
+\textit{SUSPECTED} or \textit{UNREACHABLE} state, the
+information is disseminated through the gossip subsystem to
+ensure that neighboring nodes gradually converge toward a
+consistent membership view.
+
+\begin{lstlisting}[language=Java,
+caption={Propagation of failure information},
+label={lst:gossip}]
+gossipService.gossipSuspect(
+    targetNode);
+
+gossipService.gossipUnreachable(
+    targetNode);
+\end{lstlisting}
+
+If a node is ultimately classified as
+\textit{UNREACHABLE}, additional recovery procedures are
+triggered. The failed node is removed from the local
+membership view, topology information is updated, and the
+failure event is reported to the monitoring dashboard.
+Furthermore, the self-healing topology subsystem is notified
+to restore missing network connections. Through the
+combination of periodic heartbeat monitoring, adaptive
+statistical failure estimation, gossip dissemination, and
+automated recovery, SWIMPHI provides scalable and resilient
+failure detection for dynamic distributed environments.
 
 \subsubsection{Neighbor Discovery: FINDNEMO}
 \label{subsubsec:node_discovery_code}
@@ -550,7 +697,5 @@ Summarize the final system, the main design decisions, and the experimental find
 % ====== BIBLIOGRAPHY SETUP HERE ======
 \bibliographystyle{IEEEtran}     % Uses the IEEE citation style
 \bibliography{references}        % Links to references.bib (OMIT the ".bib" extension here)
-
-
 
  \end{document}
