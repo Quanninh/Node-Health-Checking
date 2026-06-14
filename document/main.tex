@@ -159,15 +159,6 @@ By distributing the health checking responsibility, the system avoids relying on
 This project is therefore motivated by the need for a node health checking mechanism that can continue functioning even when some components fail.
 The design focuses on maintaining node relationships, detecting unhealthy nodes, and supporting recovery without depending entirely on a centralized monitor.
 
-\subsection{Reasearch Gap}
-\label{subsec:research_gap}
-
-Existing decentralized monitoring approaches effectively detect node failures through heartbeat- or gossip-based mechanisms. 
-However, many solutions focus primarily on failure detection and information dissemination, while topology maintenance and autonomous recovery are addressed as separate concerns. 
-For example, Das et al. \cite{dasSWIMScalableWeaklyconsistent2002} designed SWIM, a scalable membership and failure detection protocol that efficiently disseminates failure information in distributed systems. 
-Nevertheless, the protocol does not provide an integrated mechanism for autonomous topology repair following node failures. 
-Consequently, limited attention has been given to unified frameworks that combine dynamic membership management, failure detection, gossip dissemination, and self-healing topology repair within a single decentralized architecture.
-
 \subsection{Contributions}
 \label{subsec:contribution}
 
