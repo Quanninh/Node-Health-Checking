@@ -528,6 +528,29 @@ To facilitate understanding of the algorithm, several terms and system rules are
 
 \end{enumerate}
 
+FINDING NEMO begins when a newly created node requests to join the network. 
+To promote random neighbor selection, the joining node broadcasts a join request to all existing nodes. 
+Assuming ideal network connectivity, two cases are considered:
+
+\begin{enumerate}
+
+\item \textbf{Small Network.}
+If the network contains at most $k+1$ nodes, the joining node establishes connections with all existing nodes. 
+This allows the node to reach the desired neighbor count without requiring any restructuring of the network topology.
+
+\item \textbf{Scaled Network.}
+If the network contains more than $k+1$ nodes, all existing nodes are assumed to have already reached their target neighbor count. 
+Nevertheless, they still acknowledge the join request. 
+After collecting all acknowledgements, the joining node constructs a join plan by randomly selecting $k/2$ responding nodes. 
+Each selected node is instructed to evict one of its current neighbors. 
+The evicted nodes subsequently establish connections with the joining node, enabling it to integrate into the network with a total of $k$ randomly selected neighbors.
+
+\end{enumerate}
+
+This process maintains a bounded network density while preserving randomness in neighbor assignment, thereby reducing the likelihood of node isolation and structural bias within the topology.
+In practice, a hybrid selection strategy is employed. Nodes whose neighbor lists are not yet full are prioritized during the acknowledgement phase. 
+By preferentially connecting to such nodes, the algorithm accelerates the completion of underpopulated neighbor lists while remaining consistent with the network's connectivity constraints.
+
 \subsection{Self-healing Topology: KUBO viet va dat ten}
 \label{subsec:node_deletion}
 
