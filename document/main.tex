@@ -609,7 +609,29 @@ These observations are subsequently used by the
 $\phi$ Accrual Failure Detector to model normal communication
 behavior.
 
-If no acknowledgment is received, the detector evaluates the
+If a direct heartbeat probe does not receive an acknowledgment,
+the detector invokes the indirect verification procedure.
+As shown in the implementation, a set of helper nodes is
+selected from the local neighbor table using the
+\texttt{NeighborDirectory} component.
+
+\begin{lstlisting}[language=Java,
+caption={Selection of helper nodes for indirect verification},
+label={lst:helper}]
+List<NodeAddress> helperNodes =
+    neighborDirectory.selectHelperNodes(
+        targetNode);
+\end{lstlisting}
+
+The selected helper nodes are intended to perform
+\texttt{PING\_REQ} operations on behalf of the original sender.
+Each helper node attempts to contact the target node and
+reports the result back to the requester. If at least one
+helper node successfully receives an acknowledgment, the
+target node is considered reachable and its heartbeat
+statistics are updated accordingly.
+
+If no acknowledgment is received in any helper nodes, the detector evaluates the
 target node using the $\phi$ Accrual algorithm. The
 implementation computes a dynamic suspicion value based on
 the elapsed time since the last successful heartbeat and the
