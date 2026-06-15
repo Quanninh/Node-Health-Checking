@@ -622,6 +622,9 @@ Consider four nodes $x_1$, $x_2$. $x_3$, $x_4$.
     \end{figure}
 \end{enumerate}
 
+\subsubsection{\textbf{Termination}}
+\label{subsubsec: termination}
+The repair process is repeated until every affected nodes have recovered their missing connections and once again possess $k$ neighbors. The parameter k is assumed to be a globally predefined even integer, ensuring that affected nodes can always be paired for edge restoration operations.
 \subsection{Handling False Positives}
 \label{subsec:false_positives}
 Although the proposed approach significantly reduces false-positive detections, rare cases may still occur under severe network congestion or temporary network partitions, where the health-checking process is disrupted. 
