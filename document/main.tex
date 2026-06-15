@@ -17,6 +17,7 @@
 \usepackage{tikz}
 \usepackage{listings}
 \usepackage{circuitikz}
+\usepackage{float}
 \usetikzlibrary{arrows.meta}
 
 \definecolor{codegreen}{rgb}{0,0.6,0}
@@ -551,8 +552,75 @@ This process maintains a bounded network density while preserving randomness in 
 In practice, a hybrid selection strategy is employed. Nodes whose neighbor lists are not yet full are prioritized during the acknowledgement phase. 
 By preferentially connecting to such nodes, the algorithm accelerates the completion of underpopulated neighbor lists while remaining consistent with the network's connectivity constraints.
 
-\subsection{Self-healing Topology: KUBO viet va dat ten}
+\subsection{Degree-Preserving Topology Repair (DPTR) Algorithm}
 \label{subsec:node_deletion}
+
+\subsubsection{\textbf{Topology Repair Mechanism}}
+\label{subsubsec:repair_mechanism}
+In a decentralized architecture, node failures may disrupt the desired network structure. Specifically, when a node unexpectedly fails, all of its incident edges are deleted. Consequently, some neighboring nodes lose one connection and their degree decreases from $k$ to $k - 1$. These nodes are referred to as \textbf{affected nodes} 
+
+Since the system is designed to maintain k neighbors for every node, a topology repair process is required to restore the desired degree constraint. To address this problem, we propose a \textbf{Degree-Preserving Topology Repair} algorithm.
+
+\subsubsection{\textbf{Affected Nodes}}
+\label{subsubsec:affected_node}
+Let $G = (V, E)$ denote the network topology, where each node maintains exactly $k$ neighbors. Assume that node $v_f$ fails and is removed from the network.
+
+All nodes previously connected to $v_f$ become affected nodes. Let $A = \{a_1, a_2, \ldots, a_m\}$ denote the set of affected nodes. Each affected node requires one additional connection to restore its degree to $k$
+
+\subsubsection{\textbf{Repair Procedure}}
+\label{subsubsec:repair_procedure}
+The repair process repeatedly selects two affected nodes, denoted by $x_1$ and $x_2$, and restores their missing connection according to the following cases.
+
+\begin{enumerate}
+\item \textbf{Case 1: No Existing Connection}
+
+If $x_1$ and $x_2$ are not directly connected, a new edge is eslablished between them: $$(x_1, x_2) \in E$$ As a result, both nodes recover one connection and are removed from the affected-node set.
+
+\item \textbf{Case 2: Existing Connection}
+
+If an edge already exists between $x_1$ and $x_2$, a direct connection between is impossible because it would create a duplicate connection
+
+
+In this case, a connected pair of nodes $x_3$ and $x_4$ is randomly selected such that $$(x_3, x_4) \in E$$ The connection between $x_3$ and $x_4$ is removed and replaced with two new edges. Depending on the local topology, one of the following rewiring patterns is applied: $$(x_3, x_4) \rightarrow (x_1, x_3), (x_2, x_4)$$ or $$(x_3, x_4) \rightarrow (x_1, x_4), (x_2, x_3)$$ The selected pattern must ensure that no duplicate edges are created and that the degree of every involved node remains remains unchanged except for the affected node $x_1$ and $x_2$, whose degrees increase by one.
+
+
+\end{enumerate}
+
+\subsubsection{\textbf{Topological Constraints}}
+\label{subsubsec:topological_constraints}
+Not every candidate pair $(x_3, x_4)$ is suitable for rewiring. Additional constraints are imposed to prevent duplicate connections and preserve network consistency.
+
+Consider four nodes $x_1$, $x_2$. $x_3$, $x_4$.
+
+\begin{enumerate}
+    \item \textbf{Scenario A: General Configuration}
+    
+    The four nodes may already contain several existing edges, including one or two diagonal connections. The rewiring operation is valid provided that the newly created edges do not duplicate any existing connections. In this case, the edge $(x_3, x_4)$ is removed and replaced with $$(x_1, x_3), (x_2, x_4)$$
+    \begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\textwidth]{Rewiring1.png}
+    \caption{Scenario A: topological constraint}
+
+    \vspace{0.5cm}
+
+    \includegraphics[width=0.3\textwidth]{Rewiring2.png}
+    \caption{Scenario A after rewiring}
+    \end{figure}
+
+    \item \textbf{Scenario B: Rectangular Configuration}
+    
+    When the four nodes form a rectangular structure or contain only one existing vertical edges, the alternative rewiring pattern is applied: $$(x_3, x_4) \rightarrow (x_1, x_4), (x_2, x_3)$$ This operation restores the degrees of the affected nodes while maintaining the degree of all other nodes.
+    \begin{figure}[H]
+    \centering
+    \includegraphics[width=0.3\textwidth]{Rewiring3.png}
+    \caption{Scenario B: topological constraint}
+
+    \vspace{0.5cm}
+
+    \includegraphics[width=0.3\textwidth]{Rewiring4.png}
+    \caption{Scenario B after rewiring}
+    \end{figure}
+\end{enumerate}
 
 \subsection{Handling False Positives}
 \label{subsec:false_positives}
