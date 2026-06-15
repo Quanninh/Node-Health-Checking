@@ -212,7 +212,7 @@ This supports the identification of crash failures, temporary disconnections, de
 
 \item \textbf{Repair and rewiring support:}
 
-When a monitored node becomes unavailable, the system attempts to repair the affected node relationships by replacing failed or unreachable neighbors.
+When a monitored node becomes unavailable, the system attempts to repair the deficient node relationships by replacing failed or unreachable neighbors.
 This helps the system continue operating even when individual nodes fail.
 
 \item \textbf{Optional visualization support:}
@@ -557,31 +557,32 @@ By preferentially connecting to such nodes, the algorithm accelerates the comple
 
 \subsubsection{\textbf{Topology Repair Mechanism}}
 \label{subsubsec:repair_mechanism}
-In a decentralized architecture, node failures may disrupt the desired network structure. Specifically, when a node unexpectedly fails, all of its incident edges are deleted. Consequently, some neighboring nodes lose one connection and their degree decreases from $k$ to $k - 1$. These nodes are referred to as \textbf{affected nodes} 
+In a decentralized architecture, node failures may disrupt the desired network structure. Specifically, when a node unexpectedly fails, all of its incident edges are deleted. Consequently, some neighboring nodes lose one connection and their degree decreases from $k$ to $k - 1$. These nodes are referred to as \textbf{deficient nodes} 
 
 Since the system is designed to maintain k neighbors for every node, a topology repair process is required to restore the desired degree constraint. To address this problem, we propose a \textbf{Degree-Preserving Topology Repair} algorithm.
 
-\subsubsection{\textbf{Affected Nodes}}
-\label{subsubsec:affected_node}
+\subsubsection{\textbf{Deficient Nodes}}
+\label{subsubsec:deficient_node}
 Let $G = (V, E)$ denote the network topology, where each node maintains exactly $k$ neighbors. Assume that node $v_f$ fails and is removed from the network.
 
-All nodes previously connected to $v_f$ become affected nodes. Let $A = \{a_1, a_2, \ldots, a_m\}$ denote the set of affected nodes. Each affected node requires one additional connection to restore its degree to $k$
+
+All nodes previously connected to $v_f$ become deficient nodes. Let $A = \{a_1, a_2, \ldots, a_m\}$ denote the set of deficient nodes. Each deficient node requires one additional connection to restore its degree to $k$
 
 \subsubsection{\textbf{Repair Procedure}}
 \label{subsubsec:repair_procedure}
-The repair process repeatedly selects two affected nodes, denoted by $x_1$ and $x_2$, and restores their missing connection according to the following cases.
+The repair process repeatedly selects two deficient nodes, denoted by $x_1$ and $x_2$, and restores their missing connection according to the following cases.
 
 \begin{enumerate}
 \item \textbf{Case 1: No Existing Connection}
 
-If $x_1$ and $x_2$ are not directly connected, a new edge is eslablished between them: $$(x_1, x_2) \in E$$ As a result, both nodes recover one connection and are removed from the affected-node set.
+If $x_1$ and $x_2$ are not directly connected, a new edge is eslablished between them: $$(x_1, x_2) \in E$$ As a result, both nodes recover one connection.
 
 \item \textbf{Case 2: Existing Connection}
 
 If an edge already exists between $x_1$ and $x_2$, a direct connection between is impossible because it would create a duplicate connection
 
 
-In this case, a connected pair of nodes $x_3$ and $x_4$ is randomly selected such that $$(x_3, x_4) \in E$$ The connection between $x_3$ and $x_4$ is removed and replaced with two new edges. Depending on the local topology, one of the following rewiring patterns is applied: $$(x_3, x_4) \rightarrow (x_1, x_3), (x_2, x_4)$$ or $$(x_3, x_4) \rightarrow (x_1, x_4), (x_2, x_3)$$ The selected pattern must ensure that no duplicate edges are created and that the degree of every involved node remains remains unchanged except for the affected node $x_1$ and $x_2$, whose degrees increase by one.
+In this case, a connected pair of nodes $x_3$ and $x_4$ is randomly selected such that $$(x_3, x_4) \in E$$ The connection between $x_3$ and $x_4$ is removed and replaced with two new edges. Depending on the local topology, one of the following rewiring patterns is applied: $$(x_3, x_4) \rightarrow (x_1, x_3), (x_2, x_4)$$ or $$(x_3, x_4) \rightarrow (x_1, x_4), (x_2, x_3)$$ The selected pattern must ensure that no duplicate edges are created and that the degree of every involved node remains remains unchanged except for the deficient node $x_1$ and $x_2$, whose degrees increase by one.
 
 
 \end{enumerate}
@@ -609,7 +610,7 @@ Consider four nodes $x_1$, $x_2$. $x_3$, $x_4$.
 
     \item \textbf{Scenario B: Rectangular Configuration}
     
-    When the four nodes form a rectangular structure or contain only one existing vertical edges, the alternative rewiring pattern is applied: $$(x_3, x_4) \rightarrow (x_1, x_4), (x_2, x_3)$$ This operation restores the degrees of the affected nodes while maintaining the degree of all other nodes.
+    When the four nodes form a rectangular structure or contain only one existing vertical edges, the alternative rewiring pattern is applied: $$(x_3, x_4) \rightarrow (x_1, x_4), (x_2, x_3)$$ This operation restores the degrees of the deficient nodes while maintaining the degree of all other nodes.
     \begin{figure}[H]
     \centering
     \includegraphics[width=0.3\textwidth]{Rewiring3.png}
@@ -624,14 +625,14 @@ Consider four nodes $x_1$, $x_2$. $x_3$, $x_4$.
 
 \subsubsection{\textbf{Termination}}
 \label{subsubsec: termination}
-The repair process is repeated until every affected nodes have recovered their missing connections and once again possess $k$ neighbors. The parameter k is assumed to be a globally predefined even integer, ensuring that affected nodes can always be paired for edge restoration operations.
+The repair process is repeated until every deficient nodes have recovered their missing connections and once again possess $k$ neighbors. The parameter k is assumed to be a globally predefined even integer, ensuring that the rewiring mechanism terminates when a neighbor list size of each deficient node reaches the value k.
 \subsection{Handling False Positives}
 \label{subsec:false_positives}
 Although the proposed approach significantly reduces false-positive detections, rare cases may still occur under severe network congestion or temporary network partitions, where the health-checking process is disrupted. 
 In such situations, a healthy node may be incorrectly classified as \textbf{UNREACHABLE}.
 
 To maintain consistency of the network topology, nodes classified as \textbf{UNREACHABLE} are removed from the active membership view and treated as departed members. 
-Once connectivity is restored, the affected node is required to rejoin the network through the standard membership protocol, thereby rebuilding its neighbor relationships and restoring its participation in the system.
+Once connectivity is restored, the deficient node is required to rejoin the network through the standard membership protocol, thereby rebuilding its neighbor relationships and restoring its participation in the system.
 
 In this prototype, automatic process recovery is considered a deployment-level concern rather than a responsibility of the distributed protocol itself. 
 The protocol only determines when a node should be considered unreachable and subsequently rejoin the network. In a production environment, this mechanism can be complemented by external supervisors such as systemd, Docker restart policies, Kubernetes controllers, or watchdog services to automatically restart failed node processes.
