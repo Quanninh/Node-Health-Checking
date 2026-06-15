@@ -122,11 +122,11 @@ public class NodeHttpServer {
                                 + (System.currentTimeMillis() - startTime) + " ms", Constant.PINK);
                     }
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    // e.printStackTrace();
                 }
             });
         } catch (IOException e) {
-            e.printStackTrace();
+            // e.printStackTrace();
             try {
                 exchange.sendResponseHeaders(500, -1);
             } catch (IOException ignored) {
@@ -152,7 +152,7 @@ public class NodeHttpServer {
             httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
                     .thenAccept(res -> Console.println("Sent result to Spring Boot: " + response.getNodeId()));
         } catch (JsonProcessingException e) {
-            e.printStackTrace();
+            // e.printStackTrace();
         }
     }
 

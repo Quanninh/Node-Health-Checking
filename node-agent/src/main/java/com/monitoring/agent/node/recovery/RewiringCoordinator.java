@@ -218,8 +218,6 @@ public final class RewiringCoordinator {
         try {
             ack = sendAsync(defB, req).get(REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
         } finally {
             /*
              * During timeout/backoff, this node may accept incoming requests again.
@@ -296,7 +294,7 @@ public final class RewiringCoordinator {
                 response = sendAsync(c, query).get(REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
             } catch (InterruptedException | ExecutionException | TimeoutException e) {
                 // TODO Auto-generated catch block
-                e.printStackTrace();
+                // e.printStackTrace();
             }
 
             if (response == null || response.status() != RewireStatus.ACCEPTED || response.nodeD() == null) {
@@ -349,7 +347,7 @@ public final class RewiringCoordinator {
             response = sendAsync(defB, request).get(REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             // TODO Auto-generated catch block
-            e.printStackTrace();
+            // e.printStackTrace();
         }
 
         if (response == null || response.status() != RewireStatus.ACCEPTED) {
@@ -710,7 +708,7 @@ public final class RewiringCoordinator {
             dAck = sendAsync(d, proposal).get(REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             // TODO Auto-generated catch block
-            e.printStackTrace();
+            // e.printStackTrace();
         }
 
         if (dAck == null || dAck.status() != RewireStatus.ACCEPTED) {

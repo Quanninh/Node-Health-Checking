@@ -1,22 +1,22 @@
 package com.monitoring.service;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import com.monitoring.model.CrackingRequest;
 import com.monitoring.model.CrackingResponse;
 import com.monitoring.model.Node;
 import com.monitoring.model.PasswordCrackResponse;
 import com.monitoring.repository.NodeRepository;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.Map;
-import java.util.ArrayList;
-import java.util.Collections;
 
 @Service
 public class PasswordCrackingService {
@@ -236,7 +236,7 @@ public class PasswordCrackingService {
                     "Failed sending task to node "
                             + node.getId());
 
-            e.printStackTrace();
+            // e.printStackTrace();
 
             return false;
         }

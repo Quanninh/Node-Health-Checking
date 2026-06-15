@@ -10,9 +10,7 @@ public class App {
         try {
             NodeAgent agent = new NodeAgent(args);
         } catch (IOException e) {
-            e.printStackTrace();
         } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 

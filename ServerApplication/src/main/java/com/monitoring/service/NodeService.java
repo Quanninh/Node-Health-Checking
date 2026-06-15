@@ -74,7 +74,7 @@ public class NodeService {
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            // e.printStackTrace();
         }
     }
 

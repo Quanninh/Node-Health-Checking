@@ -1,40 +1,27 @@
 node-6
+node-b
 node-8
-node-10
-node-2
-node-4
-node-5
-node-3
-node-7
+node-a
+node-c
+node-d
 node-6 node-7
-node-6 node-10
-node-6 node-4
-node-6 node-8
-node-8 node-7
-node-8 node-6
-node-8 node-10
+node-6 node-a
+node-6 node-5
+node-6 node-d
+node-b node-a
+node-b node-c
+node-b node-d
+node-8 node-a
+node-8 node-1
 node-8 node-2
-node-10 node-6
-node-10 node-7
-node-10 node-8
-node-10 node-5
-node-2 node-4
-node-2 node-3
-node-2 node-5
-node-2 node-8
-node-4 node-2
-node-4 node-5
-node-4 node-6
-node-4 node-3
-node-5 node-3
-node-5 node-4
-node-5 node-2
-node-5 node-10
-node-3 node-2
-node-3 node-5
-node-3 node-7
-node-3 node-4
-node-7 node-6
-node-7 node-10
-node-7 node-3
-node-7 node-8
+node-8 node-3
+node-a node-b
+node-a node-c
+node-a node-d
+node-c node-a
+node-c node-d
+node-c node-b
+node-d node-3
+node-d node-c
+node-d node-a
+node-d node-b

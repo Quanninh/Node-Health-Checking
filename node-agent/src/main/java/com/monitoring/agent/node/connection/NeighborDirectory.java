@@ -50,7 +50,8 @@ public class NeighborDirectory {
      * @return the next node, empty if node has no active neighbors
      */
     public synchronized Optional<NodeAddress> nextTargetNode() {
-        List<NodeAddress> neighbors = reachableNeighbors();
+        // List<NodeAddress> neighbors = reachableNeighbors();
+        List<NodeAddress> neighbors = connectionManager.neighborAddresses();
         if (neighbors.isEmpty()) {
             return Optional.empty();
         }

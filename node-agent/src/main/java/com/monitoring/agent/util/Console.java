@@ -43,7 +43,7 @@ public class Console {
                     StandardOpenOption.APPEND);
 
         } catch (IOException e) {
-            e.printStackTrace();
+            // e.printStackTrace();
         }
     }
 

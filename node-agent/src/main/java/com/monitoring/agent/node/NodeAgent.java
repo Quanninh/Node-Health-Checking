@@ -173,7 +173,6 @@ public class NodeAgent {
                 dashboardReporter.reportSelfAlive(config.advertiseHost(), nodeServer.getPort(),
                         crackingServer.getPort());
             } catch (Exception e) {
-                e.printStackTrace();
             }
         }, 0, 10, TimeUnit.SECONDS);
         // dashboardReporter.reportSelfAlive(config.advertiseHost(),

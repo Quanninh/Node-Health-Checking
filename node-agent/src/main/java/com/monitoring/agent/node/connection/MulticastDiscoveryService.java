@@ -61,6 +61,9 @@ public final class MulticastDiscoveryService implements AutoCloseable {
         multicastSocket.bind(new InetSocketAddress(config.multicastPort()));
         multicastSocket.setNetworkInterface(config.networkInterface());
         multicastSocket.setTimeToLive(1);
+        // Set socket timeout to allow periodic checking of running flag
+        // This prevents the receiveLoop from blocking indefinitely
+        multicastSocket.setSoTimeout(5000); // 5 second timeout
 
         InetSocketAddress groupAddress = new InetSocketAddress(config.multicastGroup(), config.multicastPort());
 
@@ -239,10 +242,16 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                 if (message.type() == DiscoveryMessageType.JOIN_REQUEST) {
                     handleJoinRequest(packet.getAddress(), message);
                 }
+            } catch (SocketTimeoutException ignored) {
+                // Socket timeout is expected - allows us to check running flag periodically
+                // Continue loop to check if service should stop
             } catch (SocketException exception) {
-                // if (running) {
-                Console.log("Discovery socket error: " + exception.getMessage(), Constant.RED);
-                // }
+                // If socket is closed while still running, this indicates an error
+                // If socket is closed because service is shutting down (running=false),
+                // the loop will exit at the while condition
+                if (running) {
+                    Console.log("Discovery socket error: " + exception.getMessage(), Constant.RED);
+                }
             } catch (IOException exception) {
                 Console.log("Discovery receive error: " + exception.getMessage(), Constant.RED);
             }
