@@ -536,14 +536,38 @@ Assuming ideal network connectivity, two cases are considered:
 
 \item \textbf{Small Network.}
 If the network contains at most $k+1$ nodes, the joining node establishes connections with all existing nodes. 
-This allows the node to reach the desired neighbor count without requiring any restructuring of the network topology.
+This allows the node to reach the desired neighbor count without requiring any restructuring of the network topology. 
+
+Figure~\ref{fig:small_network} illustrates this scenario. Consider a network consisting of four nodes and a target neighbor count of $k=4$. 
+When node E joins the network, it establishes connections with all existing nodes, thereby satisfying its neighbor requirement.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.3\textwidth]{FINDING_NEMO_small.png}
+\caption{FINDING NEMO in a small network}
+\label{fig:small_network}
+\end{figure}
 
 \item \textbf{Scaled Network.}
 If the network contains more than $k+1$ nodes, all existing nodes are assumed to have already reached their target neighbor count. 
 Nevertheless, they still acknowledge the join request. 
 After collecting all acknowledgements, the joining node constructs a join plan by randomly selecting $k/2$ responding nodes. 
-Each selected node is instructed to evict one of its current neighbors. 
-The evicted nodes subsequently establish connections with the joining node, enabling it to integrate into the network with a total of $k$ randomly selected neighbors.
+The joining node immediately establishes connections with these selected nodes. 
+Subsequently, each selected node is instructed to evict one of its current neighbors. 
+The evicted nodes then establish connections with the joining node. 
+Consequently, the joining node acquires $k/2$ neighbors from the selected nodes and an additional $k/2$ neighbors from the evicted nodes, resulting in a total of $k$ neighbors.
+
+Figure~\ref{fig:scaled_network} presents an example of this process. 
+Building upon the network shown in Figure~\ref{fig:small_network}, assume that node F requests to join a network of five nodes with $k=4$. 
+One possible outcome of the random selection process is that nodes E and C are selected. 
+Node E subsequently evicts node B, while node C evicts node D. 
+Node F therefore establishes direct connections with E and C, as well as with the evicted nodes B and D. 
+As a result, node F obtains four neighbors while preserving the desired network density.
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.3\textwidth]{FINDING_NEMO_scaled.png}
+\caption{FINDING NEMO in a scaled network}
+\label{fig:scaled_network}
+\end{figure}
 
 \end{enumerate}
 
