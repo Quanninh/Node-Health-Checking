@@ -809,6 +809,7 @@ failure detection for dynamic distributed environments.
 
 \subsubsection{Neighbor Discovery: FINDING NEMO}
 \label{subsubsec:node_discovery_code}
+
 This section provides some insights of FINDING NEMO implementation. 
 One notable logic is the construction of a \textit{Join Plan}. 
 Recall that when a joining node receives responses from its peers, these acknowledgements can be classified into two categories derived from the sender's neighbor list state: \textit{fullNeighborAcks} and \textit{missingNeighborAcks}. 
@@ -819,54 +820,74 @@ This can be achieved by sorting received acknowledgements into two lists corresp
 \begin{lstlisting}[language=Java,
 caption={Compute the quantity taken from two lists},
 label={lst:quantity_target_list}]
-int missingDirectTargetCount;
-int fullDirectTargetCount;
+int missingTargetCount;
+int fullTargetCount;
 
 int missingCount = missingNeighborAcks.size();
 int fullCount = fullNeighborAcks.size();
 
 if (missingCount + (2 * fullCount) <= maxNeighbors) {
 
-    missingDirectTargetCount = missingCount;
-    fullDirectTargetCount = fullCount;
+    missingTargetCount = missingCount;
+    fullTargetCount = fullCount;
 
 } else {
 
-    int evenMissingCount;
-
-    if (missingCount % 2 == 0) {
-        evenMissingCount = missingCount;
-    } else {
-        evenMissingCount = missingCount - 1;
-    }
+    int evenMissingCount =
+            (missingCount % 2 == 0)
+                    ? missingCount
+                    : missingCount - 1;
 
     evenMissingCount = Math.max(evenMissingCount, 0);
 
-    missingDirectTargetCount =
+    missingTargetCount =
             Math.min(evenMissingCount, maxNeighbors);
 
-    fullDirectTargetCount =
+    fullTargetCount =
             Math.min(
-                    (maxNeighbors - missingDirectTargetCount) / 2,
+                    (maxNeighbors - missingTargetCount) / 2,
                     fullCount);
+
+    int minimumFullTargets =
+            Math.min(
+                    Constant.MINIMUM_FULL_TARGET_COUNT,
+                    fullCount);
+
+    if (fullTargetCount < minimumFullTargets
+            && maxNeighbors >= 2 * minimumFullTargets) {
+
+        fullTargetCount = minimumFullTargets;
+
+        missingTargetCount =
+                maxNeighbors - (2 * fullTargetCount);
+
+        // Redundant when k is guaranteed to be even.
+        if ((missingTargetCount & 1) != 0) {
+            missingTargetCount--;
+        }
+
+        missingTargetCount =
+                Math.max(0, missingTargetCount);
+    }
 }
 
 List<JoinAck> directTargetAcks = new ArrayList<>();
 
-List<JoinAck> fullDirectTargetAcks =
-        fullNeighborAcks.subList(0, fullDirectTargetCount);
-
 directTargetAcks.addAll(
         missingNeighborAcks.subList(
                 0,
-                missingDirectTargetCount));
+                missingTargetCount));
 
-directTargetAcks.addAll(fullDirectTargetAcks);
+directTargetAcks.addAll(
+        fullNeighborAcks.subList(
+                0,
+                fullTargetCount));
 \end{lstlisting}
 
 Listing~\ref{lst:quantity_target_list} shows the target-selection stage of FINDING NEMO. 
 Nodes with available neighbor capacity are prioritized, while fully connected nodes are considered only when additional neighbors are required. 
-The number of selected under-connected nodes is rounded down to the nearest even value to ensure that the remaining neighbor budget can be satisfied through the eviction mechanism, where each fully connected node contributes both itself and one evicted neighbor to the joining node.
+The number of selected under-connected nodes is rounded down to the nearest even value to ensure that the remaining neighbor budget can be satisfied through the eviction mechanism, where each fully connected node contributes both itself and one evicted neighbor to the joining node. 
+Furthermore, the algorithm attempts to include at least \verb|MINIMUM_FULL_TARGET_COUNT| fully connected nodes so that in a outburst of new nodes, the network is protected from partition.
 
 Another implementation that worths mentioning is the selection process of evicted nodes. 
 Listing~\ref{lst:evicted_members_selection} presents the victim-selection procedure. 
@@ -874,7 +895,7 @@ For each fully connected direct target, a neighbor is randomly selected for evic
 An exclusion set is maintained to prevent the joining node, previously selected direct targets, and previously selected victims from being chosen again. 
 This guarantees that each eviction victim is unique and cannot simultaneously serve as a direct target, thereby avoiding conflicting topology updates.
 \begin{lstlisting}[language=Java,
-caption={Plan evicted members},
+caption={Evicted members planning},
 label={lst:evicted_members_selection}]
 Set<String> excludedNodeIds = new HashSet<>();
 
@@ -911,7 +932,24 @@ for (JoinAck directTarget : fullDirectTargetAcks) {
 }
 \end{lstlisting}
 
+Finally, we discuss the protocol flow of FINDING NEMO. 
+Unfortunately the source code is not used for the visualization aid here due to boilerplates and syntax complexity. 
+Instead, we provide an activity diagram as in Fig~\ref{fig:FINDING_NEMO_protocol} so that readers can grasp the concept with ease. 
+Observed from the diagram, the flow diverges into two paths depending on whether the target node has an uncompleted or full neighbor list. 
+Nevertheless, overlapping operations can be oberserved except the number of connections the new node acquires eventually. 
+In addition, it can be noticed that the target node communicates with the evicted node to break up before sending $COMMIT_ACK$ back to the new node. 
+Initially, we designed the protocol so that one $COMMIT_DIRECT$ to target node results in the addition of the new node and the deletion of the evicted node. 
+After that, one $COMMIT_VICTIM$ is sent to add the new node and remove the target node on the evicted node's side. 
+This previous design raises the challenge of partial commits, meaning that if one of the above message fails, either the targer or evicted node will keep the contact of the other while the vice versa is not true. 
+That weakness leads us to the current design. 
+However, some nodes can still be lacking in neighbors in the end, but that can be resolved later via our rewring algorithm.
 
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.95\textwidth]{FINDING_NEMO_actiDi.png}
+\caption{FINDING NEMO protocol flow}
+\label{fig:FINDING_NEMO_protocol}
+\end{figure*}
 
 \subsubsection{Self-healing Topology: KUBO viet va dat ten}
 \label{subsubsec:node_deletion_code}
