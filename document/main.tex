@@ -813,8 +813,66 @@ statistical failure estimation, gossip dissemination, and
 automated recovery, SWIMPHI provides scalable and resilient
 failure detection for dynamic distributed environments.
 
-\subsubsection{Neighbor Discovery: FINDNEMO}
+\subsubsection{Neighbor Discovery: FINDING NEMO}
 \label{subsubsec:node_discovery_code}
+This section provides some insights of FINDING NEMO implementation. 
+One notable logic is the construction of a \textit{Join Plan}. 
+Recall that when a joining node receives responses from its peers, these acknowledgements can be classified into two categories derived from the sender's neighbor list state: \textit{fullNeighborAcks} and \textit{missingNeighborAcks}. 
+In subsection~\ref{subsec:node_discovery}, we learn that a full-neighbor node has to evict one of its current connection, while a lacking-neighbor node simply adds connection. 
+Therefore, in the code implementation, a \textit{JoinPlan} is designed as a record with two components: a list \textit{directTargets} to connect directly with the joining node and a map \text{evictionByDirectTarget} which points out evicted nodes of each full-neighbor targets. 
+This can be achieved by sorting received acknowledgements into two lists corresponding to two types above, and calculating the number of chosen elements from each one: 
+
+\begin{lstlisting}[language=Java,
+caption={Compute the quantity taken from two lists},
+label={lst:quantity_target_list}]
+int missingDirectTargetCount;
+int fullDirectTargetCount;
+
+int missingCount = missingNeighborAcks.size();
+int fullCount = fullNeighborAcks.size();
+
+if (missingCount + (2 * fullCount) <= maxNeighbors) {
+
+    missingDirectTargetCount = missingCount;
+    fullDirectTargetCount = fullCount;
+
+} else {
+
+    int evenMissingCount;
+
+    if (missingCount % 2 == 0) {
+        evenMissingCount = missingCount;
+    } else {
+        evenMissingCount = missingCount - 1;
+    }
+
+    evenMissingCount = Math.max(evenMissingCount, 0);
+
+    missingDirectTargetCount =
+            Math.min(evenMissingCount, maxNeighbors);
+
+    fullDirectTargetCount =
+            Math.min(
+                    (maxNeighbors - missingDirectTargetCount) / 2,
+                    fullCount);
+}
+
+List<JoinAck> directTargetAcks = new ArrayList<>();
+
+List<JoinAck> fullDirectTargetAcks =
+        fullNeighborAcks.subList(0, fullDirectTargetCount);
+
+directTargetAcks.addAll(
+        missingNeighborAcks.subList(
+                0,
+                missingDirectTargetCount));
+
+directTargetAcks.addAll(fullDirectTargetAcks);
+\end{lstlisting}
+
+Listing~\ref{lst:quantity_target_list} shows the target-selection stage of FINDING NEMO. 
+Nodes with available neighbor capacity are prioritized, while fully connected nodes are considered only when additional neighbors are required. 
+The number of selected under-connected nodes is rounded down to the nearest even value to ensure that the remaining neighbor budget can be satisfied through the eviction mechanism, where each fully connected node contributes both itself and one evicted neighbor to the joining node.
 
 \subsubsection{Self-healing Topology: KUBO viet va dat ten}
 \label{subsubsec:node_deletion_code}
