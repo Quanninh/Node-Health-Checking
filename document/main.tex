@@ -344,62 +344,64 @@ Fig.~\ref{fig:architecture} shows the complete architecture of the proposed syst
 % \end{figure*}
 
 \begin{figure*}[!t]
-\centering
-\resizebox{0.95\textwidth}{!}{%
-\begin{circuitikz}
-\tikzstyle{every node}=[font=\fontsize{18.2pt}{23.7pt}\selectfont]
-\draw [fill=white, fill opacity=1, line width=0.2pt] (-2.5,17.25) rectangle (38.75,-6.5);
-
-\draw  (1.25,13.5) circle (1.125cm);
-\draw  (5,7.25) circle (1.125cm);
-\draw  (6.25,14.75) circle (1.125cm);
-\draw  (1.25,9.75) circle (1.125cm);
-\node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (1.25,13.5) {node};
-\node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (1.25,9.75) {node};
-\node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (5,7.25) {node};
-\node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (6.25,14.75) {node};
-\draw [short] (2.375,13.5) -- (6.25,13.625);
-\draw [short] (6.25,13.625) -- (5,8.375);
-\draw [short] (2.375,13.5) -- (2.375,9.75);
-\draw [short] (2.375,9.75) -- (5,8.375);
-\draw [-{Stealth[scale=1.5]}, ] (6.25,13.625) -- (10,8.5);
-\draw [ rounded corners = 37.5] (10,9.75) rectangle (15,7.25);
-\draw [-{Stealth[scale=1.5]}, ] (2.375,13.5) -- (10,8.5);
-\draw [-{Stealth[scale=1.5]}, ] (5,8.375) -- (10,8.5);
-\draw [-{Stealth[scale=1.5]}, ] (2.375,9.75) -- (10,8.5);
-\node [font=\fontsize{18.2pt}{23.7pt}\selectfont, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (12.5,8.5) {SERVER};
-\draw [ rounded corners = 37.5] (17.5,2.25) rectangle (22.5,-0.25);
-\draw [ rounded corners = 37.5] (25,2.25) rectangle (30,-0.25);
-\draw [ rounded corners = 37.5] (32.5,2.25) rectangle (37.5,-0.25);
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (12.5,7.25) -- (17.5,1);
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (22.375,1.625) -- (25.125,1.625);
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (29.875,1.625) -- (32.625,1.625);
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (32.625,0.375) -- (29.875,0.375);
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (25.125,0.375) -- (22.375,0.375);
-\node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (19.875,1) {Controller};
-\node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (27.375,1) {Service};
-\node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (35,1) {Repository};
-\draw [ rounded corners = 37.5] (17.5,14.75) rectangle (22.5,12.25);
-\node[anchor=center, align=center, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (20,13.5) {\fontsize{18.2pt}{23.7pt}\selectfont Dashboard};
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (20.625,12.25) -- (20.625,2.25);
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (19.375,2.25) -- (19.375,12.25);
-\draw [ fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, line width=0.2pt , rounded corners = 37.5, dashed] (17.5,-2.75) rectangle (22.5,-5.25);
-\node[anchor=center, align=center, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (20,-4) {\fontsize{18.2pt}{23.7pt}\selectfont collect};
-\draw [ fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, line width=0.2pt , rounded corners = 37.5, dashed] (25,-2.75) rectangle (30,-5.25);
-\node[anchor=center, align=center, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (27.5,-4) {\fontsize{18.2pt}{23.7pt}\selectfont process};
-\draw [ rounded corners = 37.5] (32.5,-2.75) rectangle (37.5,-5.25);
-\node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (35,-4) {Database};
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, dashed] (20,-2.75) -- (20,-0.25);
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, dashed] (27.5,-2.75) -- (27.5,-0.25);
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (35.625,-0.25) -- (35.625,-2.75);
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (34.375,-2.75) -- (34.375,-0.25);
-\node [font=\fontsize{18.2pt}{23.7pt}\selectfont, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm, align=center] at (11.125,3.75) {node-info.json \\ ~ \\ POST METHOD};
-\node [font=\fontsize{18.2pt}{23.7pt}\selectfont, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm, align=center] at (24.125,8.375) {request node-info.json \\ ~ \\ GET METHOD};
-\end{circuitikz}
-}%
-\caption{Complete architectural diagram of the node health-checking system.}
-\label{fig:architecture}
+    \centering
+    \includegraphics[width=0.95\textwidth]{ArchitecturalDiagram.png}
+    \caption{Complete architectural diagram of the node health-checking system.}
+    \label{fig:architecture}
 \end{figure*}
+% \resizebox{0.95\textwidth}{!}{%
+% \begin{circuitikz}
+% \tikzstyle{every node}=[font=\fontsize{18.2pt}{23.7pt}\selectfont]
+% \draw [fill=white, fill opacity=1, line width=0.2pt] (-2.5,17.25) rectangle (38.75,-6.5);
+
+% \draw  (1.25,13.5) circle (1.125cm);
+% \draw  (5,7.25) circle (1.125cm);
+% \draw  (6.25,14.75) circle (1.125cm);
+% \draw  (1.25,9.75) circle (1.125cm);
+% \node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (1.25,13.5) {node};
+% \node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (1.25,9.75) {node};
+% \node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (5,7.25) {node};
+% \node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (6.25,14.75) {node};
+% \draw [short] (2.375,13.5) -- (6.25,13.625);
+% \draw [short] (6.25,13.625) -- (5,8.375);
+% \draw [short] (2.375,13.5) -- (2.375,9.75);
+% \draw [short] (2.375,9.75) -- (5,8.375);
+% \draw [-{Stealth[scale=1.5]}, ] (6.25,13.625) -- (10,8.5);
+% \draw [ rounded corners = 37.5] (10,9.75) rectangle (15,7.25);
+% \draw [-{Stealth[scale=1.5]}, ] (2.375,13.5) -- (10,8.5);
+% \draw [-{Stealth[scale=1.5]}, ] (5,8.375) -- (10,8.5);
+% \draw [-{Stealth[scale=1.5]}, ] (2.375,9.75) -- (10,8.5);
+% \node [font=\fontsize{18.2pt}{23.7pt}\selectfont, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (12.5,8.5) {SERVER};
+% \draw [ rounded corners = 37.5] (17.5,2.25) rectangle (22.5,-0.25);
+% \draw [ rounded corners = 37.5] (25,2.25) rectangle (30,-0.25);
+% \draw [ rounded corners = 37.5] (32.5,2.25) rectangle (37.5,-0.25);
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (12.5,7.25) -- (17.5,1);
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (22.375,1.625) -- (25.125,1.625);
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (29.875,1.625) -- (32.625,1.625);
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (32.625,0.375) -- (29.875,0.375);
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (25.125,0.375) -- (22.375,0.375);
+% \node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (19.875,1) {Controller};
+% \node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (27.375,1) {Service};
+% \node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (35,1) {Repository};
+% \draw [ rounded corners = 37.5] (17.5,14.75) rectangle (22.5,12.25);
+% \node[anchor=center, align=center, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (20,13.5) {\fontsize{18.2pt}{23.7pt}\selectfont Dashboard};
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (20.625,12.25) -- (20.625,2.25);
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (19.375,2.25) -- (19.375,12.25);
+% \draw [ fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, line width=0.2pt , rounded corners = 37.5, dashed] (17.5,-2.75) rectangle (22.5,-5.25);
+% \node[anchor=center, align=center, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (20,-4) {\fontsize{18.2pt}{23.7pt}\selectfont collect};
+% \draw [ fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, line width=0.2pt , rounded corners = 37.5, dashed] (25,-2.75) rectangle (30,-5.25);
+% \node[anchor=center, align=center, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (27.5,-4) {\fontsize{18.2pt}{23.7pt}\selectfont process};
+% \draw [ rounded corners = 37.5] (32.5,-2.75) rectangle (37.5,-5.25);
+% \node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (35,-4) {Database};
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, dashed] (20,-2.75) -- (20,-0.25);
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, dashed] (27.5,-2.75) -- (27.5,-0.25);
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (35.625,-0.25) -- (35.625,-2.75);
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (34.375,-2.75) -- (34.375,-0.25);
+% \node [font=\fontsize{18.2pt}{23.7pt}\selectfont, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm, align=center] at (11.125,3.75) {node-info.json \\ ~ \\ POST METHOD};
+% \node [font=\fontsize{18.2pt}{23.7pt}\selectfont, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm, align=center] at (24.125,8.375) {request node-info.json \\ ~ \\ GET METHOD};
+% \end{circuitikz}
+% }%
+
 % NOTE: add something to lead to these algo, algo will be divided into three subsections
 \subsection{Failure Detection: Hybrid SWIMPHI}
 \label{subsec:hybrid_swimphi}
