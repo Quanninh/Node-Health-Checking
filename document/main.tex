@@ -304,34 +304,25 @@ This increases deployment and operational complexity and makes membership manage
 For this reason, our system adopts a decentralized design instead. 
 Rather than relying on an external coordination service, membership management, failure detection, and topology maintenance are distributed across the participating nodes themselves.
 
-
 \section{Proposed Approach} % present algorithm
 \label{sec:proposed_approach}
 
 \subsection{Complete Architectural Diagram}
 \label{subsec:architecture}
-During operation, the nodes also generate status reports containing node information and health-checking results.
-These reports are sent to the server in JSON format.
-The server-side application receives the submitted node information through a POST request and forwards it to the controller.
-The controller acts as the entry point of the application layer.
-After receiving the data, it passes the information to the service layer, where the data is processed and prepared for storage.
-The service layer then communicates with the repository layer, which is responsible for storing the processed records in the database.
 
-The database is used to store node information, node status, and failure reports.
-This allows the system to keep a history of node activities and health-checking events.
-However, the database is not part of the core decentralized health-checking mechanism.
-It is mainly used to support visualization, inspection, and analysis through the dashboard.
+Inside each node, the health-checking process follows an event-driven structure.
+A node regularly checks its neighbors and reacts when abnormal behavior is detected, such as missing responses, delayed replies, or unreachable nodes.
+When such an event occurs, the node may request indirect checks from other neighbors, calculate the suspicion level of the target node, and categorize it.
+After the status is determined, the result will be broadcasted to the system so that the cluster can maintain a consistent view of node conditions.
 
-The dashboard provides a visual interface for observing the current state of the system.
-When the dashboard needs updated node information, it sends a GET request to the controller.
-The controller receives the request and forwards it to the service layer.
-The service layer processes the request and retrieves the required information through the repository layer.
-The repository then fetches the data from the database and returns it back through the same application layers.
-Finally, the dashboard displays the received information in a readable format using HTML and CSS.
+The lower part of the diagram represents the supporting observation subsystem.
+This subsystem receives node status information from the decentralized cluster and passes it through several logical layers.
+The first layer receives reported node status, the next layer processes and organizes the information, and the storage layer keeps historical records of node states and failure events.
+The visualization layer then retrieves this information and presents it in a readable form for users to inspect the current and past condition of the cluster.
 
-An important characteristic of this architecture is that the health-checking logic is not dependent on the dashboard or the database.
-The nodes remain interconnected and continue performing health checks on their neighbors even if the server, dashboard, or database becomes unavailable.
-Therefore, the server-side components are used mainly for reporting, storage, and visualization, while the actual node health-checking process remains decentralized.
+The main point of this architecture is the separation between the core health-checking mechanism and the observation subsystem.
+The decentralized cluster is responsible for detection, classification, and reaction, while the supporting layers are used only for reporting, storage, and visualization.
+Therefore, the system can continue checking node health and maintaining neighbor status even if the observation subsystem, storage component, or visual interface becomes unavailable.
 
 Fig.~\ref{fig:architecture} shows the complete architecture of the proposed system.
 
@@ -349,6 +340,7 @@ Fig.~\ref{fig:architecture} shows the complete architecture of the proposed syst
     \caption{Complete architectural diagram of the node health-checking system.}
     \label{fig:architecture}
 \end{figure*}
+
 % \resizebox{0.95\textwidth}{!}{%
 % \begin{circuitikz}
 % \tikzstyle{every node}=[font=\fontsize{18.2pt}{23.7pt}\selectfont]
