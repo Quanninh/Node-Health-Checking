@@ -88,8 +88,27 @@ public final class JoinPlanner {
             missingDirectTargetCount = Math.min(evenMissingDirectTargetCount, maxNeighbors);
             fullDirectTargetCount = Math.min((maxNeighbors - missingDirectTargetCount) / 2,
                     fullNeighborAcks.size());
+                    
+            int minimumFullTargets = Math.min(2, fullNeighborAcks.size());
+
+            if (fullDirectTargetCount < minimumFullTargets
+                    && maxNeighbors >= 2 * minimumFullTargets) {
+
+                fullDirectTargetCount = minimumFullTargets;
+
+                // Fill remaining slots with missing targets.
+                missingDirectTargetCount = maxNeighbors - 2 * fullDirectTargetCount;
+
+                // Keep missing count even.
+                if ((missingDirectTargetCount & 1) != 0) {
+                    missingDirectTargetCount--;
+                }
+
+                missingDirectTargetCount = Math.max(0, missingDirectTargetCount);
+            }
         }
-        // TODO: Update this to allow more full-neighbor to engage to prevent network partition
+        // TODO: Update this to allow more full-neighbor to engage to prevent network
+        // partition
         List<JoinAck> directTargetAcks = new ArrayList<>();
 
         List<JoinAck> fullDirectTargetAcks = fullNeighborAcks.subList(0, fullDirectTargetCount);

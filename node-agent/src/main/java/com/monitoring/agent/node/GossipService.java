@@ -4,7 +4,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.connection.ConnectionManager;
 import com.monitoring.agent.node.connection.NeighborDirectory;
 import com.monitoring.agent.util.Console;
@@ -38,7 +37,7 @@ public class GossipService {
      */
     public void gossipSuspect(NodeAddress targetNode) {
         GossipMessage message = createSuspectMessage(targetNode);
-        Console.log("Created gossip message: " + message.toString());
+        // Console.log("Created gossip message: " + message.toString());
         receiveGossip(message, localNodeId);
     }
 
@@ -49,7 +48,7 @@ public class GossipService {
      */
     public void gossipUnreachable(NodeAddress targetNode) {
         GossipMessage message = createUnreachableMessage(targetNode);
-        Console.log("Created gossip message: " + message.toString());
+        // Console.log("Created gossip message: " + message.toString());
         receiveGossip(message, localNodeId);
     }
 
@@ -140,13 +139,14 @@ public class GossipService {
      */
     public void receiveGossip(GossipMessage message, String senderNodeId) {
         if (message == null) {
-            Console.log("Gossip message empty -> skip", Constant.RED);
+            // Console.log("Gossip message empty -> skip", Constant.RED);
             return;
         }
 
         if (seenMessages.contains(message.messageId())) {
-            Console.log("Duplicate gossip message ignored: " + message.messageId() + " from " + message.sourceNodeId()
-                    + ", type=" + message.messageType(), Constant.RED);
+            // Console.log("Duplicate gossip message ignored: " + message.messageId() + "
+            // from " + message.sourceNodeId()
+            // + ", type=" + message.messageType(), Constant.RED);
             return;
         }
 
@@ -170,7 +170,7 @@ public class GossipService {
             return;
         }
 
-        Console.log("Forwarding gossip message" + message.toString());
+        Console.log("Forwarding gossip message" + message.messageId());
 
         for (NodeAddress neighborNode : connectionManager.neighborAddresses()) {
             if (neighborNode.nodeId().equals(senderNodeId) || neighborNode.nodeId().equals(localNodeId)) {
@@ -206,7 +206,7 @@ public class GossipService {
      * @param message         the gossip message
      */
     private void sendGossipMessage(NodeAddress destinationNode, GossipMessage message) {
-        Console.log("Sending gossip message" + message.toString() + " to " + destinationNode.nodeId());
+        Console.log("Sending gossip message" + message.messageId() + " to " + destinationNode.nodeId());
         nodeClient.sendGossipMessage(destinationNode, message);
     }
 
