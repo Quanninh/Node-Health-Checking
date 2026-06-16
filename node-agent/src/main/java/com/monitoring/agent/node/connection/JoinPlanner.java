@@ -107,8 +107,7 @@ public final class JoinPlanner {
                 missingDirectTargetCount = Math.max(0, missingDirectTargetCount);
             }
         }
-        // TODO: Update this to allow more full-neighbor to engage to prevent network
-        // partition
+
         List<JoinAck> directTargetAcks = new ArrayList<>();
 
         List<JoinAck> fullDirectTargetAcks = fullNeighborAcks.subList(0, fullDirectTargetCount);
