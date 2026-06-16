@@ -868,7 +868,7 @@ Listing~\ref{lst:quantity_target_list} shows the target-selection stage of FINDI
 Nodes with available neighbor capacity are prioritized, while fully connected nodes are considered only when additional neighbors are required. 
 The number of selected under-connected nodes is rounded down to the nearest even value to ensure that the remaining neighbor budget can be satisfied through the eviction mechanism, where each fully connected node contributes both itself and one evicted neighbor to the joining node.
 
-Another implementation that worths to mention is the selection process of evicted nodes. 
+Another implementation that worths mentioning is the selection process of evicted nodes. 
 Listing~\ref{lst:evicted_members_selection} presents the victim-selection procedure. 
 For each fully connected direct target, a neighbor is randomly selected for eviction. 
 An exclusion set is maintained to prevent the joining node, previously selected direct targets, and previously selected victims from being chosen again. 
@@ -910,6 +910,8 @@ for (JoinAck directTarget : fullDirectTargetAcks) {
     }
 }
 \end{lstlisting}
+
+
 
 \subsubsection{Self-healing Topology: KUBO viet va dat ten}
 \label{subsubsec:node_deletion_code}
