@@ -874,6 +874,49 @@ Listing~\ref{lst:quantity_target_list} shows the target-selection stage of FINDI
 Nodes with available neighbor capacity are prioritized, while fully connected nodes are considered only when additional neighbors are required. 
 The number of selected under-connected nodes is rounded down to the nearest even value to ensure that the remaining neighbor budget can be satisfied through the eviction mechanism, where each fully connected node contributes both itself and one evicted neighbor to the joining node.
 
+Another implementation that worths to mention is the selection process of evicted nodes. 
+Listing~\ref{lst:evicted_members_selection} presents the victim-selection procedure. 
+For each fully connected direct target, a neighbor is randomly selected for eviction. 
+An exclusion set is maintained to prevent the joining node, previously selected direct targets, and previously selected victims from being chosen again. 
+This guarantees that each eviction victim is unique and cannot simultaneously serve as a direct target, thereby avoiding conflicting topology updates.
+\begin{lstlisting}[language=Java,
+caption={Plan evicted members},
+label={lst:evicted_members_selection}]
+Set<String> excludedNodeIds = new HashSet<>();
+
+// Prevent the joining node and all direct targets
+// from being selected as eviction victims.
+excludedNodeIds.add(localAddress.nodeId());
+excludedNodeIds.addAll(directTargetIds);
+
+for (JoinAck directTarget : fullDirectTargetAcks) {
+
+    List<NodeAddress> candidateVictims =
+            new ArrayList<>(directTarget.responderNeighbors());
+
+    Collections.shuffle(candidateVictims);
+
+    for (NodeAddress victim : candidateVictims) {
+
+        if (victim == null) {
+            continue;
+        }
+
+        if (excludedNodeIds.contains(victim.nodeId())) {
+            continue;
+        }
+
+        evictionByDirectTarget.put(
+                directTarget.responder(),
+                victim);
+
+        excludedNodeIds.add(victim.nodeId());
+
+        break;
+    }
+}
+\end{lstlisting}
+
 \subsubsection{Self-healing Topology: KUBO viet va dat ten}
 \label{subsubsec:node_deletion_code}
 
