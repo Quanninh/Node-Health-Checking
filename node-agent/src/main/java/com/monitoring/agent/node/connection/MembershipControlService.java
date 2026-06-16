@@ -1,7 +1,6 @@
 package com.monitoring.agent.node.connection;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,14 +27,13 @@ import com.monitoring.agent.util.Console;
  */
 public final class MembershipControlService implements AutoCloseable {
 
-    private static final Duration DIRECT_COMMIT_RESULT_TTL = Duration.ofSeconds(60);
-
     private final NodeAddress localAddress;
     private final ConnectionManager connectionManager;
     private final UdpCoordinator udpCoordinator;
 
     // Map to track pending responses by transaction ID
     private final ConcurrentHashMap<String, CompletableFuture<DiscoveryMessage>> pendingResponses = new ConcurrentHashMap<>();
+    // map to check in case a COMMIT_ACK doesnt reach the destination but the operation at the target node already happens
     private final ConcurrentHashMap<String, CompletableFuture<CommitResult>> directCommitResults = new ConcurrentHashMap<>();
     private final ExecutorService directCommitExecutor = Executors.newSingleThreadExecutor(runnable -> {
         Thread thread = new Thread(runnable, "Membership-Direct-Commit");
@@ -228,6 +226,11 @@ public final class MembershipControlService implements AutoCloseable {
         }
     }
 
+    /**
+     * Method used to handle COMMIT_DIRECT. This is PREPARE to put into a different thread(async task) because it have to wait for the DELETE operation to end before adding the new node.
+     * The actual work here is to set up the directCommitResults, and send the COMMIT_ACK when all operations are performed.
+     * @param message the discovery message received
+     */
     private void handleDirectCommitAsync(DiscoveryMessage message) {
         CompletableFuture<CommitResult> resultFuture = directCommitResults.computeIfAbsent(
                 message.transactionId(),
@@ -248,6 +251,15 @@ public final class MembershipControlService implements AutoCloseable {
         });
     }
 
+    /**
+     * Method used to actually handle COMMIT_DIRECT, start a worker thread (supplyAsync) like in RewiringCoordinator.
+     * When complete, clean up directCommitResults when complete otw it grows infinitely.
+     * Note that this is not a scheduler, think of it as a timer to keep the info in case the new node doesn't receive the COMMIT_ACK.
+     * More specifically, target node finishes the breakup with the evicted, adds new node to its list -> send COMMIT_ACK
+     * -> new node may however doesn't receive that -> it attempts to resend the DIRECT request -> target node will perform the action again if there's no cache.
+     * @param message the discovery message
+     * @return CompletableFuture of CommitResult
+     */ 
     private CompletableFuture<CommitResult> createDirectCommitFuture(DiscoveryMessage message) {
         CompletableFuture<CommitResult> resultFuture = CompletableFuture
                 .supplyAsync(() -> handleDirectCommit(message), directCommitExecutor)
@@ -264,6 +276,9 @@ public final class MembershipControlService implements AutoCloseable {
         return resultFuture;
     }
 
+    /**
+     * Method used to clean up after DIRECT_COMMIT_RESULT_TTL milliseconds
+     */
     private void scheduleDirectCommitResultCleanup(
             String transactionId,
             CompletableFuture<CommitResult> resultFuture) {
@@ -274,7 +289,7 @@ public final class MembershipControlService implements AutoCloseable {
                         Console.log("Expired cached direct commit result txId=" + transactionId);
                     }
                 },
-                DIRECT_COMMIT_RESULT_TTL.toMillis(),
+                Constant.DIRECT_COMMIT_RESULT_TTL.toMillis(),
                 TimeUnit.MILLISECONDS);
     }
 
