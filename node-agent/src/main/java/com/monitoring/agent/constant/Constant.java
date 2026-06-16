@@ -9,6 +9,7 @@ import io.github.cdimascio.dotenv.Dotenv;
 public final class Constant {
 
     public static final Duration DIRECT_COMMIT_RESULT_TTL = Duration.ofSeconds(60);
+    public static final int MINIMUM_FULL_TARGET_COUNT = 1;
 
     public static final int DEFAULT_MAX_NEIGHBORS = 2;
     public static final int DEFAULT_JOIN_TIMEOUT_SECONDS = 3;
