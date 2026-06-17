@@ -125,20 +125,16 @@ Node Health Checking
 
 
 \begin{abstract}
-Distributed systems depend on multiple interconnected nodes to communicate and cooperate reliably.
-However, node failures, unstable connections, and disconnections can affect system availability if they are not detected and handled properly.
-Many node health checking systems use a centralized approach because it is easier to implement, but this design creates a single point of failure when the central entity becomes unavailable.
-This report presents a decentralized node health checking system that detects and repairs node and connection problems without relying on a central controller.
+Distributed systems rely on continuous health monitoring to detect node failures, unstable links, and disconnections before they reduce system availability.
+Centralized health-checking designs simplify coordination, but they may introduce a single point of failure when the monitoring entity becomes unavailable.
+This paper presents a decentralized node health-checking system in which failure detection and topology repair are performed directly by participating nodes rather than by a central controller.
 
-The proposed system uses a decentralized structure in which nodes monitor one another using phi-accrual failure detection.
-Each node calculates a phi value and compares it with a predefined threshold to determine whether another node or connection is suspicious or failed.
-When a problem is detected, the system applies repair and rewiring algorithms to restore the network topology.
-Each node attempts to maintain a fixed number of neighbors, denoted as \textit{k}, and new nodes can join the network through a joining algorithm.
+The proposed system uses peer-to-peer monitoring with phi-accrual failure detection.
+Each node observes a fixed number of neighbors, computes a suspicion value, and compares it with a predefined threshold to identify suspicious or failed nodes and connections.
+When a failure or disconnection is detected, the system attempts to repair and rewiring procedures to restore the network structure. Each node attempts to maintain a fixed number of neighbors, while a joining procedure allows new nodes to enter the network and become part of the monitoring topology.
 
-The system was implemented in Java using Spring Boot.
-PostgreSQL and a dashboard were used only for visualization and observation, while the health checking mechanism can operate independently through terminal output.
-Testing was performed with up to eight nodes, covering joining, termination, disconnection, and unstable connection scenarios.
-Overall, the system demonstrates that decentralized node health checking can reduce dependency on a central entity and improve fault tolerance.
+A prototype was implemented and tested with joining, termination, disconnection, and unstable-connection scenarios on various types of devices.
+The results show that the proposed design reduces dependency on a central monitoring entity and supports fault-tolerant health checking in the tested decentralized setting.
 
 \end{abstract}
 
@@ -234,11 +230,11 @@ The system demonstrates how node relationships, failure detection, and recovery 
 
 \section{Problem Statement}
 \label{sec:problem_statement}
-Many health checking systems rely on a centralized structure \cite{1Server}\cite{ApacheHadoop335}\cite{MonitorNodeHealth}, where a single central entity collects information and makes decisions for the entire network.
-Although this approach is simple to manage, it may introduce a bottleneck and a single point of failure.
+Many health checking systems rely on a centralized structure, where a single central entity collects information and makes decisions for the entire network.
+Although this approach is simple to manage, it may introduce a bottleneck and a single point of failure \cite{kingCentralizedDecentralizedComputing1983} \cite{patsiasTaskAllocationMethods2023} .
 To address this limitation, this project adopts a decentralized approach.
 Instead of depending entirely on one central controller, nodes participate in monitoring one another and responding to failures.
-A dashboard may be used as a visual aid to observe the system state, but the health checking and recovery logic remain decentralized.
+%A dashboard may be used as a visual aid to observe the system state, but the health checking and recovery logic remain decentralized.
 
 % \section{...}
 % \label{sec:second}
@@ -304,34 +300,25 @@ This increases deployment and operational complexity and makes membership manage
 For this reason, our system adopts a decentralized design instead. 
 Rather than relying on an external coordination service, membership management, failure detection, and topology maintenance are distributed across the participating nodes themselves.
 
-
 \section{Proposed Approach} % present algorithm
 \label{sec:proposed_approach}
 
 \subsection{Complete Architectural Diagram}
 \label{subsec:architecture}
-During operation, the nodes also generate status reports containing node information and health-checking results.
-These reports are sent to the server in JSON format.
-The server-side application receives the submitted node information through a POST request and forwards it to the controller.
-The controller acts as the entry point of the application layer.
-After receiving the data, it passes the information to the service layer, where the data is processed and prepared for storage.
-The service layer then communicates with the repository layer, which is responsible for storing the processed records in the database.
 
-The database is used to store node information, node status, and failure reports.
-This allows the system to keep a history of node activities and health-checking events.
-However, the database is not part of the core decentralized health-checking mechanism.
-It is mainly used to support visualization, inspection, and analysis through the dashboard.
+Inside each node, the health-checking process follows an event-driven structure.
+A node regularly checks its neighbors and reacts when abnormal behavior is detected, such as missing responses, delayed replies, or unreachable nodes.
+When such an event occurs, the node may request indirect checks from other neighbors, calculate the suspicion level of the target node, and categorize it.
+After the status is determined, the result will be broadcasted to the system so that the cluster can maintain a consistent view of node conditions.
 
-The dashboard provides a visual interface for observing the current state of the system.
-When the dashboard needs updated node information, it sends a GET request to the controller.
-The controller receives the request and forwards it to the service layer.
-The service layer processes the request and retrieves the required information through the repository layer.
-The repository then fetches the data from the database and returns it back through the same application layers.
-Finally, the dashboard displays the received information in a readable format using HTML and CSS.
+The lower part of the diagram represents the supporting observation subsystem.
+This subsystem receives node status information from the decentralized cluster and passes it through several logical layers.
+The first layer receives reported node status, the next layer processes and organizes the information, and the storage layer keeps historical records of node states and failure events.
+The visualization layer then retrieves this information and presents it in a readable form for users to inspect the current and past condition of the cluster.
 
-An important characteristic of this architecture is that the health-checking logic is not dependent on the dashboard or the database.
-The nodes remain interconnected and continue performing health checks on their neighbors even if the server, dashboard, or database becomes unavailable.
-Therefore, the server-side components are used mainly for reporting, storage, and visualization, while the actual node health-checking process remains decentralized.
+The main point of this architecture is the separation between the core health-checking mechanism and the observation subsystem.
+The decentralized cluster is responsible for detection, classification, and reaction, while the supporting layers are used only for reporting, storage, and visualization.
+Therefore, the system can continue checking node health and maintaining neighbor status even if the observation subsystem, storage component, or visual interface becomes unavailable.
 
 Fig.~\ref{fig:architecture} shows the complete architecture of the proposed system.
 
@@ -344,62 +331,65 @@ Fig.~\ref{fig:architecture} shows the complete architecture of the proposed syst
 % \end{figure*}
 
 \begin{figure*}[!t]
-\centering
-\resizebox{0.95\textwidth}{!}{%
-\begin{circuitikz}
-\tikzstyle{every node}=[font=\fontsize{18.2pt}{23.7pt}\selectfont]
-\draw [fill=white, fill opacity=1, line width=0.2pt] (-2.5,17.25) rectangle (38.75,-6.5);
-
-\draw  (1.25,13.5) circle (1.125cm);
-\draw  (5,7.25) circle (1.125cm);
-\draw  (6.25,14.75) circle (1.125cm);
-\draw  (1.25,9.75) circle (1.125cm);
-\node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (1.25,13.5) {node};
-\node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (1.25,9.75) {node};
-\node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (5,7.25) {node};
-\node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (6.25,14.75) {node};
-\draw [short] (2.375,13.5) -- (6.25,13.625);
-\draw [short] (6.25,13.625) -- (5,8.375);
-\draw [short] (2.375,13.5) -- (2.375,9.75);
-\draw [short] (2.375,9.75) -- (5,8.375);
-\draw [-{Stealth[scale=1.5]}, ] (6.25,13.625) -- (10,8.5);
-\draw [ rounded corners = 37.5] (10,9.75) rectangle (15,7.25);
-\draw [-{Stealth[scale=1.5]}, ] (2.375,13.5) -- (10,8.5);
-\draw [-{Stealth[scale=1.5]}, ] (5,8.375) -- (10,8.5);
-\draw [-{Stealth[scale=1.5]}, ] (2.375,9.75) -- (10,8.5);
-\node [font=\fontsize{18.2pt}{23.7pt}\selectfont, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (12.5,8.5) {SERVER};
-\draw [ rounded corners = 37.5] (17.5,2.25) rectangle (22.5,-0.25);
-\draw [ rounded corners = 37.5] (25,2.25) rectangle (30,-0.25);
-\draw [ rounded corners = 37.5] (32.5,2.25) rectangle (37.5,-0.25);
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (12.5,7.25) -- (17.5,1);
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (22.375,1.625) -- (25.125,1.625);
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (29.875,1.625) -- (32.625,1.625);
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (32.625,0.375) -- (29.875,0.375);
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (25.125,0.375) -- (22.375,0.375);
-\node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (19.875,1) {Controller};
-\node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (27.375,1) {Service};
-\node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (35,1) {Repository};
-\draw [ rounded corners = 37.5] (17.5,14.75) rectangle (22.5,12.25);
-\node[anchor=center, align=center, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (20,13.5) {\fontsize{18.2pt}{23.7pt}\selectfont Dashboard};
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (20.625,12.25) -- (20.625,2.25);
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (19.375,2.25) -- (19.375,12.25);
-\draw [ fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, line width=0.2pt , rounded corners = 37.5, dashed] (17.5,-2.75) rectangle (22.5,-5.25);
-\node[anchor=center, align=center, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (20,-4) {\fontsize{18.2pt}{23.7pt}\selectfont collect};
-\draw [ fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, line width=0.2pt , rounded corners = 37.5, dashed] (25,-2.75) rectangle (30,-5.25);
-\node[anchor=center, align=center, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (27.5,-4) {\fontsize{18.2pt}{23.7pt}\selectfont process};
-\draw [ rounded corners = 37.5] (32.5,-2.75) rectangle (37.5,-5.25);
-\node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (35,-4) {Database};
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, dashed] (20,-2.75) -- (20,-0.25);
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, dashed] (27.5,-2.75) -- (27.5,-0.25);
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (35.625,-0.25) -- (35.625,-2.75);
-\draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (34.375,-2.75) -- (34.375,-0.25);
-\node [font=\fontsize{18.2pt}{23.7pt}\selectfont, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm, align=center] at (11.125,3.75) {node-info.json \\ ~ \\ POST METHOD};
-\node [font=\fontsize{18.2pt}{23.7pt}\selectfont, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm, align=center] at (24.125,8.375) {request node-info.json \\ ~ \\ GET METHOD};
-\end{circuitikz}
-}%
-\caption{Complete architectural diagram of the node health-checking system.}
-\label{fig:architecture}
+    \centering
+    \includegraphics[width=0.95\textwidth]{ArchitecturalDiagram.png}
+    \caption{Complete architectural diagram of the node health-checking system.}
+    \label{fig:architecture}
 \end{figure*}
+
+% \resizebox{0.95\textwidth}{!}{%
+% \begin{circuitikz}
+% \tikzstyle{every node}=[font=\fontsize{18.2pt}{23.7pt}\selectfont]
+% \draw [fill=white, fill opacity=1, line width=0.2pt] (-2.5,17.25) rectangle (38.75,-6.5);
+
+% \draw  (1.25,13.5) circle (1.125cm);
+% \draw  (5,7.25) circle (1.125cm);
+% \draw  (6.25,14.75) circle (1.125cm);
+% \draw  (1.25,9.75) circle (1.125cm);
+% \node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (1.25,13.5) {node};
+% \node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (1.25,9.75) {node};
+% \node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (5,7.25) {node};
+% \node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (6.25,14.75) {node};
+% \draw [short] (2.375,13.5) -- (6.25,13.625);
+% \draw [short] (6.25,13.625) -- (5,8.375);
+% \draw [short] (2.375,13.5) -- (2.375,9.75);
+% \draw [short] (2.375,9.75) -- (5,8.375);
+% \draw [-{Stealth[scale=1.5]}, ] (6.25,13.625) -- (10,8.5);
+% \draw [ rounded corners = 37.5] (10,9.75) rectangle (15,7.25);
+% \draw [-{Stealth[scale=1.5]}, ] (2.375,13.5) -- (10,8.5);
+% \draw [-{Stealth[scale=1.5]}, ] (5,8.375) -- (10,8.5);
+% \draw [-{Stealth[scale=1.5]}, ] (2.375,9.75) -- (10,8.5);
+% \node [font=\fontsize{18.2pt}{23.7pt}\selectfont, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (12.5,8.5) {SERVER};
+% \draw [ rounded corners = 37.5] (17.5,2.25) rectangle (22.5,-0.25);
+% \draw [ rounded corners = 37.5] (25,2.25) rectangle (30,-0.25);
+% \draw [ rounded corners = 37.5] (32.5,2.25) rectangle (37.5,-0.25);
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (12.5,7.25) -- (17.5,1);
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (22.375,1.625) -- (25.125,1.625);
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (29.875,1.625) -- (32.625,1.625);
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (32.625,0.375) -- (29.875,0.375);
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (25.125,0.375) -- (22.375,0.375);
+% \node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (19.875,1) {Controller};
+% \node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (27.375,1) {Service};
+% \node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (35,1) {Repository};
+% \draw [ rounded corners = 37.5] (17.5,14.75) rectangle (22.5,12.25);
+% \node[anchor=center, align=center, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (20,13.5) {\fontsize{18.2pt}{23.7pt}\selectfont Dashboard};
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (20.625,12.25) -- (20.625,2.25);
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (19.375,2.25) -- (19.375,12.25);
+% \draw [ fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, line width=0.2pt , rounded corners = 37.5, dashed] (17.5,-2.75) rectangle (22.5,-5.25);
+% \node[anchor=center, align=center, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (20,-4) {\fontsize{18.2pt}{23.7pt}\selectfont collect};
+% \draw [ fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, line width=0.2pt , rounded corners = 37.5, dashed] (25,-2.75) rectangle (30,-5.25);
+% \node[anchor=center, align=center, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (27.5,-4) {\fontsize{18.2pt}{23.7pt}\selectfont process};
+% \draw [ rounded corners = 37.5] (32.5,-2.75) rectangle (37.5,-5.25);
+% \node [font=\fontsize{19.9pt}{25.9pt}\selectfont, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm] at (35,-4) {Database};
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, dashed] (20,-2.75) -- (20,-0.25);
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, dashed] (27.5,-2.75) -- (27.5,-0.25);
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (35.625,-0.25) -- (35.625,-2.75);
+% \draw [line width=0.2pt, -{Stealth[scale=1.5]}, ] (34.375,-2.75) -- (34.375,-0.25);
+% \node [font=\fontsize{18.2pt}{23.7pt}\selectfont, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm, align=center] at (11.125,3.75) {node-info.json \\ ~ \\ POST METHOD};
+% \node [font=\fontsize{18.2pt}{23.7pt}\selectfont, fill={rgb,255:red,255; green,255; blue,255}, fill opacity=1, text opacity=1, inner xsep=0.080cm, inner ysep=0.085cm, rounded corners=0.020cm, align=center] at (24.125,8.375) {request node-info.json \\ ~ \\ GET METHOD};
+% \end{circuitikz}
+% }%
+
 % NOTE: add something to lead to these algo, algo will be divided into three subsections
 \subsection{Failure Detection: Hybrid SWIMPHI}
 \label{subsec:hybrid_swimphi}
@@ -815,6 +805,7 @@ failure detection for dynamic distributed environments.
 
 \subsubsection{Neighbor Discovery: FINDING NEMO}
 \label{subsubsec:node_discovery_code}
+
 This section provides some insights of FINDING NEMO implementation. 
 One notable logic is the construction of a \textit{Join Plan}. 
 Recall that when a joining node receives responses from its peers, these acknowledgements can be classified into two categories derived from the sender's neighbor list state: \textit{fullNeighborAcks} and \textit{missingNeighborAcks}. 
@@ -825,62 +816,82 @@ This can be achieved by sorting received acknowledgements into two lists corresp
 \begin{lstlisting}[language=Java,
 caption={Compute the quantity taken from two lists},
 label={lst:quantity_target_list}]
-int missingDirectTargetCount;
-int fullDirectTargetCount;
+int missingTargetCount;
+int fullTargetCount;
 
 int missingCount = missingNeighborAcks.size();
 int fullCount = fullNeighborAcks.size();
 
 if (missingCount + (2 * fullCount) <= maxNeighbors) {
 
-    missingDirectTargetCount = missingCount;
-    fullDirectTargetCount = fullCount;
+    missingTargetCount = missingCount;
+    fullTargetCount = fullCount;
 
 } else {
 
-    int evenMissingCount;
-
-    if (missingCount % 2 == 0) {
-        evenMissingCount = missingCount;
-    } else {
-        evenMissingCount = missingCount - 1;
-    }
+    int evenMissingCount =
+            (missingCount % 2 == 0)
+                    ? missingCount
+                    : missingCount - 1;
 
     evenMissingCount = Math.max(evenMissingCount, 0);
 
-    missingDirectTargetCount =
+    missingTargetCount =
             Math.min(evenMissingCount, maxNeighbors);
 
-    fullDirectTargetCount =
+    fullTargetCount =
             Math.min(
-                    (maxNeighbors - missingDirectTargetCount) / 2,
+                    (maxNeighbors - missingTargetCount) / 2,
                     fullCount);
+
+    int minimumFullTargets =
+            Math.min(
+                    Constant.MINIMUM_FULL_TARGET_COUNT,
+                    fullCount);
+
+    if (fullTargetCount < minimumFullTargets
+            && maxNeighbors >= 2 * minimumFullTargets) {
+
+        fullTargetCount = minimumFullTargets;
+
+        missingTargetCount =
+                maxNeighbors - (2 * fullTargetCount);
+
+        // Redundant when k is guaranteed to be even.
+        if ((missingTargetCount & 1) != 0) {
+            missingTargetCount--;
+        }
+
+        missingTargetCount =
+                Math.max(0, missingTargetCount);
+    }
 }
 
 List<JoinAck> directTargetAcks = new ArrayList<>();
 
-List<JoinAck> fullDirectTargetAcks =
-        fullNeighborAcks.subList(0, fullDirectTargetCount);
-
 directTargetAcks.addAll(
         missingNeighborAcks.subList(
                 0,
-                missingDirectTargetCount));
+                missingTargetCount));
 
-directTargetAcks.addAll(fullDirectTargetAcks);
+directTargetAcks.addAll(
+        fullNeighborAcks.subList(
+                0,
+                fullTargetCount));
 \end{lstlisting}
 
 Listing~\ref{lst:quantity_target_list} shows the target-selection stage of FINDING NEMO. 
 Nodes with available neighbor capacity are prioritized, while fully connected nodes are considered only when additional neighbors are required. 
-The number of selected under-connected nodes is rounded down to the nearest even value to ensure that the remaining neighbor budget can be satisfied through the eviction mechanism, where each fully connected node contributes both itself and one evicted neighbor to the joining node.
+The number of selected under-connected nodes is rounded down to the nearest even value to ensure that the remaining neighbor budget can be satisfied through the eviction mechanism, where each fully connected node contributes both itself and one evicted neighbor to the joining node. 
+Furthermore, the algorithm attempts to include at least \verb|MINIMUM_FULL_TARGET_COUNT| fully connected nodes so that in a outburst of new nodes, the network is protected from partition.
 
-Another implementation that worths to mention is the selection process of evicted nodes. 
+Another implementation that worths mentioning is the selection process of evicted nodes. 
 Listing~\ref{lst:evicted_members_selection} presents the victim-selection procedure. 
 For each fully connected direct target, a neighbor is randomly selected for eviction. 
 An exclusion set is maintained to prevent the joining node, previously selected direct targets, and previously selected victims from being chosen again. 
 This guarantees that each eviction victim is unique and cannot simultaneously serve as a direct target, thereby avoiding conflicting topology updates.
 \begin{lstlisting}[language=Java,
-caption={Plan evicted members},
+caption={Evicted members planning},
 label={lst:evicted_members_selection}]
 Set<String> excludedNodeIds = new HashSet<>();
 
@@ -916,6 +927,25 @@ for (JoinAck directTarget : fullDirectTargetAcks) {
     }
 }
 \end{lstlisting}
+
+Finally, we discuss the protocol flow of FINDING NEMO. 
+Unfortunately the source code is not used for the visualization aid here due to boilerplates and syntax complexity. 
+Instead, we provide an activity diagram as in Fig~\ref{fig:FINDING_NEMO_protocol} so that readers can grasp the concept with ease. 
+Observed from the diagram, the flow diverges into two paths depending on whether the target node has an uncompleted or full neighbor list. 
+Nevertheless, overlapping operations can be oberserved except the number of connections the new node acquires eventually. 
+In addition, it can be noticed that the target node communicates with the evicted node to break up before sending $COMMIT_ACK$ back to the new node. 
+Initially, we designed the protocol so that one $COMMIT_DIRECT$ to target node results in the addition of the new node and the deletion of the evicted node. 
+After that, one $COMMIT_VICTIM$ is sent to add the new node and remove the target node on the evicted node's side. 
+This previous design raises the challenge of partial commits, meaning that if one of the above message fails, either the targer or evicted node will keep the contact of the other while the vice versa is not true. 
+That weakness leads us to the current design. 
+However, some nodes can still be lacking in neighbors in the end, but that can be resolved later via our rewring algorithm.
+
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.95\textwidth]{FINDING_NEMO_actiDi.png}
+\caption{FINDING NEMO protocol flow}
+\label{fig:FINDING_NEMO_protocol}
+\end{figure*}
 
 \subsubsection{Self-healing Topology: KUBO viet va dat ten}
 \label{subsubsec:node_deletion_code}

@@ -146,13 +146,13 @@ public final class ConnectionManager {
     }
 
     /**
-     * This function is called by the node that is randomly chosen by the joining
-     * node. This node will add the joining node as a new neighbor, as well as
-     * remove a neighbor which is determined by the joining node.
+     * This function is called by the direct target after any needed delete commit
+     * has completed. This node will add the joining node as a new neighbor.
      * 
      * @param txId          transaction ID
      * @param joiningNode   the joining node
-     * @param evictedNodeId the evicted node
+     * @param evictedNodeId retained for compatibility with existing callers; this
+     *                      method no longer removes it => put it here just to refactor mayebe in the future?
      * @return the result of the transaction
      */
     public CommitResult applyDirectTargetCommit(String txId, NodeAddress joiningNode, String evictedNodeId) {
@@ -174,17 +174,7 @@ public final class ConnectionManager {
                 return new CommitResult(true, "joining node already exists");
             }
 
-            NodeAddress evicted = null;
-            // Remove evicted node if possible
-            if (evictedNodeId != null && !evictedNodeId.isBlank()) {
-                evicted = neighborsById.remove(evictedNodeId);
-            }
-
-            // If adding would lead to exceeding max neighbor, undo changes
             if (neighborsById.size() >= maxNeighbors) {
-                if (evicted != null) {
-                    neighborsById.put(evicted.nodeId(), evicted);
-                }
                 Console.log("direct target would exceed maxNeighbors");
                 return new CommitResult(false, "direct target would exceed maxNeighbors");
             }
@@ -195,7 +185,6 @@ public final class ConnectionManager {
 
             Console.log("Node " + localAddress.nodeId()
                     + " accepted joining node " + joiningNode
-                    + (evicted == null ? "" : " and evicted " + evicted)
                     + ". neighbors=" + neighborsById.values(), Constant.GREEN);
             return new CommitResult(true, "direct target commit accepted");
         } finally {
@@ -204,18 +193,56 @@ public final class ConnectionManager {
     }
 
     /**
+     * Applies a delete commit by removing one existing neighbor. This is used by
+     * the evicted node when a direct target asks it to drop their old edge.
+     *
+     * @param txId         transaction ID
+     * @param targetNodeId the neighbor to remove
+     * @return the result of the transaction
+     */
+    public CommitResult applyDeleteCommit(String txId, String targetNodeId) {
+        lock.lock();
+        try {
+            if (!processedTransactions.add("DELETE:" + txId + ":" + targetNodeId)) {
+                Console.log("duplicate delete commit ignored");
+                return new CommitResult(true, "duplicate delete commit ignored");
+            }
+
+            if (targetNodeId == null || targetNodeId.isBlank()) {
+                Console.log("target node id is blank");
+                return new CommitResult(false, "target node id is blank");
+            }
+
+            NodeAddress removed = neighborsById.remove(targetNodeId);
+            if (removed == null) {
+                Console.log("delete commit target " + targetNodeId + " was already absent");
+                return new CommitResult(true, "delete commit target already absent");
+            }
+
+            version++;
+            refreshHealthStateLocked();
+            Console.log(localAddress.nodeId() + " applied delete commit and removed " + removed
+                    + ". neighbors=" + neighborsById.values());
+            return new CommitResult(true, "delete commit accepted");
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
      * This function is called by the evicted node. The evicted node will add the
-     * joining node as a neighbor and remove its old neighbor.
+     * joining node as a neighbor and remove its old neighbor(now no longer removes its old neighbor -> that task is delegated to other method).
+     * Now this method acts just like a small commit, just diff name for better logging
      * 
      * @param txId              transaction ID
      * @param joiningNode       the joining node
      * @param oldDirectTargetId the old neighbor
      * @return the result of the transaction
      */
-    public CommitResult applyEvictedNodeCommit(String txId, NodeAddress joiningNode, String oldDirectTargetId) {
+    public CommitResult applyEvictedNodeCommit(String txId, NodeAddress joiningNode) {
         lock.lock();
         try {
-            if (!processedTransactions.add("VICTIM:" + txId + ":" + oldDirectTargetId)) {
+            if (!processedTransactions.add("VICTIM:" + txId)) {
                 Console.log("duplicate victim commit ignored");
                 return new CommitResult(true, "duplicate victim commit ignored");
             }
@@ -225,18 +252,32 @@ public final class ConnectionManager {
                 return new CommitResult(false, "joining node is null");
             }
 
-            NodeAddress removed = null;
-            if (oldDirectTargetId != null && !oldDirectTargetId.isBlank()) {
-                removed = neighborsById.remove(oldDirectTargetId);
+            if (neighborsById.containsKey(joiningNode.nodeId())) {
+                Console.log("Joining node already exists");
+                return new CommitResult(true, "Joining node already exists");
             }
 
-            if (!joiningNode.nodeId().equals(localAddress.nodeId())) {
-                neighborsById.put(joiningNode.nodeId(), joiningNode);
+            if (neighborsById.size() >= maxNeighbors) {
+                Console.log("Accepting " + joiningNode + " will exceed neighbor limit.",
+                        Constant.BG_PURPLE);
+                return new CommitResult(false, "Small join target has no free neighbor slot");
             }
 
+            if (joiningNode.nodeId().equals(localAddress.nodeId())) {
+                Console.log("Cannot add self");
+                return new CommitResult(false, "Cannot add self");
+            }
+
+            // NodeAddress removed = null;
+            // if (oldDirectTargetId != null && !oldDirectTargetId.isBlank()) {
+            //     removed = neighborsById.remove(oldDirectTargetId);
+            // }
+
+            
+            neighborsById.put(joiningNode.nodeId(), joiningNode);
             version++;
             refreshHealthStateLocked();
-            Console.log(localAddress.nodeId() + " evicted " + removed + " and added " + joiningNode
+            Console.log(localAddress.nodeId() + " is a victim and added " + joiningNode
                     + ". neighbors=" + neighborsById.values());
             return new CommitResult(true, "victim commit accepted");
         } finally {

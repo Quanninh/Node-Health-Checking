@@ -105,8 +105,13 @@ public final class MulticastJoinCoordinator {
                 continue;
             }
 
+            connectionManager.addIfSpace(directTarget, "scaled join direct target");
+
+            Console.log(localAddress.nodeId() + " successfully connected with direct target " + directTarget
+                    + " after it deleted old edge to " + victim, Constant.GREEN);
+
             boolean victimCommitted = membershipControlService.commitVictim(
-                    victim, localAddress, directTarget, txId + ":victim:" + victim.nodeId());
+            victim, localAddress, directTarget, txId + ":victim:" + victim.nodeId());
 
             if (!victimCommitted) {
                 Console.log("Victim commit failed for " + victim + ". Failure detector/repair should fix this later.",
@@ -114,12 +119,9 @@ public final class MulticastJoinCoordinator {
                 continue;
             }
 
-            connectionManager.addIfSpace(directTarget, "scaled join direct target");
-
             connectionManager.addIfSpace(victim, "scaled join evicted handover");
 
-            Console.log(localAddress.nodeId() + " successfully connected with " + directTarget
-                    + " and handed over evicted node " + victim, Constant.GREEN);
+            Console.log(localAddress.nodeId() + " successfully + handed over evicted node " + victim, Constant.GREEN);
         }
 
         Console.log("Hybrid join complete. Current neighbors=" + connectionManager.neighborIds(), Constant.GREEN);

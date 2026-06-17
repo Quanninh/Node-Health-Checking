@@ -89,7 +89,7 @@ public final class JoinPlanner {
             fullDirectTargetCount = Math.min((maxNeighbors - missingDirectTargetCount) / 2,
                     fullNeighborAcks.size());
                     
-            int minimumFullTargets = Math.min(2, fullNeighborAcks.size());
+            int minimumFullTargets = Math.min(Constant.MINIMUM_FULL_TARGET_COUNT, fullNeighborAcks.size());
 
             if (fullDirectTargetCount < minimumFullTargets
                     && maxNeighbors >= 2 * minimumFullTargets) {
@@ -99,7 +99,7 @@ public final class JoinPlanner {
                 // Fill remaining slots with missing targets.
                 missingDirectTargetCount = maxNeighbors - 2 * fullDirectTargetCount;
 
-                // Keep missing count even.
+                // Keep missing count even. This can be redundant in the system as we force k to be even.
                 if ((missingDirectTargetCount & 1) != 0) {
                     missingDirectTargetCount--;
                 }
@@ -107,8 +107,7 @@ public final class JoinPlanner {
                 missingDirectTargetCount = Math.max(0, missingDirectTargetCount);
             }
         }
-        // TODO: Update this to allow more full-neighbor to engage to prevent network
-        // partition
+
         List<JoinAck> directTargetAcks = new ArrayList<>();
 
         List<JoinAck> fullDirectTargetAcks = fullNeighborAcks.subList(0, fullDirectTargetCount);
