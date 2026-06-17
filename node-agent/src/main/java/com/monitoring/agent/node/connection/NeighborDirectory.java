@@ -37,10 +37,12 @@ public class NeighborDirectory {
 
     /** Index for iterating through neighbors (for failure detection). */
     private int nextIndex = 0;
+    private final List<NodeAddress> shuffledNeighbors;
 
     public NeighborDirectory(ConnectionManager connectionManager) {
         this.connectionManager = connectionManager;
         syncStatesWithConnections();
+        shuffledNeighbors = connectionManager.neighborAddresses();
     }
 
     /**
@@ -50,18 +52,17 @@ public class NeighborDirectory {
      * @return the next node, empty if node has no active neighbors
      */
     public synchronized Optional<NodeAddress> nextTargetNode() {
-        // List<NodeAddress> neighbors = reachableNeighbors();
-        List<NodeAddress> neighbors = connectionManager.neighborAddresses();
-        if (neighbors.isEmpty()) {
+        // List<NodeAddress> neighbors = connectionManager.neighborAddresses();
+        if (shuffledNeighbors.isEmpty()) {
             return Optional.empty();
         }
 
-        if (nextIndex >= neighbors.size()) {
-            Collections.shuffle(neighbors);
+        if (nextIndex >= shuffledNeighbors.size()) {
+            Collections.shuffle(shuffledNeighbors);
             nextIndex = 0;
         }
 
-        NodeAddress selected = neighbors.get(nextIndex);
+        NodeAddress selected = shuffledNeighbors.get(nextIndex);
         nextIndex++;
         return Optional.of(selected);
     }
@@ -220,29 +221,6 @@ public class NeighborDirectory {
         return connectionManager.neighborAddresses().stream()
                 .filter(node -> node.nodeId().equals(targetNodeId))
                 .findFirst();
-    }
-
-    /**
-     * Gets a list of reachable neighbors.
-     * 
-     * @return list of reachable neighbors
-     */
-    private List<NodeAddress> reachableNeighbors() {
-        syncStatesWithConnections();
-        return connectionManager.neighborAddresses().stream()
-                .filter(node -> getStatusWithoutSync(node.nodeId()) != NodeStatus.UNREACHABLE)
-                .collect(Collectors.toCollection(ArrayList::new));
-    }
-
-    /**
-     * Gets the status of a node without syncing with the connection manager.
-     * 
-     * @param nodeId
-     * @return the node status
-     */
-    private NodeStatus getStatusWithoutSync(String nodeId) {
-        NodeState state = nodeStates.get(nodeId);
-        return state == null ? NodeStatus.UNKNOWN : state.getStatus();
     }
 
     /**

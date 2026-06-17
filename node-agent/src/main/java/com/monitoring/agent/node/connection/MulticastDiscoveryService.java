@@ -63,18 +63,15 @@ public final class MulticastDiscoveryService implements AutoCloseable {
         multicastSocket.setTimeToLive(1);
         // Set socket timeout to allow periodic checking of running flag
         // This prevents the receiveLoop from blocking indefinitely
-        multicastSocket.setSoTimeout(5000); // 5 second timeout
+        multicastSocket.setSoTimeout(5000);
 
         InetSocketAddress groupAddress = new InetSocketAddress(config.multicastGroup(), config.multicastPort());
-
         multicastSocket.joinGroup(groupAddress, config.networkInterface());
-
         running = true;
-
         receiverExecutor.submit(this::receiveLoop);
 
-        Console.log("Joined multicast discovery group " + config.multicastGroup().getHostAddress() + ":"
-                + config.multicastPort() + " on interface " + config.networkInterface().getName(), Constant.GREEN);
+        Console.logSuccess("Joined multicast discovery group " + config.multicastGroup().getHostAddress() + ":"
+                + config.multicastPort() + " on interface " + config.networkInterface().getName());
     }
 
     /**
@@ -86,17 +83,14 @@ public final class MulticastDiscoveryService implements AutoCloseable {
     @SuppressWarnings("SleepWhileInLoop")
     public List<JoinAck> discoverPeers() throws IOException {
         String txId = UUID.randomUUID().toString();
-
         List<JoinAck> allAcksReceived = new ArrayList<>();
 
         try (DatagramSocket replySocket = new DatagramSocket(0)) {
             replySocket.setSoTimeout((int) config.retryInterval().toMillis());
-
             int replyPort = replySocket.getLocalPort();
 
             for (int attempt = 1; attempt <= config.retryCount(); attempt++) {
                 sendJoinRequest(txId, attempt, replyPort);
-
                 List<JoinAck> collected = collectReplies(replySocket, txId, config.retryInterval());
                 allAcksReceived.addAll(collected);
 
@@ -132,50 +126,42 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 
                 replySocket.receive(packet);
-
-                String raw = new String(
-                        packet.getData(),
-                        packet.getOffset(),
-                        packet.getLength(),
+                String raw = new String(packet.getData(), packet.getOffset(), packet.getLength(),
                         StandardCharsets.UTF_8);
-
                 DiscoveryMessage message = DiscoveryMessage.decode(raw);
 
                 if (message.type() != DiscoveryMessageType.JOIN_ACK) {
-                    Console.log("Not JOIN_ACK received, discarded.", Constant.PINK);
+                    Console.logWarning("Not JOIN_ACK received, discarded.");
                     continue;
                 }
 
                 if (!txId.equals(message.transactionId())) {
-                    Console.log("Wrong txId received, discarded.", Constant.PINK);
+                    Console.logWarning("Wrong txId received, discarded.");
                     continue;
                 }
 
                 if (message.sender().nodeId().equals(localAddress.nodeId())) {
-                    Console.log("Sender = Myself, discarded.", Constant.PINK);
+                    Console.logWarning("Sender = Myself, discarded.");
                     continue;
                 }
 
                 String key = message.transactionId() + ":" + message.sender().nodeId();
-
-                // `add` returns false if key already exist in set
                 if (!seenAcks.add(key)) {
-                    Console.log("Duplicate KEY received, discarded.", Constant.PINK);
+                    Console.logWarning("Duplicate KEY received, discarded.");
                     continue;
                 }
 
                 JoinAck ack = new JoinAck(message.transactionId(), message.sender(), message.isInNetwork(),
                         message.neighborVersion(), message.neighbors());
-
                 repliesByNodeId.putIfAbsent(ack.responder().nodeId(), ack);
 
-                Console.log("Received JOIN_ACK from " + ack.responder()
-                        + " with neighbors=" + ack.responderNeighbors(), Constant.CYAN);
+                Console.logInfo(
+                        "Received JOIN_ACK from " + ack.responder() + " with neighbors=" + ack.responderNeighbors());
             } catch (SocketTimeoutException ignored) {
-                Console.log("Socket timeout.", Constant.BG_ORANGE);
+                Console.logHighlight("Socket timeout.");
                 break;
             } catch (IOException exception) {
-                Console.log("Ignored invalid discovery reply: " + exception.getMessage(), Constant.RED);
+                Console.logError("Ignored invalid discovery reply: " + exception.getMessage());
             }
         }
 
@@ -205,15 +191,11 @@ public final class MulticastDiscoveryService implements AutoCloseable {
 
         byte[] bytes = message.encode().getBytes(StandardCharsets.UTF_8);
 
-        DatagramPacket packet = new DatagramPacket(
-                bytes,
-                bytes.length,
-                config.multicastGroup(),
+        DatagramPacket packet = new DatagramPacket(bytes, bytes.length, config.multicastGroup(),
                 config.multicastPort());
-
         multicastSocket.send(packet);
 
-        Console.log("Sent multicast JOIN_REQUEST txId=" + txId + ", seq=" + sequence, Constant.CYAN);
+        Console.log("Sent multicast JOIN_REQUEST txId=" + txId + ", seq=" + sequence);
     }
 
     /**
@@ -225,18 +207,11 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                 byte[] buffer = new byte[config.packetBufferSize()];
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
 
-                multicastSocket.receive(packet);
                 // receive here on a different port compared to MembershipControl and Recovery
+                multicastSocket.receive(packet);
 
-                String raw = new String(
-                        packet.getData(),
-                        packet.getOffset(),
-                        packet.getLength(),
+                String raw = new String(packet.getData(), packet.getOffset(), packet.getLength(),
                         StandardCharsets.UTF_8);
-
-                // Console.log("Received by Multicast Discovery Service. Raw message: " + raw,
-                // Constant.BG_PURPLE);
-
                 DiscoveryMessage message = DiscoveryMessage.decode(raw);
 
                 if (message.type() == DiscoveryMessageType.JOIN_REQUEST) {
@@ -250,10 +225,10 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                 // If socket is closed because service is shutting down (running=false),
                 // the loop will exit at the while condition
                 if (running) {
-                    Console.log("Discovery socket error: " + exception.getMessage(), Constant.RED);
+                    Console.logError("Discovery socket error: " + exception.getMessage());
                 }
             } catch (IOException exception) {
-                Console.log("Discovery receive error: " + exception.getMessage(), Constant.RED);
+                Console.logError("Discovery receive error: " + exception.getMessage());
             }
         }
     }
@@ -286,19 +261,13 @@ public final class MulticastDiscoveryService implements AutoCloseable {
                 null);
 
         byte[] bytes = joinAck.encode().getBytes(StandardCharsets.UTF_8);
-
-        DatagramPacket packet = new DatagramPacket(
-                bytes,
-                bytes.length,
-                senderAddress,
-                request.replyPort());
-
+        DatagramPacket packet = new DatagramPacket(bytes, bytes.length, senderAddress, request.replyPort());
         try (DatagramSocket socket = new DatagramSocket()) {
             socket.send(packet);
         }
 
-        Console.log("Sent JOIN_ACK to " + request.sender() + " for txId=" + request.transactionId() + " with neighbors="
-                + snapshot.neighbors(), Constant.CYAN);
+        Console.log("Sent JOIN_ACK to " + request.sender() + ", txId=" + request.transactionId() + ", neighbors="
+                + snapshot.neighbors());
     }
 
     @Override

@@ -22,8 +22,7 @@ import com.monitoring.agent.util.Console;
  * Receives and sends ACKs for Discovery Messages using UdpCoordinator.
  * 
  * This service manages both incoming commands (via consumer callback) and
- * outgoing
- * commands with response waiting (via CompletableFutures).
+ * outgoing commands with response waiting (via CompletableFutures).
  */
 public final class MembershipControlService implements AutoCloseable {
 
@@ -31,17 +30,23 @@ public final class MembershipControlService implements AutoCloseable {
     private final ConnectionManager connectionManager;
     private final UdpCoordinator udpCoordinator;
 
-    // Map to track pending responses by transaction ID
+    /** Map to track pending responses by transaction ID */
     private final ConcurrentHashMap<String, CompletableFuture<DiscoveryMessage>> pendingResponses = new ConcurrentHashMap<>();
-    // map to check in case a COMMIT_ACK doesnt reach the destination but the operation at the target node already happens
+
+    /**
+     * Map to check in case a COMMIT_ACK doesn't reach the destination but the
+     * operation at the target node already happens
+     */
     private final ConcurrentHashMap<String, CompletableFuture<CommitResult>> directCommitResults = new ConcurrentHashMap<>();
+
     private final ExecutorService directCommitExecutor = Executors.newSingleThreadExecutor(runnable -> {
         Thread thread = new Thread(runnable, "Membership-Direct-Commit");
         thread.setDaemon(false);
         return thread;
     });
-    private final ScheduledExecutorService directCommitCleanupExecutor = Executors.newSingleThreadScheduledExecutor(
-            runnable -> {
+
+    private final ScheduledExecutorService directCommitCleanupExecutor = Executors
+            .newSingleThreadScheduledExecutor(runnable -> {
                 Thread thread = new Thread(runnable, "Membership-Direct-Commit-Cleanup");
                 thread.setDaemon(false);
                 return thread;
@@ -172,63 +177,63 @@ public final class MembershipControlService implements AutoCloseable {
             DiscoveryMessage message = DiscoveryMessage.decode(envelope.payload());
 
             if (message.type() == null) {
-                Console.log("Invalid message: " + message);
+                Console.logError("Invalid message: " + message);
                 return;
             }
 
             Console.log("[MEMBERSHIP] Received " + message.type() + " txId=" + message.transactionId() + " from "
                     + message.sender());
 
-            // Check if this is a response to a pending request
-            if (message.type() == DiscoveryMessageType.COMMIT_ACK
-                    || message.type() == DiscoveryMessageType.COMMIT_DELETE_ACK) {
-                CompletableFuture<DiscoveryMessage> future = pendingResponses.remove(message.transactionId());
-                if (future != null) {
-                    future.complete(message);
+            boolean isMessageResponseToPendingRequest = message.type() == DiscoveryMessageType.COMMIT_ACK
+                    || message.type() == DiscoveryMessageType.COMMIT_DELETE_ACK;
+
+            if (isMessageResponseToPendingRequest) {
+                CompletableFuture<DiscoveryMessage> tempFuture = pendingResponses.remove(message.transactionId());
+
+                if (tempFuture != null) {
+                    tempFuture.complete(message);
                 }
-                Console.log("Message is a " + message.type() + ". Resolved");
+
+                Console.logWarning("Message is a " + message.type() + ". Resolved");
                 return;
             }
 
-            // Handle incoming commands
             CommitResult result;
             DiscoveryMessageType ackType = DiscoveryMessageType.COMMIT_ACK;
+
             switch (message.type()) {
-                case COMMIT_SMALL_JOIN -> result = connectionManager.applySmallJoinCommit(
-                        message.transactionId(),
-                        message.sender());
+                case COMMIT_SMALL_JOIN ->
+                    result = connectionManager.applySmallJoinCommit(message.transactionId(), message.sender());
                 case COMMIT_DIRECT -> {
                     handleDirectCommitAsync(message);
                     return;
                 }
-                case COMMIT_VICTIM -> result = connectionManager.applyEvictedNodeCommit(
-                        message.transactionId(),
-                        message.sender());
+                case COMMIT_VICTIM ->
+                    result = connectionManager.applyEvictedNodeCommit(message.transactionId(), message.sender());
                 case COMMIT_DELETE -> {
-                    result = connectionManager.applyDeleteCommit(
-                            message.transactionId(),
-                            message.directTargetId());
+                    result = connectionManager.applyDeleteCommit(message.transactionId(), message.directTargetId());
                     ackType = DiscoveryMessageType.COMMIT_DELETE_ACK;
                 }
                 default -> {
-                    Console.log(
-                            "Message not COMMIT_SMALL_JOIN, COMMIT_DIRECT, COMMIT_VICTIM, COMMIT_DELETE, but rather "
-                                    + message.type(),
-                            Constant.PURPLE);
+                    Console.logError(
+                            "Message not COMMIT_(SMALL_JOIN / DIRECT / VICTIM / DELETE), but rather " + message.type());
                     return;
                 }
             }
 
             sendCommitAck(message.sender(), message.transactionId(), result.accepted(), ackType);
-
         } catch (IOException ex) {
-            Console.log("Error handling membership packet; " + ex.getMessage(), Constant.RED);
+            Console.logError("Error handling membership packet; " + ex.getMessage());
         }
     }
 
     /**
-     * Method used to handle COMMIT_DIRECT. This is PREPARE to put into a different thread(async task) because it have to wait for the DELETE operation to end before adding the new node.
-     * The actual work here is to set up the directCommitResults, and send the COMMIT_ACK when all operations are performed.
+     * Method used to handle COMMIT_DIRECT. This is PREPARE to put into a different
+     * thread(async task) because it have to wait for the DELETE operation to end
+     * before adding the new node.
+     * The actual work here is to set up the directCommitResults, and send the
+     * COMMIT_ACK when all operations are performed.
+     * 
      * @param message the discovery message received
      */
     private void handleDirectCommitAsync(DiscoveryMessage message) {
@@ -238,40 +243,43 @@ public final class MembershipControlService implements AutoCloseable {
 
         resultFuture.thenAccept(result -> {
             try {
-                sendCommitAck(
-                        message.sender(),
-                        message.transactionId(),
-                        result.accepted(),
-                        DiscoveryMessageType.COMMIT_ACK);
+                sendCommitAck(message.sender(), message.transactionId(), result.accepted());
             } catch (IOException exception) {
-                Console.log("Failed to send async COMMIT_ACK txId=" + message.transactionId()
-                        + " to " + message.sender().nodeId()
-                        + ": " + exception.getMessage(), Constant.RED);
+                Console.logError("Failed to send async COMMIT_ACK txId=" + message.transactionId()
+                        + " to " + message.sender().nodeId() + ": " + exception.getMessage());
             }
         });
     }
 
     /**
-     * Method used to actually handle COMMIT_DIRECT, start a worker thread (supplyAsync) like in RewiringCoordinator.
-     * When complete, clean up directCommitResults when complete otw it grows infinitely.
-     * Note that this is not a scheduler, think of it as a timer to keep the info in case the new node doesn't receive the COMMIT_ACK.
-     * More specifically, target node finishes the breakup with the evicted, adds new node to its list -> send COMMIT_ACK
-     * -> new node may however doesn't receive that -> it attempts to resend the DIRECT request -> target node will perform the action again if there's no cache.
+     * Method used to actually handle COMMIT_DIRECT, start a worker thread
+     * (supplyAsync) like in RewiringCoordinator.
+     * 
+     * When complete, clean up directCommitResults when complete otw it grows
+     * infinitely.
+     * 
+     * Note that this is not a scheduler, think of it as a timer to keep the info in
+     * case the new node doesn't receive the COMMIT_ACK.
+     * 
+     * More specifically, target node finishes the breakup with the evicted, adds
+     * new node to its list -> send COMMIT_ACK -> new node may however doesn't
+     * receive that -> it attempts to resend the DIRECT request -> target node will
+     * perform the action again if there's no cache.
+     * 
      * @param message the discovery message
      * @return CompletableFuture of CommitResult
-     */ 
+     */
     private CompletableFuture<CommitResult> createDirectCommitFuture(DiscoveryMessage message) {
         CompletableFuture<CommitResult> resultFuture = CompletableFuture
                 .supplyAsync(() -> handleDirectCommit(message), directCommitExecutor)
                 .exceptionally(exception -> {
-                    Console.log("Direct commit failed for txId=" + message.transactionId()
-                            + ": " + exception.getMessage(), Constant.RED);
+                    Console.logError("Direct commit failed for txId=" + message.transactionId()
+                            + ": " + exception.getMessage());
                     return new CommitResult(false, "direct commit failed");
                 });
 
-        resultFuture.whenComplete((result, exception) -> scheduleDirectCommitResultCleanup(
-                message.transactionId(),
-                resultFuture));
+        resultFuture.whenComplete(
+                (result, exception) -> scheduleDirectCommitResultCleanup(message.transactionId(), resultFuture));
 
         return resultFuture;
     }
@@ -279,31 +287,37 @@ public final class MembershipControlService implements AutoCloseable {
     /**
      * Method used to clean up after DIRECT_COMMIT_RESULT_TTL milliseconds
      */
-    private void scheduleDirectCommitResultCleanup(
-            String transactionId,
-            CompletableFuture<CommitResult> resultFuture) {
-        directCommitCleanupExecutor.schedule(
-                () -> {
-                    boolean removed = directCommitResults.remove(transactionId, resultFuture);
-                    if (removed) {
-                        Console.log("Expired cached direct commit result txId=" + transactionId);
-                    }
-                },
-                Constant.DIRECT_COMMIT_RESULT_TTL.toMillis(),
-                TimeUnit.MILLISECONDS);
+    private void scheduleDirectCommitResultCleanup(String transactionId, CompletableFuture<CommitResult> resultFuture) {
+        directCommitCleanupExecutor.schedule(() -> {
+            boolean removed = directCommitResults.remove(transactionId, resultFuture);
+            if (removed) {
+                Console.logWarning("Expired cached direct commit result txId=" + transactionId);
+            }
+        }, Constant.DIRECT_COMMIT_RESULT_TTL.toMillis(), TimeUnit.MILLISECONDS);
     }
 
     /**
-     * Method used to handle COMMIT_DIRECT received from a joining node. This basically works like this: 
+     * Method used to handle COMMIT_DIRECT received from a joining node. This
+     * basically works like this:
+     * 
      * 1. The target node asks the evicted node to delete their contact
-     * 2. Upon the success of the above step begins the target to add the new node to its list
-     * This ensures in the worst case, when new node can add the target but fail to add the evicted one, we only have two incomplete nodes(which can be resolved via rewiring)
-     * Most importantly, this flow ensures eventual completeness
+     * 
+     * 2. Upon the success of the above step begins the target to add the new node
+     * to its list
+     * 
+     * This ensures in the worst case, when new node can add the target but fail to
+     * add the evicted one, we only have two incomplete nodes(which can be resolved
+     * via rewiring)
+     * 
+     * Most importantly, this flow ensures eventual completeness.
+     * 
      * @param message the message received by the target node
-     * @return the commit result of the operation: failed if the target node fails to break its connection with the evicted node
+     * @return the commit result of the operation: failed if the target node fails
+     *         to break its connection with the evicted node
      */
     private CommitResult handleDirectCommit(DiscoveryMessage message) {
         String evictedNodeId = message.evictedNodeId();
+
         // this is kinda a unnecessary check
         if (evictedNodeId == null || evictedNodeId.isBlank()) {
             return connectionManager.applyDirectTargetCommit(
@@ -318,29 +332,25 @@ public final class MembershipControlService implements AutoCloseable {
                 .orElse(null);
 
         if (victim == null) {
-            Console.log("Direct commit victim " + evictedNodeId + " is not a current neighbor");
+            Console.logWarning("Direct commit victim " + evictedNodeId + " is not a current neighbor");
             return new CommitResult(false, "direct commit victim is not a current neighbor");
         }
 
-        boolean deleteCommitted = commitDelete(
-                victim,
-                message.transactionId() + ":delete:" + evictedNodeId);
+        boolean deleteCommitted = commitDelete(victim, message.transactionId() + ":delete:" + evictedNodeId);
 
         if (!deleteCommitted) {
-            Console.log("Delete commit failed for victim " + victim.nodeId(), Constant.RED);
+            Console.logError("Delete commit failed for victim " + victim.nodeId());
             return new CommitResult(false, "delete commit failed");
         }
 
         connectionManager.remove(evictedNodeId, "delete commit acknowledged by victim");
 
-        return connectionManager.applyDirectTargetCommit(
-                message.transactionId(),
-                message.sender(),
-                evictedNodeId);
+        return connectionManager.applyDirectTargetCommit(message.transactionId(), message.sender(), evictedNodeId);
     }
 
     /**
-     * Sends a discovery message reliably to the target node and waits for an ACK.
+     * Sends a discovery message reliably to the target node and waits for a
+     * COMMIT_ACK.
      * 
      * @param target           the target node address
      * @param discoveryMessage the discovery message
@@ -350,35 +360,39 @@ public final class MembershipControlService implements AutoCloseable {
         return sendReliableCommand(target, discoveryMessage, DiscoveryMessageType.COMMIT_ACK);
     }
 
-    private boolean sendReliableCommand(
-            NodeAddress target,
-            DiscoveryMessage discoveryMessage,
+    /**
+     * Sends a discovery message reliably to the target node and waits for an ACK.
+     * 
+     * @param target           the target node address
+     * @param discoveryMessage the discovery message
+     * @param expectedAckType  the expected ACK type
+     * @return true if the expected ACK received and accepted, false otherwise
+     */
+    private boolean sendReliableCommand(NodeAddress target, DiscoveryMessage discoveryMessage,
             DiscoveryMessageType expectedAckType) {
-        for (int attempt = 1; attempt <= 3; attempt++) {
+        for (int attempt = 1; attempt <= Constant.DEFAULT_MAX_ATTEMPTS; attempt++) {
             try {
-                // Create a future to wait for the response
-                CompletableFuture<DiscoveryMessage> responseFuture = new CompletableFuture<>();
-                pendingResponses.put(discoveryMessage.transactionId(), responseFuture);
-
-                // Send command via UdpCoordinator (payload is wrapped in UdpEnvelope)
                 Console.log("[MEMBERSHIP] Sending " + discoveryMessage.type()
                         + " txId=" + discoveryMessage.transactionId() + " to " + target.nodeId());
+
+                CompletableFuture<DiscoveryMessage> responseFuture = new CompletableFuture<>();
+                pendingResponses.put(discoveryMessage.transactionId(), responseFuture);
                 udpCoordinator.send(localAddress, target, UdpPacketType.MEMBERSHIP, discoveryMessage.encode());
 
-                // Wait for the response with a timeout
                 DiscoveryMessage response = responseFuture.get(700, TimeUnit.MILLISECONDS);
+                boolean isCorrectResponse = response.type() == expectedAckType
+                        && discoveryMessage.transactionId().equals(response.transactionId());
 
-                if (response.type() == expectedAckType
-                        && discoveryMessage.transactionId().equals(response.transactionId())) {
+                if (isCorrectResponse) {
                     boolean accepted = Boolean.parseBoolean(response.directTargetId());
                     Console.log(response.type() + " from " + target + " for txId=" + discoveryMessage.transactionId()
                             + " status=" + response.directTargetId() + " accepted=" + accepted);
                     return accepted;
                 }
             } catch (IOException | InterruptedException | ExecutionException | TimeoutException exception) {
-                Console.log("Commit attempt " + attempt + " failed for " + target
+                Console.logError("Commit attempt " + attempt + " failed for " + target
                         + ": " + exception.getClass().getSimpleName()
-                        + " - " + exception.getMessage(), Constant.BG_RED);
+                        + " - " + exception.getMessage());
                 pendingResponses.remove(discoveryMessage.transactionId());
             }
         }
@@ -398,6 +412,16 @@ public final class MembershipControlService implements AutoCloseable {
         sendCommitAck(recipient, txId, accepted, DiscoveryMessageType.COMMIT_ACK);
     }
 
+    /**
+     * Sends a COMMIT_ACK discovery message to the sender with a custom ACK type.
+     * Sends with UDP coordinator.
+     * 
+     * @param recipient the node to send the ACK to
+     * @param txId      transaction ID
+     * @param accepted  whether the commit is accepted or not
+     * @param ackType   the type of the ACK
+     * @throws IOException if sending fails
+     */
     private void sendCommitAck(NodeAddress recipient, String txId, boolean accepted, DiscoveryMessageType ackType)
             throws IOException {
         DiscoveryMessage ack = new DiscoveryMessage(
@@ -413,9 +437,8 @@ public final class MembershipControlService implements AutoCloseable {
                 null);
 
         String encodedMessage = ack.encode();
-        Console.log("[MEMBERSHIP] Sending " + ackType + " txId=" + txId
-                + " accepted=" + accepted
-                + " to " + recipient.nodeId());
+        Console.log("[MEMBERSHIP] Sending " + ackType + " txId=" + txId + " accepted=" + accepted + " to "
+                + recipient.nodeId());
         udpCoordinator.send(localAddress, recipient, UdpPacketType.MEMBERSHIP, encodedMessage);
     }
 

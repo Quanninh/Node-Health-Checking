@@ -30,6 +30,8 @@ public final class Constant {
 
     public static final int DEFAULT_GOSSIP_TTL = 3;
 
+    public static final int DEFAULT_MAX_ATTEMPTS = 3;
+
     public static final String FIELD_SEPARATOR = "&";
     public static final String KEY_VALUE_SEPARATOR = "=";
     public static final String LIST_SEPARATOR = ",";
