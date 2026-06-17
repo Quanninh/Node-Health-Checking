@@ -125,20 +125,16 @@ Node Health Checking
 
 
 \begin{abstract}
-Distributed systems depend on multiple interconnected nodes to communicate and cooperate reliably.
-However, node failures, unstable connections, and disconnections can affect system availability if they are not detected and handled properly.
-Many node health checking systems use a centralized approach because it is easier to implement, but this design creates a single point of failure when the central entity becomes unavailable.
-This report presents a decentralized node health checking system that detects and repairs node and connection problems without relying on a central controller.
+Distributed systems rely on continuous health monitoring to detect node failures, unstable links, and disconnections before they reduce system availability.
+Centralized health-checking designs simplify coordination, but they may introduce a single point of failure when the monitoring entity becomes unavailable.
+This paper presents a decentralized node health-checking system in which failure detection and topology repair are performed directly by participating nodes rather than by a central controller.
 
-The proposed system uses a decentralized structure in which nodes monitor one another using phi-accrual failure detection.
-Each node calculates a phi value and compares it with a predefined threshold to determine whether another node or connection is suspicious or failed.
-When a problem is detected, the system applies repair and rewiring algorithms to restore the network topology.
-Each node attempts to maintain a fixed number of neighbors, denoted as \textit{k}, and new nodes can join the network through a joining algorithm.
+The proposed system uses peer-to-peer monitoring with phi-accrual failure detection.
+Each node observes a fixed number of neighbors, computes a suspicion value, and compares it with a predefined threshold to identify suspicious or failed nodes and connections.
+When a failure or disconnection is detected, the system attempts to repair and rewiring procedures to restore the network structure. Each node attempts to maintain a fixed number of neighbors, while a joining procedure allows new nodes to enter the network and become part of the monitoring topology.
 
-The system was implemented in Java using Spring Boot.
-PostgreSQL and a dashboard were used only for visualization and observation, while the health checking mechanism can operate independently through terminal output.
-Testing was performed with up to eight nodes, covering joining, termination, disconnection, and unstable connection scenarios.
-Overall, the system demonstrates that decentralized node health checking can reduce dependency on a central entity and improve fault tolerance.
+A prototype was implemented and tested with joining, termination, disconnection, and unstable-connection scenarios on various types of devices.
+The results show that the proposed design reduces dependency on a central monitoring entity and supports fault-tolerant health checking in the tested decentralized setting.
 
 \end{abstract}
 
