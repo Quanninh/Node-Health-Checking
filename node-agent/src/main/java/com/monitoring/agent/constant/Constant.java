@@ -9,7 +9,7 @@ import io.github.cdimascio.dotenv.Dotenv;
 public final class Constant {
 
     public static final Duration DIRECT_COMMIT_RESULT_TTL = Duration.ofSeconds(60);
-    public static final int MINIMUM_FULL_TARGET_COUNT = 1;
+    public static final int MINIMUM_FULL_TARGET_COUNT = 0;
 
     public static final int DEFAULT_MAX_NEIGHBORS = 2;
     public static final int DEFAULT_JOIN_TIMEOUT_SECONDS = 3;
@@ -34,7 +34,7 @@ public final class Constant {
     public static final String KEY_VALUE_SEPARATOR = "=";
     public static final String LIST_SEPARATOR = ",";
 
-    private static final Dotenv dotenv = Dotenv.load();
+    private static final Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
     public static final boolean ANSI_ENABLED = Boolean.parseBoolean(dotenv.get("ANSI_ENABLED", "false"));
 
     public static final String RESET = ANSI_ENABLED ? "\u001B[0m" : "";
