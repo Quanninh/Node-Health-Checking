@@ -8,7 +8,7 @@
 
     <groupId>com.monitoring.agent</groupId>
     <artifactId>node-agent</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
 
     <name>node-agent</name>
 
