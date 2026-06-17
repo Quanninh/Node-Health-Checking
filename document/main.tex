@@ -311,7 +311,7 @@ A node regularly checks its neighbors and reacts when abnormal behavior is detec
 When such an event occurs, the node may request indirect checks from other neighbors, calculate the suspicion level of the target node, and categorize it.
 After the status is determined, the result will be broadcasted to the system so that the cluster can maintain a consistent view of node conditions.
 
-The lower part of the diagram represents the supporting observation subsystem.
+The lower part of the diagram~\ref{fig:architecture} represents the supporting observation subsystem.
 This subsystem receives node status information from the decentralized cluster and passes it through several logical layers.
 The first layer receives reported node status, the next layer processes and organizes the information, and the storage layer keeps historical records of node states and failure events.
 The visualization layer then retrieves this information and presents it in a readable form for users to inspect the current and past condition of the cluster.
