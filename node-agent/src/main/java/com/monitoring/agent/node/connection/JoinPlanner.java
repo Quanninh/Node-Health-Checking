@@ -43,10 +43,8 @@ public final class JoinPlanner {
      * @return the join plan
      */
     public JoinPlan createPlan(Collection<JoinAck> joinAckList) {
-        List<JoinAck> uniqueNodeAcks = getUniqueNodeAcksList(joinAckList);
-
-        if (uniqueNodeAcks.isEmpty()) {
-            Console.log("No ACKs received, empty join plan", Constant.ORANGE);
+        if (getUniqueNodeAcksList(joinAckList).isEmpty()) {
+            Console.logWarning("No ACKs received, empty join plan");
             return JoinPlan.empty();
         }
 
@@ -78,6 +76,12 @@ public final class JoinPlanner {
         return new JoinPlan(directTargets, evictionMap);
     }
 
+    /**
+     * Gets a list of unique join ACKs.
+     * 
+     * @param joinAckList the join ACK list
+     * @return the unique join ACK list
+     */
     private List<JoinAck> getUniqueNodeAcksList(Collection<JoinAck> joinAckList) {
         Map<String, JoinAck> uniqueNodeMap = new LinkedHashMap<>();
 
@@ -93,6 +97,12 @@ public final class JoinPlanner {
         return uniqueAcks;
     }
 
+    /**
+     * Gets a list of sufficient join ACKs.
+     * 
+     * @param joinAckList the join ACK list
+     * @return the sufficient join ACK list
+     */
     private List<JoinAck> getSufficientNodeAcksList(Collection<JoinAck> joinAckList) {
         Map<String, JoinAck> sufficientNodeMap = new LinkedHashMap<>();
 
@@ -110,6 +120,12 @@ public final class JoinPlanner {
         return sufficientNodeAcks;
     }
 
+    /**
+     * Gets a list of deficient join ACKs.
+     * 
+     * @param joinAckList the join ACK list
+     * @return the deficient join ACK list
+     */
     private List<JoinAck> getDeficientNodeAcksList(Collection<JoinAck> joinAckList) {
         Map<String, JoinAck> deficientNodeMap = new LinkedHashMap<>();
 
@@ -127,6 +143,14 @@ public final class JoinPlanner {
         return deficientNodeAcks;
     }
 
+    /**
+     * Calculates the number of sufficient targets. The number of deficient targets
+     * can be calculated by maxNeighbors - 2 * sufficient targets.
+     * 
+     * @param sufficientNodes the total number of sufficient nodes
+     * @param deficientNodes  the total number of deficient nodes
+     * @return the number of sufficient targets
+     */
     private int calcSufficientTarget(int sufficientNodes, int deficientNodes) {
         int evenDeficientTargets = deficientNodes;
 
@@ -149,6 +173,15 @@ public final class JoinPlanner {
         return sufficientTargets;
     }
 
+    /**
+     * Generates a mapping from an evicted node to the node that would evict that
+     * node. For each sufficient target, choose one from its neighbor to evict. The
+     * evicted node should not be one of the direct target nodes.
+     * 
+     * @param directTargets     the direct target nodes
+     * @param sufficientTargets the sufficient targets
+     * @return the map
+     */
     private Map<NodeAddress, NodeAddress> generateEvictionMap(List<JoinAck> directTargets,
             List<JoinAck> sufficientTargets) {
         Set<String> directTargetIds = new HashSet<>();
@@ -184,6 +217,12 @@ public final class JoinPlanner {
         return evictionByDirectTarget;
     }
 
+    /**
+     * If the join ACK is null or from self, it is discarded.
+     * 
+     * @param joinAck the join ACK
+     * @return whether it is discarded
+     */
     private boolean isJoinAckDiscarded(JoinAck joinAck) {
         return joinAck == null || joinAck.responder().nodeId().equals(localAddress.nodeId());
     }
