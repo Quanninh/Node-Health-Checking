@@ -8,7 +8,6 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.NodeAddress;
 import com.monitoring.agent.node.recovery.HealthState;
 import com.monitoring.agent.util.Console;
@@ -93,26 +92,26 @@ public final class ConnectionManager {
         lock.lock();
         try {
             if (peer == null || peer.nodeId().equals(localAddress.nodeId())) {
-                Console.log(
+                Console.logWarning(
                         "Can't add because " + (peer == null ? "null" : peer.nodeId()) + " is null or is me");
                 return false;
             }
 
             if (neighborsById.containsKey(peer.nodeId())) {
-                Console.log("Already a neighbor");
+                Console.logWarning("Already a neighbor");
                 return true;
             }
 
             if (neighborsById.size() >= maxNeighbors) {
-                Console.log("Full neighbors -> can't add");
+                Console.logWarning("Full neighbors -> can't add");
                 return false;
             }
 
             neighborsById.put(peer.nodeId(), peer);
             version++;
-            refreshHealthStateLocked();
+            refreshHealthState();
 
-            Console.log("Added neighbor " + peer + " because " + reason + ". neighbors=" + neighborsById.values());
+            Console.logInfo("Added neighbor " + peer + " because " + reason + ". neighbors=" + neighborsById.values());
             return true;
         } finally {
             lock.unlock();
@@ -131,14 +130,14 @@ public final class ConnectionManager {
         try {
             NodeAddress removed = neighborsById.remove(nodeId);
             if (removed == null) {
-                Console.log("Couldn't remove " + nodeId + ".");
+                Console.logWarning("Couldn't remove " + nodeId + ".");
                 return false;
             }
 
             version++;
-            refreshHealthStateLocked();
-            Console.log("Removed neighbor " + removed + " because " + reason
-                    + ". neighbors=" + neighborsById.values());
+            refreshHealthState();
+            Console.logInfo(
+                    "Removed neighbor " + removed + " because " + reason + ". neighbors=" + neighborsById.values());
             return true;
         } finally {
             lock.unlock();
@@ -152,7 +151,8 @@ public final class ConnectionManager {
      * @param txId          transaction ID
      * @param joiningNode   the joining node
      * @param evictedNodeId retained for compatibility with existing callers; this
-     *                      method no longer removes it => put it here just to refactor mayebe in the future?
+     *                      method no longer removes it => put it here just to
+     *                      refactor mayebe in the future?
      * @return the result of the transaction
      */
     public CommitResult applyDirectTargetCommit(String txId, NodeAddress joiningNode, String evictedNodeId) {
@@ -160,32 +160,31 @@ public final class ConnectionManager {
         try {
             // `add` returns false if already in set
             if (!processedTransactions.add("DIRECT:" + txId)) {
-                Console.log("duplicate direct commit ignored");
+                Console.logWarning("duplicate direct commit ignored");
                 return new CommitResult(true, "duplicate direct commit ignored");
             }
 
             if (joiningNode == null || joiningNode.nodeId().equals(localAddress.nodeId())) {
-                Console.log("cannot add self/null joining node");
+                Console.logWarning("cannot add self/null joining node");
                 return new CommitResult(false, "cannot add self/null joining node");
             }
 
             if (neighborsById.containsKey(joiningNode.nodeId())) {
-                Console.log("joining node already exists");
+                Console.logWarning("joining node already exists");
                 return new CommitResult(true, "joining node already exists");
             }
 
             if (neighborsById.size() >= maxNeighbors) {
-                Console.log("direct target would exceed maxNeighbors");
+                Console.logWarning("direct target would exceed maxNeighbors");
                 return new CommitResult(false, "direct target would exceed maxNeighbors");
             }
 
             neighborsById.put(joiningNode.nodeId(), joiningNode);
             version++;
-            refreshHealthStateLocked();
+            refreshHealthState();
 
-            Console.log("Node " + localAddress.nodeId()
-                    + " accepted joining node " + joiningNode
-                    + ". neighbors=" + neighborsById.values(), Constant.GREEN);
+            Console.logInfo("Node " + localAddress.nodeId() + " accepted joining node " + joiningNode
+                    + ". neighbors=" + neighborsById.values());
             return new CommitResult(true, "direct target commit accepted");
         } finally {
             lock.unlock();
@@ -204,24 +203,24 @@ public final class ConnectionManager {
         lock.lock();
         try {
             if (!processedTransactions.add("DELETE:" + txId + ":" + targetNodeId)) {
-                Console.log("duplicate delete commit ignored");
+                Console.logWarning("duplicate delete commit ignored");
                 return new CommitResult(true, "duplicate delete commit ignored");
             }
 
             if (targetNodeId == null || targetNodeId.isBlank()) {
-                Console.log("target node id is blank");
+                Console.logWarning("target node id is blank");
                 return new CommitResult(false, "target node id is blank");
             }
 
             NodeAddress removed = neighborsById.remove(targetNodeId);
             if (removed == null) {
-                Console.log("delete commit target " + targetNodeId + " was already absent");
+                Console.logWarning("delete commit target " + targetNodeId + " was already absent");
                 return new CommitResult(true, "delete commit target already absent");
             }
 
             version++;
-            refreshHealthStateLocked();
-            Console.log(localAddress.nodeId() + " applied delete commit and removed " + removed
+            refreshHealthState();
+            Console.logInfo(localAddress.nodeId() + " applied delete commit and removed " + removed
                     + ". neighbors=" + neighborsById.values());
             return new CommitResult(true, "delete commit accepted");
         } finally {
@@ -231,8 +230,9 @@ public final class ConnectionManager {
 
     /**
      * This function is called by the evicted node. The evicted node will add the
-     * joining node as a neighbor and remove its old neighbor(now no longer removes its old neighbor -> that task is delegated to other method).
-     * Now this method acts just like a small commit, just diff name for better logging
+     * joining node as a neighbor.
+     * Now this method acts just like a small commit, just different name for better
+     * logging
      * 
      * @param txId              transaction ID
      * @param joiningNode       the joining node
@@ -243,41 +243,39 @@ public final class ConnectionManager {
         lock.lock();
         try {
             if (!processedTransactions.add("VICTIM:" + txId)) {
-                Console.log("duplicate victim commit ignored");
+                Console.logWarning("duplicate victim commit ignored");
                 return new CommitResult(true, "duplicate victim commit ignored");
             }
 
             if (joiningNode == null) {
-                Console.log("joining node is null");
+                Console.logWarning("joining node is null");
                 return new CommitResult(false, "joining node is null");
             }
 
             if (neighborsById.containsKey(joiningNode.nodeId())) {
-                Console.log("Joining node already exists");
+                Console.logWarning("Joining node already exists");
                 return new CommitResult(true, "Joining node already exists");
             }
 
             if (neighborsById.size() >= maxNeighbors) {
-                Console.log("Accepting " + joiningNode + " will exceed neighbor limit.",
-                        Constant.BG_PURPLE);
+                Console.logWarning("Accepting " + joiningNode + " will exceed neighbor limit.");
                 return new CommitResult(false, "Small join target has no free neighbor slot");
             }
 
             if (joiningNode.nodeId().equals(localAddress.nodeId())) {
-                Console.log("Cannot add self");
+                Console.logWarning("Cannot add self");
                 return new CommitResult(false, "Cannot add self");
             }
 
             // NodeAddress removed = null;
             // if (oldDirectTargetId != null && !oldDirectTargetId.isBlank()) {
-            //     removed = neighborsById.remove(oldDirectTargetId);
+            // removed = neighborsById.remove(oldDirectTargetId);
             // }
 
-            
             neighborsById.put(joiningNode.nodeId(), joiningNode);
             version++;
-            refreshHealthStateLocked();
-            Console.log(localAddress.nodeId() + " is a victim and added " + joiningNode
+            refreshHealthState();
+            Console.logInfo(localAddress.nodeId() + " is a victim and added " + joiningNode
                     + ". neighbors=" + neighborsById.values());
             return new CommitResult(true, "victim commit accepted");
         } finally {
@@ -298,96 +296,41 @@ public final class ConnectionManager {
 
         try {
             if (!processedTransactions.add("SMALL_JOIN:" + txId)) {
-                Console.log("Duplicate small join commit ignored");
+                Console.logWarning("Duplicate small join commit ignored");
                 return new CommitResult(true, "Duplicate small join commit ignored");
             }
 
             if (joiningNode == null) {
-                Console.log("Joining node is null");
+                Console.logWarning("Joining node is null");
                 return new CommitResult(false, "Joining node is null");
             }
 
             if (joiningNode.nodeId().equals(localAddress.nodeId())) {
-                Console.log("Cannot add self");
+                Console.logWarning("Cannot add self");
                 return new CommitResult(false, "Cannot add self");
             }
 
             if (neighborsById.containsKey(joiningNode.nodeId())) {
-                Console.log("Joining node already exists");
+                Console.logWarning("Joining node already exists");
                 return new CommitResult(true, "Joining node already exists");
             }
 
             if (neighborsById.size() >= maxNeighbors) {
-                Console.log("Accepting " + joiningNode + " will exceed neighbor limit.",
-                        Constant.BG_PURPLE);
+                Console.logWarning("Accepting " + joiningNode + " will exceed neighbor limit.");
                 return new CommitResult(false, "Small join target has no free neighbor slot");
             }
 
             neighborsById.put(joiningNode.nodeId(), joiningNode);
             version++;
-            refreshHealthStateLocked();
+            refreshHealthState();
 
-            Console.log("Node " + localAddress.nodeId() + " accepted small-network joining " + joiningNode
+            Console.logInfo("Node " + localAddress.nodeId() + " accepted small-network joining " + joiningNode
                     + ". neighbors=" + neighborsById.values());
 
             return new CommitResult(true, "small join commit accepted");
         } finally {
             lock.unlock();
         }
-    }
-
-    /**
-     * Gets the size of the neighbors list.
-     * 
-     * @return the size
-     */
-    public int size() {
-        lock.lock();
-        try {
-            return neighborsById.size();
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    /**
-     * Gets the number of max neighbors for this node.
-     * 
-     * @return the max neighbors
-     */
-    public int getMaxNeighbors() {
-        return maxNeighbors;
-    }
-
-    /**
-     * Gets the list of addresses of neighbors.
-     * 
-     * @return list of addresses
-     */
-    public List<NodeAddress> neighborAddresses() {
-        lock.lock();
-        try {
-            return new ArrayList<>(neighborsById.values());
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    public List<String> neighborIds() {
-        lock.lock();
-        try {
-            return new ArrayList<>(neighborsById.keySet());
-        } finally {
-            lock.unlock();
-        }
-    }
-
-    public boolean isInNetwork() {
-        return isInNetwork;
-    }
-
-    public void setInNetwork(boolean isInNetwork) {
-        this.isInNetwork = isInNetwork;
     }
 
     /**
@@ -427,13 +370,13 @@ public final class ConnectionManager {
                 // neighborsById.put(disconnectsFrom.nodeId(), disconnectsFrom);
                 // }
 
-                refreshHealthStateLocked();
+                refreshHealthState();
                 Console.log("Neighbors exceeded");
                 return false;
             }
 
             version++;
-            refreshHealthStateLocked();
+            refreshHealthState();
 
             Console.log("[REWIRE] " + localAddress.nodeId()
                     + " applied scheme. connectsTo=" + connectsTo
@@ -447,15 +390,88 @@ public final class ConnectionManager {
         }
     }
 
+    /**
+     * Gets the size of the neighbors list.
+     * 
+     * @return the size of the neighbors list
+     */
+    public int size() {
+        lock.lock();
+        try {
+            return neighborsById.size();
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Gets the number of max neighbors for this node.
+     * 
+     * @return the max number of neighbors
+     */
+    public int getMaxNeighbors() {
+        return maxNeighbors;
+    }
+
+    /**
+     * Gets the list of addresses of neighbors.
+     * 
+     * @return the list of addresses
+     */
+    public List<NodeAddress> neighborAddresses() {
+        lock.lock();
+        try {
+            return new ArrayList<>(neighborsById.values());
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Gets the list of neighbor IDs.
+     * 
+     * @return the list of neighbor IDs
+     */
+    public List<String> neighborIds() {
+        lock.lock();
+        try {
+            return new ArrayList<>(neighborsById.keySet());
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Gets whether the node is already in the network or not.
+     * 
+     * @return whether the node is in the network
+     */
+    public boolean isInNetwork() {
+        return isInNetwork;
+    }
+
+    /**
+     * Sets whether the node is already in the network or not.
+     * 
+     * @param isInNetwork is the node in the network
+     */
+    public void setInNetwork(boolean isInNetwork) {
+        this.isInNetwork = isInNetwork;
+    }
+
+    /**
+     * Gets the current health state.
+     * 
+     * @return the health state
+     */
     public HealthState getHealthState() {
         return healthState;
     }
 
-    public void setHealthState(HealthState healthState) {
-        this.healthState = healthState;
-    }
-
-    public void refreshHealthStateLocked() {
+    /**
+     * Refreshes the current health state.
+     */
+    public void refreshHealthState() {
         healthState = neighborsById.size() < maxNeighbors
                 ? HealthState.DEFICIENT
                 : HealthState.SUFFICIENT;

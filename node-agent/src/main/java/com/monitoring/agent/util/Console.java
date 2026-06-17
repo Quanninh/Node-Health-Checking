@@ -32,12 +32,7 @@ public class Console {
         try {
             Files.writeString(
                     Path.of(LOG_CSV),
-                    String.format(
-                            "\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"%n",
-                            timestamp,
-                            sender,
-                            receiver,
-                            type,
+                    String.format("\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"%n", timestamp, sender, receiver, type,
                             message.replace("\"", "\"\"")),
                     StandardOpenOption.CREATE,
                     StandardOpenOption.APPEND);
@@ -48,9 +43,28 @@ public class Console {
     }
 
     public static void setNodeId(String nodeId) {
-        // not working
         Console.nodeId = nodeId;
         writeToFile(nodeId);
+    }
+
+    public static void logInfo(String message) {
+        log(message, Constant.CYAN);
+    }
+
+    public static void logError(String message) {
+        log(message, Constant.RED);
+    }
+
+    public static void logWarning(String message) {
+        log(message, Constant.ORANGE);
+    }
+
+    public static void logSuccess(String message) {
+        log(message, Constant.GREEN);
+    }
+
+    public static void logHighlight(String message) {
+        log(message, Constant.BG_PINK);
     }
 
     public static void log(String message, String color) {

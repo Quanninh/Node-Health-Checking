@@ -28,10 +28,8 @@ public final class JoinPlanner {
      * Creates a join plan.
      * 
      * From the list of received ACKs, creates 2 lists. One list (A) for all ACKs
-     * that
-     * are from nodes with less than the maximum amount of neighbors, the other list
-     * (B)
-     * for all ACKs from fully connected nodes.
+     * that are from nodes with less than the maximum amount of neighbors, the other
+     * list (B) for all ACKs from fully connected nodes.
      * 
      * The joining node will choose as many nodes as possible from list (A) and an
      * even number of nodes from list (B). All nodes from list (A) will directly add
@@ -45,123 +43,149 @@ public final class JoinPlanner {
      * @return the join plan
      */
     public JoinPlan createPlan(Collection<JoinAck> joinAckList) {
-        Map<String, JoinAck> uniqueNodeMap = new LinkedHashMap<>();
-        Map<String, JoinAck> fullNeighborMap = new LinkedHashMap<>();
-        Map<String, JoinAck> missingNeighborMap = new LinkedHashMap<>();
+        List<JoinAck> uniqueNodeAcks = getUniqueNodeAcksList(joinAckList);
 
-        for (JoinAck joinAck : joinAckList) {
-            if (joinAck == null || joinAck.responder().nodeId().equals(localAddress.nodeId())) {
-                continue;
-            }
-            uniqueNodeMap.putIfAbsent(joinAck.responder().nodeId(), joinAck);
-
-            if (joinAck.responderNeighbors().size() >= maxNeighbors) {
-                fullNeighborMap.putIfAbsent(joinAck.responder().nodeId(), joinAck);
-            } else {
-                missingNeighborMap.putIfAbsent(joinAck.responder().nodeId(), joinAck);
-            }
-        }
-
-        List<JoinAck> uniqueAcks = new ArrayList<>(uniqueNodeMap.values());
-        List<JoinAck> fullNeighborAcks = new ArrayList<>(fullNeighborMap.values());
-        List<JoinAck> missingNeighborAcks = new ArrayList<>(missingNeighborMap.values());
-
-        Collections.shuffle(uniqueAcks);
-        Collections.shuffle(fullNeighborAcks);
-        Collections.shuffle(missingNeighborAcks);
-
-        if (uniqueAcks.isEmpty()) {
+        if (uniqueNodeAcks.isEmpty()) {
             Console.log("No ACKs received, empty join plan", Constant.ORANGE);
             return JoinPlan.empty();
         }
 
-        int missingDirectTargetCount;
-        int fullDirectTargetCount;
+        List<JoinAck> sufficientNodeAcks = getSufficientNodeAcksList(joinAckList);
+        List<JoinAck> deficientNodeAcks = getDeficientNodeAcksList(joinAckList);
 
-        if (missingNeighborAcks.size() + fullNeighborAcks.size() * 2 <= maxNeighbors) {
-            missingDirectTargetCount = missingNeighborAcks.size();
-            fullDirectTargetCount = fullNeighborAcks.size();
+        int sufficientTargetCount;
+        int deficientTargetCount;
+
+        if (deficientNodeAcks.size() + sufficientNodeAcks.size() * 2 <= maxNeighbors) {
+            deficientTargetCount = deficientNodeAcks.size();
+            sufficientTargetCount = sufficientNodeAcks.size();
         } else {
-            int evenMissingDirectTargetCount = Math
-                    .max(missingNeighborAcks.size() % 2 == 0 ? missingNeighborAcks.size()
-                            : missingNeighborAcks.size() - 1, 0);
-            missingDirectTargetCount = Math.min(evenMissingDirectTargetCount, maxNeighbors);
-            fullDirectTargetCount = Math.min((maxNeighbors - missingDirectTargetCount) / 2,
-                    fullNeighborAcks.size());
-                    
-            int minimumFullTargets = Math.min(Constant.MINIMUM_FULL_TARGET_COUNT, fullNeighborAcks.size());
-
-            if (fullDirectTargetCount < minimumFullTargets
-                    && maxNeighbors >= 2 * minimumFullTargets) {
-
-                fullDirectTargetCount = minimumFullTargets;
-
-                // Fill remaining slots with missing targets.
-                missingDirectTargetCount = maxNeighbors - 2 * fullDirectTargetCount;
-
-                // Keep missing count even. This can be redundant in the system as we force k to be even.
-                if ((missingDirectTargetCount & 1) != 0) {
-                    missingDirectTargetCount--;
-                }
-
-                missingDirectTargetCount = Math.max(0, missingDirectTargetCount);
-            }
+            sufficientTargetCount = calcSufficientTarget(sufficientNodeAcks.size(), deficientNodeAcks.size());
+            deficientTargetCount = maxNeighbors - 2 * sufficientTargetCount;
         }
 
         List<JoinAck> directTargetAcks = new ArrayList<>();
+        List<JoinAck> chosenSufficientTargetAcks = sufficientNodeAcks.subList(0, sufficientTargetCount);
 
-        List<JoinAck> fullDirectTargetAcks = fullNeighborAcks.subList(0, fullDirectTargetCount);
+        directTargetAcks.addAll(deficientNodeAcks.subList(0, deficientTargetCount));
+        directTargetAcks.addAll(chosenSufficientTargetAcks);
 
-        directTargetAcks.addAll(missingNeighborAcks.subList(0, missingDirectTargetCount));
-        directTargetAcks.addAll(fullDirectTargetAcks);
+        Map<NodeAddress, NodeAddress> evictionMap = generateEvictionMap(directTargetAcks, chosenSufficientTargetAcks);
+        List<NodeAddress> directTargets = directTargetAcks.stream().map(JoinAck::responder).toList();
 
-        // Console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
-        // Console.log("UNIQUE ACKS: " + uniqueAcks, Constant.CYAN);
-        // Console.log("FULL NEIGHBOR ACKS: " + fullNeighborAcks, Constant.CYAN);
-        // Console.log("MISSING NEIGHBOR ACKS: " + missingNeighborAcks, Constant.CYAN);
-        // Console.log("Missing direct target count: " + missingDirectTargetCount + " ||
-        // Full direct target count: "
-        // + fullDirectTargetCount, Constant.BG_CYAN);
-        // Console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&");
+        Console.logSuccess("Join plan created. directTargets=" + directTargets + ", evictions=" + evictionMap);
 
-        // uniqueAcks.subList(0, fullDirectTargetCount);
+        return new JoinPlan(directTargets, evictionMap);
+    }
 
+    private List<JoinAck> getUniqueNodeAcksList(Collection<JoinAck> joinAckList) {
+        Map<String, JoinAck> uniqueNodeMap = new LinkedHashMap<>();
+
+        for (JoinAck joinAck : joinAckList) {
+            if (isJoinAckDiscarded(joinAck))
+                continue;
+
+            uniqueNodeMap.putIfAbsent(joinAck.responder().nodeId(), joinAck);
+        }
+
+        List<JoinAck> uniqueAcks = new ArrayList<>(uniqueNodeMap.values());
+        Collections.shuffle(uniqueAcks);
+        return uniqueAcks;
+    }
+
+    private List<JoinAck> getSufficientNodeAcksList(Collection<JoinAck> joinAckList) {
+        Map<String, JoinAck> sufficientNodeMap = new LinkedHashMap<>();
+
+        for (JoinAck joinAck : joinAckList) {
+            if (isJoinAckDiscarded(joinAck))
+                continue;
+
+            if (joinAck.responderNeighbors().size() >= maxNeighbors) {
+                sufficientNodeMap.putIfAbsent(joinAck.responder().nodeId(), joinAck);
+            }
+        }
+
+        List<JoinAck> sufficientNodeAcks = new ArrayList<>(sufficientNodeMap.values());
+        Collections.shuffle(sufficientNodeAcks);
+        return sufficientNodeAcks;
+    }
+
+    private List<JoinAck> getDeficientNodeAcksList(Collection<JoinAck> joinAckList) {
+        Map<String, JoinAck> deficientNodeMap = new LinkedHashMap<>();
+
+        for (JoinAck joinAck : joinAckList) {
+            if (isJoinAckDiscarded(joinAck))
+                continue;
+
+            if (joinAck.responderNeighbors().size() < maxNeighbors) {
+                deficientNodeMap.putIfAbsent(joinAck.responder().nodeId(), joinAck);
+            }
+        }
+
+        List<JoinAck> deficientNodeAcks = new ArrayList<>(deficientNodeMap.values());
+        Collections.shuffle(deficientNodeAcks);
+        return deficientNodeAcks;
+    }
+
+    private int calcSufficientTarget(int sufficientNodes, int deficientNodes) {
+        int evenDeficientTargets = deficientNodes;
+
+        if (evenDeficientTargets % 2 == 1) {
+            evenDeficientTargets--;
+        }
+
+        evenDeficientTargets = Math.min(evenDeficientTargets, maxNeighbors);
+        int sufficientTargets = Math.min((maxNeighbors - evenDeficientTargets) / 2, sufficientNodes);
+
+        int minSufficientTargets = Math.min(Constant.MINIMUM_SUFFICIENT_TARGET_COUNT, sufficientNodes);
+
+        boolean hasLessThanMinTargets = sufficientTargets < minSufficientTargets;
+        boolean canAcceptMinTargets = maxNeighbors >= 2 * minSufficientTargets;
+
+        if (hasLessThanMinTargets && canAcceptMinTargets) {
+            sufficientTargets = minSufficientTargets;
+        }
+
+        return sufficientTargets;
+    }
+
+    private Map<NodeAddress, NodeAddress> generateEvictionMap(List<JoinAck> directTargets,
+            List<JoinAck> sufficientTargets) {
         Set<String> directTargetIds = new HashSet<>();
 
-        for (JoinAck ack : directTargetAcks) {
+        for (JoinAck ack : directTargets) {
             directTargetIds.add(ack.responder().nodeId());
         }
 
         Map<NodeAddress, NodeAddress> evictionByDirectTarget = new LinkedHashMap<>();
 
-        Set<String> alreadySelectedVictimIds = new HashSet<>();
-        alreadySelectedVictimIds.add(localAddress.nodeId());
-        alreadySelectedVictimIds.addAll(directTargetIds);
+        Set<String> selectedVictimIds = new HashSet<>();
+        selectedVictimIds.add(localAddress.nodeId());
+        selectedVictimIds.addAll(directTargetIds);
 
-        // for (JoinAck directAck : directTargetAcks) {
-        for (JoinAck directAck : fullDirectTargetAcks) {
+        for (JoinAck directAck : sufficientTargets) {
             List<NodeAddress> candidates = new ArrayList<>(directAck.responderNeighbors());
             Collections.shuffle(candidates);
 
             for (NodeAddress candidate : candidates) {
-                if (candidate == null || alreadySelectedVictimIds.contains(candidate.nodeId())) {
+                if (candidate == null)
                     continue;
-                }
+
+                boolean hasCandidateAlreadyEvicted = selectedVictimIds.contains(candidate.nodeId());
+                if (hasCandidateAlreadyEvicted)
+                    continue;
 
                 evictionByDirectTarget.put(directAck.responder(), candidate);
-                alreadySelectedVictimIds.add(candidate.nodeId());
+                selectedVictimIds.add(candidate.nodeId());
                 break;
             }
         }
 
-        List<NodeAddress> directTargets = directTargetAcks.stream()
-                .map(JoinAck::responder)
-                .toList();
+        return evictionByDirectTarget;
+    }
 
-        Console.log("Join plan created. directTargets=" + directTargets
-                + ", evictions=" + evictionByDirectTarget, Constant.ITALIC + Constant.GREEN);
-
-        return new JoinPlan(directTargets, evictionByDirectTarget);
+    private boolean isJoinAckDiscarded(JoinAck joinAck) {
+        return joinAck == null || joinAck.responder().nodeId().equals(localAddress.nodeId());
     }
 
 }

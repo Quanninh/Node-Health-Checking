@@ -1261,7 +1261,7 @@ public final class RewiringCoordinator {
      * Sets the current health state.
      */
     private void refreshHealthState() {
-        connectionManager.refreshHealthStateLocked();
+        connectionManager.refreshHealthState();
         connectionManager.getHealthState();
     }
 
