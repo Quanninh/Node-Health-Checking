@@ -128,11 +128,10 @@ Node Health Checking
 Distributed systems rely on continuous health monitoring to detect node failures, unstable links, and disconnections before they reduce system availability.
 Centralized health-checking designs simplify coordination, but they may introduce a single point of failure when the monitoring entity becomes unavailable.
 This paper presents a decentralized node health-checking system in which failure detection and topology repair are performed directly by participating nodes rather than by a central controller.
-
 The proposed system uses peer-to-peer monitoring with phi-accrual failure detection.
 Each node observes a fixed number of neighbors, computes a suspicion value, and compares it with a predefined threshold to identify suspicious or failed nodes and connections.
-When a failure or disconnection is detected, the system attempts to repair and rewiring procedures to restore the network structure. Each node attempts to maintain a fixed number of neighbors, while a joining procedure allows new nodes to enter the network and become part of the monitoring topology.
-
+When a failure or disconnection is detected, the system attempts to repair and rewiring procedures to restore the network structure.
+Each node attempts to maintain a fixed number of neighbors, while a joining procedure allows new nodes to enter the network and become part of the monitoring topology.
 A prototype was implemented and tested with joining, termination, disconnection, and unstable-connection scenarios on various types of devices.
 The results show that the proposed design reduces dependency on a central monitoring entity and supports fault-tolerant health checking in the tested decentralized setting.
 
@@ -144,89 +143,84 @@ distributed systems, node health checking, failure detection, heartbeat, false p
 
 \section{Introduction}
 \label{sec:introduction}
-Distributed systems consist of multiple nodes connecting to each other and working with each other to perform tasks and provide reliable services.
-In such systems, the readiness of a node is very important because individual nodes may become disconnected, unresponsive, or fail completely.
-If these failures are not detected and handled quickly, they may affect communication between nodes and reduce the reliability of the system.
 
-Node health checking is the process of monitoring if nodes are still active and responsive in the network.
-In this project, health checking focuses on detecting the up or down status of each node through communication between connected nodes.
-Based on the detected condition of the network, the system can identify healthy nodes, suspicious nodes, and failed nodes.
-When a node or connection problem occurs, the system applies algorithms to remove failed nodes or unstable connections and reorganize the remaining connections to maintain progess of the network.
+Distributed systems rely on multiple interconnected nodes that communicate and cooperate to provide services.
+In this kind of environment, node availability is important because a node may crash, become unreachable, respond slowly, or lose connection with other nodes.
+When these problems are not detected and handled properly, they can affect communication, reduce reliability, and weaken the overall operation of the system.
+
+Node health checking is used to observe whether nodes remain active and responsive.
+In many systems, this responsibility is assigned to a central monitoring component because it is easier to collect, manage, and visualize node status from one place.
+However, this structure can introduce a single point of failure when the central component becomes unavailable. This project therefore focuses on a decentralized node health-checking structure, where monitoring responsibility is distributed among the nodes themselves instead of being concentrated in one component.
+
+In the proposed system, each node maintains relationships with a limited number of neighboring nodes.
+These relationships define which nodes are responsible for monitoring one another and form the basic structure of the decentralized health-checking mechanism.
+Through node-to-node communication, the system identifies healthy, suspicious, and failed nodes.
+When a node or connection problem is detected, the system updates the affected relationships and attempts to preserve the monitoring structure so that health checking can continue.
 
 \subsection{Background}
 \label{subsec:background}
 
-A node health checking system is used to observe the status of nodes in a distributed system.
-A node may be considered healthy when it can respond to health check messages within an acceptable time, and unhealthy when it stops responding, becomes unreachable, or behaves abnormally due to network or system issues.
-The common centralized approach uses a dedicated monitoring component to check the status of all nodes.
-In this model, nodes usually report their status to a central service, or the central service periodically sends health check requests to each node.
-The centralized model has several advantages.
-It is easier to design, easier to visualize, and simpler to maintain because all health information is collected in one place.
-However, this also means that the reliability of the whole monitoring mechanism depends heavily on the central component.
-If the central monitor fails, becomes disconnected, or is overloaded, the system may no longer be able to detect failures correctly.
-In contrast, a decentralized node health checking system distributes the monitoring responsibility among the nodes themselves.
-Each node maintains relationships with a limited number of neighboring nodes and performs health checks on those neighbors.
-This creates a distributed monitoring structure where no single node is responsible for the entire system.
-The relationship between nodes becomes an important part of the design because it determines how monitoring responsibility is shared, how failures are detected, and how the system can recover when connections are lost.
+A node health-checking system observes the condition of nodes in a distributed environment.
+A node may be considered healthy when it responds to health-check messages within an acceptable time, and unhealthy when it becomes unreachable, stops responding, or behaves abnormally due to system or network issues.
+Health checking is therefore related to failure detection, connection monitoring, and membership management.
+
+In a decentralized health-checking structure, nodes do not need a complete view of the entire system.
+Instead, each node is responsible for monitoring a smaller set of neighboring nodes.
+This reduces the amount of direct monitoring required from each participant and allows the health-checking responsibility to be shared across the network.
+The structure of node relationships is therefore important because it determines how monitoring tasks are distributed and how the system reacts when nodes join, leave, fail, or recover.
+
+This project uses a neighbor-based monitoring structure.
+Each node attempts to maintain a fixed number of neighbors, denoted as \textbf{k}.
+The value of \textbf{k} represents the desired number of monitoring relationships for each node. When this number is reduced because of failure or disconnection, the system attempts to repair the missing relationships by connecting to other available nodes.
+In this way, the health-checking structure is not static, but can adapt to changes in the network.
 
 \subsection{Motivation}
 \label{subsec:motivation}
 
-The main motivation for this project is the single point of failure problem found in traditional centralized node health checking systems.
-While centralized monitoring is practical for small or simple systems, it becomes less reliable when the central component is unavailable.
-A failure in the monitoring service can prevent the system from detecting node failures, even though the actual distributed nodes may still be capable of communicating with one another.
-A decentralized design reduces this dependency by allowing nodes to monitor each other directly.
-This improves fault tolerance because the failure of one monitoring node does not stop the entire health checking process.
-It also improves availability because the system can continue operating as long as enough node relationships remain active.
-By distributing the health checking responsibility, the system avoids relying on a single central authority and becomes more resilient to partial failures.
-This project is therefore motivated by the need for a node health checking mechanism that can continue functioning even when some components fail.
-The design focuses on maintaining node relationships, detecting unhealthy nodes, and supporting recovery without depending entirely on a centralized monitor.
+The motivation of this project is to design a health-checking mechanism that remains active through local node cooperation.
+Instead of treating monitoring as a separate external service, the system makes health checking part of the behavior of each node.
+This allows nodes to participate directly in detecting failures, maintaining relationships, and restoring the monitoring structure when changes occur.
+
+A decentralized structure is useful when the system must continue operating under partial failure conditions.
+In such conditions, some nodes or connections may fail while others remain functional.
+The health-checking mechanism should therefore avoid depending on a complete and perfect network view. It should instead allow each node to make local decisions based on the neighbors it can observe.
+
+This project is motivated by the need to combine failure detection with relationship maintenance.
+Detecting that a node is unavailable is not enough by itself; the system must also respond by updating the monitoring topology.
+For this reason, the design focuses not only on identifying unhealthy nodes, but also on preserving the network structure through joining, repair, and rewiring mechanisms.
 
 \subsection{Contributions}
 \label{subsec:contribution}
 
-This project presents a decentralized node health-checking system designed to reduce the single point of failure problem found in traditional centralized monitoring approaches.
-Instead of depending on one central monitor to observe the entire system, the proposed design distributes the health-checking responsibility among the nodes themselves.
-Each node monitors a limited number of neighboring nodes and participates in maintaining the overall health-checking structure.
+This project presents a decentralized node health-checking system in which nodes monitor one another through neighbor-based relationships.
+The main contributions are as follows:
 
-The main contributions of this project are as follows:
 \begin{itemize}
-\item \textbf{Decentralized node health-checking design:}
 
-The project proposes a neighbor-based monitoring structure where each node is responsible for checking the health status of a small set of other nodes.
-This avoids relying on a single centralized monitor for failure detection.
+\item \textbf{Neighbor-based decentralized structure:}
+The system distributes health-checking responsibility across nodes by assigning each node a limited set of neighbors to monitor.
 
-\item \textbf{Node relationship and membership management:}
+\item \textbf{Fixed-\(k\) relationship maintenance:}
+Each node attempts to maintain a fixed number of neighbor relationships, allowing the monitoring structure to remain organized as the network changes.
 
-The system maintains relationships between nodes so that each node can monitor and be monitored by others.
-When a node joins, fails, or becomes unreachable, the system attempts to update the node relationships to preserve the health-checking structure.
+\item \textbf{Node joining mechanism:}
+The system supports new nodes entering the network and becoming part of the decentralized monitoring topology.
 
 \item \textbf{Failure detection mechanism:}
+Nodes use health-check communication to identify healthy, suspicious, and failed neighbors based on their observed responses.
 
-The system implements a health-checking mechanism that allows nodes to detect unreachable or failed neighbors based on their responses.
-This supports the identification of crash failures, temporary disconnections, delayed responses, and recovery situations.
+\item \textbf{Repair and rewiring mechanism:}
+When nodes or connections become unavailable, the system attempts to replace missing relationships and restore the required monitoring structure.
 
-\item \textbf{Repair and rewiring support:}
+\item \textbf{Optional observation layer:}
+A dashboard, server, and database are included to display node status and failure events, but they are separate from the core decentralized health-checking mechanism.
 
-When a monitored node becomes unavailable, the system attempts to repair the deficient node relationships by replacing failed or unreachable neighbors.
-This helps the system continue operating even when individual nodes fail.
-
-\item \textbf{Optional visualization support:}
-
-The project includes a server application and dashboard for observing node status and failure events.
-However, this component is used only for visualization and does not act as the central authority for the health-checking logic.
-Therefore, the decentralized health-checking process can continue even without the dashboard or database.
-
-\item \textbf{Experimental evaluation under failure scenarios:}
-
-The system is evaluated using several scenarios, including normal operation, node joining, node crash, temporary network loss, unstable connection, node recovery, and dashboard or database unavailability.
-These experiments demonstrate whether the system can detect failures and maintain node relationships without depending on a single centralized monitor.
+\item \textbf{Experimental evaluation:}
+The system is tested under normal operation, node joining, node crash, temporary disconnection, unstable connection, recovery, and observation-layer unavailability scenarios.
 
 \end{itemize}
 
-Overall, the contribution of this project is a working prototype of a decentralized node health-checking system that improves fault tolerance and availability by distributing monitoring responsibility across multiple nodes.
-The system demonstrates how node relationships, failure detection, and recovery mechanisms can be combined to reduce dependency on a central monitoring component.
-
+Overall, this project contributes a working prototype of a decentralized node health-checking system that combines local monitoring, relationship maintenance, failure detection, and topology repair. The system demonstrates how node cooperation can be used to maintain health-checking functionality in a changing distributed environment.
 
 \section{Problem Statement}
 \label{sec:problem_statement}
