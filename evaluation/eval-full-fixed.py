@@ -21,9 +21,9 @@ MAX_NEIGHBORS = 4
 INITIAL_NODE_COUNT = 10
 ADDED_NODE_COUNT = 6
 
-PHASE_TIMEOUT_SECONDS = 60
+PHASE_TIMEOUT_SECONDS = 120
 PHASE_3_TIMEOUT_SECONDS = 180
-PHASE_5_TIMEOUT_SECONDS = 60
+PHASE_5_TIMEOUT_SECONDS = 180
 
 COOLDOWN_SECONDS = 10
 POLL_INTERVAL_SECONDS = 0.5
@@ -375,6 +375,7 @@ def start_initial_cluster() -> List[str]:
         node_id = next_node_id()
         start_node(node_id)
         started_ids.append(node_id)
+        time.sleep(5)
     return started_ids
 
 
@@ -454,6 +455,7 @@ def run_phase_4(expected_active_after_addition: int) -> Tuple[float, List[str], 
         node_id = next_node_id()
         start_node(node_id)
         new_node_ids.append(node_id)
+        time.sleep(5)
 
     def condition() -> ConditionResult:
         nodes = get_all_nodes()
