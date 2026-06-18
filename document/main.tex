@@ -952,9 +952,115 @@ However, some nodes can still be lacking in neighbors in the end, but that can b
 
 \subsection{Server Application}
 \label{subsec:server_application}
-Describe the server-side logic, including node registration, state storage, graph or topology handling, and health-status aggregation.
+The monitoring dashboard follows a client-server architecture in which each distributed node in decentralized network acts as a client and the dashboard application serves as a centralized server reponsible for collecting, storing, and visualizing network information
+
+\subsubsection{\textbf{Node Status Reporting}}
+\label{subsubsec: nodestatusreport}
+    Each node contains a \mbox{\texttt{DashboardReporter}} component that periodically reports its current state to the dashboard. Communication between nodes and the dashboard is implemented using HTTP and JSON messages.
 
 
+    When a node is operational, the \mbox{\texttt{reportSelfAlive()}} method constructs a JSON object containing the node's id (\mbox{\texttt{id}}), IP address(\texttt{ipAddress}), peer-to-peer communication port(\texttt{p2pPort}), password-cracking service port(\texttt{crackingPort}), current neighbor list (\texttt{neighbors}), and a status field set to \texttt{"UP"}. The message is then transmitted asynchronously to the dashboard's \texttt{/hearbeat} endpoint using and HTTP POST request. 
+    \begin{lstlisting}[language=Java,
+    label={lst:evicted_members_selection}]
+
+    String json = """
+        {
+            "id": "%s",
+            "ipAddress": "%s",
+            "p2pPort": %d,
+            "crackingPort": %d,
+            "status": "UP",
+            "neighbors": [%s]
+        }
+        """.formatted(localNodeId, advertiseHost, p2pPort, crackingPort, neighborsJson);
+
+    HttpRequest request = HttpRequest.newBuilder()
+        .uri(URI.create(dashboardUrl + "/heartbeat"))
+        .timeout(Duration.ofSeconds(5))
+        .header("Content-Type", "application/json")
+        .POST(HttpRequest.BodyPublishers.ofString(json))
+        .build();
+
+    \end{lstlisting}
+
+    In the event of a node failure, a neighboring node that detects the communication loss reports the failure through the \texttt{reportFailure()} method. This method generates a JSON message containing the reporting node identifier (\texttt{reporterNodeId}), the suspected failed node identifier (\texttt{failedNodeId}), the computed phi value (\texttt{phi}), the failure detection threshold (\texttt{threshold}), a timestamp (\texttt{timestamp}), and a status field set to "\texttt{UNREACHABLE}". The message is subsequently sent to the dashboard's \texttt{/failure-report} endpoint using an HTTP POST request. The use of asynchronous HTTP requests through \texttt{CompletableFuture} ensures that dashboard communication does not block the execution of the distributed system.
+    \begin{lstlisting}[language=Java,
+    label={lst:evicted_members_selection}]
+    String json = String.format(Locale.US, """
+            {"reporterNodeId": "%s",
+            "failedNodeId": "%s",
+            "message": "%s",
+            "phi": %.6f,
+            "threshold": %.6f,
+            "status": "UNREACHABLE",
+            "timestamp": "%s"
+            }""",
+        localNodeId,
+        failedNode.nodeId(),
+        message,
+        phi,
+        threshold,
+        LocalDateTime.now());
+
+    HttpRequest request = HttpRequest.newBuilder().uri(URI.create(dashboardUrl + "/failure-report")).timeout(Duration.ofSeconds(5))
+    .header("Content-Type", "application/json")
+    .POST(HttpRequest.BodyPublishers.ofString(json)).build();
+    
+    \end{lstlisting}
+\subsubsection{\textbf{Server-Side Request Processing}}
+\label{subsubsec: server}
+On the server side, the \texttt{NodeController} class exposes REST endpoints that receive and process requests from distributed nodes. Incoming hearbeat messages are mapped to the \texttt{/heartbeat} endpoint and handled by the \texttt{receiveHeartbeat()} method. This method delegates the processing task to \texttt{NodeService.processHeartbeat()}, which updates or creates anode record in the database. The service stores the node's network information, neighbor list, and latest heartbeat timestamp while setting its status to "\texttt{UP}". Similarly, failure notifications are mapped to the \texttt{/failure-report} endpoint and handled by the \texttt{receiveFailureReport()} method. The method invokes \texttt{NodeService.processFail;ureReport()} to validate and persist the failure report. Subsequently, the reported is marked as "\texttt{FAILED}" in the node repository, and the failure information is stored in the failure report repository for later visualization and analysis.
+    
+\begin{lstlisting}[language=Java,
+label={lst:evicted_members_selection}]
+@PostMapping("/heartbeat")
+public ResponseEntity<String> receiveHeartbeat(
+        @RequestBody Node node) {
+
+    nodeService.processHeartbeat(node);
+
+    return ResponseEntity.ok(
+            "Heartbeat received from " + node.getId());
+}
+
+@PostMapping("/failure-report")
+public ResponseEntity<String> receiveFailureReport(
+        @RequestBody FailureReport report) {
+
+    nodeService.processFailureReport(report);
+    passwordCrackingService.handleNodeFailure(report.getFailedNodeId());
+
+    return ResponseEntity.ok(
+            "Failure report received");
+}
+\end{lstlisting}
+
+\subsubsection{\textbf{Dashboard Visualization}}
+\label{subsubsec: dashboard}
+The dashboard obtains monitoring information through REST endpoints exposed by the server. The \texttt{/nodes} and \texttt{/nodes/{id}} endpoints return information about all nodes or a specific node, respectively, while the \texttt{/failure-reports} endpoint returns the history of detected failures. The dashboard periodically issues HTTP GET requests to these endpoints to retrieve the latest data stored in the repositories and visualize the current system state, including node availability, network topology, and recorded failures.
+\begin{lstlisting}[language=Java,
+label={lst:evicted_members_selection}]
+@GetMapping("/nodes")
+public ResponseEntity<List<Node>> getAllNodes() {
+    return ResponseEntity.ok(nodeService.getAllNodes());
+}
+
+@GetMapping("/nodes/{id}")
+public ResponseEntity<Node> getNodeById(@PathVariable String id) {
+    Node node = nodeService.getNodeById(id);
+
+    if (node == null) {
+        return ResponseEntity.notFound().build();
+    }
+
+    return ResponseEntity.ok(node);
+}
+
+@GetMapping("/failure-reports")
+public ResponseEntity<List<FailureReport>> getFailureReports() {
+    return ResponseEntity.ok(nodeService.getFailureReports());
+}
+\end{lstlisting}
 \section{Teamwork}
 \label{sec:teamwork}
 

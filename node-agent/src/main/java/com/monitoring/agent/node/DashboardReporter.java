@@ -19,124 +19,128 @@ import com.monitoring.agent.util.Console;
  */
 public class DashboardReporter {
 
-    /** The node that this reporter is in. */
-    private final String localNodeId;
-    private final String dashboardUrl;
-    private final HttpClient httpClient;
-    private final ConnectionManager connectionManager;
+        /** The node that this reporter is in. */
+        private final String localNodeId;
+        private final String dashboardUrl;
+        private final HttpClient httpClient;
+        private final ConnectionManager connectionManager;
 
-    public DashboardReporter(String localNodeId, String dashboardUrl, ConnectionManager connectionManager) {
-        this.localNodeId = localNodeId;
-        this.dashboardUrl = removeTrailingSlash(dashboardUrl);
-        this.httpClient = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(5))
-                .build();
-        this.connectionManager = connectionManager;
-    }
-
-    /**
-     * Reports to the dashboard that the current node is alive.
-     * 
-     * @param advertiseHost ip address for self-advertisement address
-     * @param p2pPort       port for self-advertisement address
-     * @return
-     */
-    public CompletableFuture<Void> reportSelfAlive(String advertiseHost, int p2pPort, int crackingPort) {
-        // Becasue there are 2 port, 1 port for p2p and one port for 1 port for
-        // crackingport -> I don't understand why we need crackingport so I will comment
-        // it and let the cracking port uses the same as p2p port -> this is just for
-        // testing
-        String neighborsJson = connectionManager.neighborIds().stream().map(id -> "\"" + id + "\"")
-                .collect(Collectors.joining(", "));
-
-        String json = """
-                {
-                    "id": "%s",
-                    "ipAddress": "%s",
-                    "p2pPort": %d,
-                    "crackingPort": %d,
-                    "status": "UP",
-                    "neighbors": [%s]
-                }
-                """.formatted(localNodeId, advertiseHost, p2pPort, crackingPort, neighborsJson);
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(dashboardUrl + "/heartbeat"))
-                .timeout(Duration.ofSeconds(5))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(json))
-                .build();
-
-        return httpClient
-                .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenAccept(response -> Console.log("Registered self with dashboard. Status: " + response.statusCode()))
-                .exceptionally(error -> {
-                    Console.log("Could not register with dashboard: " + error.getMessage(), Constant.RED);
-                    return null;
-                });
-    }
-
-    /**
-     * Reports to the dashboard that another node failed.
-     * 
-     * @param failedNode the failed node
-     * @param phi        phi calculations for the failed node
-     * @return
-     */
-    public CompletableFuture<Void> reportFailure(NodeAddress failedNode, double phi, double threshold) {
-        String message = "Node " + localNodeId
-                + " classifies Node " + failedNode.nodeId()
-                + " as UNREACHABLE by phi threshold. phi=" + String.format("%.4f", phi) + ", threshold="
-                + String.format("%.4f", threshold)
-                + ". If this node comes back, it must rejoin as a new node.";
-
-        String json = String.format(
-                Locale.US, """
-                        {
-                          "reporterNodeId": "%s",
-                          "failedNodeId": "%s",
-                          "message": "%s",
-                          "phi": %.6f,
-                          "threshold": %.6f,
-                          "status": "UNREACHABLE",
-                          "timestamp": "%s"
-                        }
-                        """,
-                localNodeId,
-                failedNode.nodeId(),
-                message,
-                phi,
-                threshold,
-                LocalDateTime.now());
-
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(dashboardUrl + "/failure-report"))
-                .timeout(Duration.ofSeconds(5))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(json))
-                .build();
-
-        return httpClient
-                .sendAsync(request, HttpResponse.BodyHandlers.ofString())
-                .thenAccept(response -> Console
-                        .log("UNREACHABLE report sent to dashboard. Status: " + response.statusCode()))
-                .exceptionally(error -> {
-                    Console.log("Could not report UNREACHABLE node to dashboard: " + error.getMessage(), Constant.RED);
-                    return null;
-                });
-    }
-
-    /**
-     * Removes trailing forward slashes from URLs
-     * 
-     * @param value the URL
-     * @return the formatted URL
-     */
-    private String removeTrailingSlash(String value) {
-        if (value.endsWith("/")) {
-            return value.substring(0, value.length() - 1);
+        public DashboardReporter(String localNodeId, String dashboardUrl, ConnectionManager connectionManager) {
+                this.localNodeId = localNodeId;
+                this.dashboardUrl = removeTrailingSlash(dashboardUrl);
+                this.httpClient = HttpClient.newBuilder()
+                                .connectTimeout(Duration.ofSeconds(5))
+                                .build();
+                this.connectionManager = connectionManager;
         }
 
-        return value;
-    }
+        /**
+         * Reports to the dashboard that the current node is alive.
+         * 
+         * @param advertiseHost ip address for self-advertisement address
+         * @param p2pPort       port for self-advertisement address
+         * @return
+         */
+        public CompletableFuture<Void> reportSelfAlive(String advertiseHost, int p2pPort, int crackingPort) {
+                // Becasue there are 2 port, 1 port for p2p and one port for 1 port for
+                // crackingport -> I don't understand why we need crackingport so I will comment
+                // it and let the cracking port uses the same as p2p port -> this is just for
+                // testing
+                String neighborsJson = connectionManager.neighborIds().stream().map(id -> "\"" + id + "\"")
+                                .collect(Collectors.joining(", "));
+
+                String json = """
+                                {
+                                    "id": "%s",
+                                    "ipAddress": "%s",
+                                    "p2pPort": %d,
+                                    "crackingPort": %d,
+                                    "status": "UP",
+                                    "neighbors": [%s]
+                                }
+                                """.formatted(localNodeId, advertiseHost, p2pPort, crackingPort, neighborsJson);
+
+                HttpRequest request = HttpRequest.newBuilder()
+                                .uri(URI.create(dashboardUrl + "/heartbeat"))
+                                .timeout(Duration.ofSeconds(5))
+                                .header("Content-Type", "application/json")
+                                .POST(HttpRequest.BodyPublishers.ofString(json))
+                                .build();
+
+                return httpClient
+                                .sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                                .thenAccept(response -> Console.log(
+                                                "Registered self with dashboard. Status: " + response.statusCode()))
+                                .exceptionally(error -> {
+                                        Console.log("Could not register with dashboard: " + error.getMessage(),
+                                                        Constant.RED);
+                                        return null;
+                                });
+        }
+
+        /**
+         * Reports to the dashboard that another node failed.
+         * 
+         * @param failedNode the failed node
+         * @param phi        phi calculations for the failed node
+         * @return
+         */
+        public CompletableFuture<Void> reportFailure(NodeAddress failedNode, double phi, double threshold) {
+                String message = "Node " + localNodeId
+                                + " classifies Node " + failedNode.nodeId()
+                                + " as UNREACHABLE by phi threshold. phi=" + String.format("%.4f", phi) + ", threshold="
+                                + String.format("%.4f", threshold)
+                                + ". If this node comes back, it must rejoin as a new node.";
+
+                String json = String.format(
+                                Locale.US, """
+                                                {
+                                                  "reporterNodeId": "%s",
+                                                  "failedNodeId": "%s",
+                                                  "message": "%s",
+                                                  "phi": %.6f,
+                                                  "threshold": %.6f,
+                                                  "status": "UNREACHABLE",
+                                                  "timestamp": "%s"
+                                                }
+                                                """,
+                                localNodeId,
+                                failedNode.nodeId(),
+                                message,
+                                phi,
+                                threshold,
+                                LocalDateTime.now());
+
+                HttpRequest request = HttpRequest.newBuilder()
+                                .uri(URI.create(dashboardUrl + "/failure-report"))
+                                .timeout(Duration.ofSeconds(5))
+                                .header("Content-Type", "application/json")
+                                .POST(HttpRequest.BodyPublishers.ofString(json))
+                                .build();
+
+                return httpClient
+                                .sendAsync(request, HttpResponse.BodyHandlers.ofString())
+                                .thenAccept(response -> Console
+                                                .log("UNREACHABLE report sent to dashboard. Status: "
+                                                                + response.statusCode()))
+                                .exceptionally(error -> {
+                                        Console.log("Could not report UNREACHABLE node to dashboard: "
+                                                        + error.getMessage(), Constant.RED);
+                                        return null;
+                                });
+        }
+
+        /**
+         * Removes trailing forward slashes from URLs
+         * 
+         * @param value the URL
+         * @return the formatted URL
+         */
+        private String removeTrailingSlash(String value) {
+                if (value.endsWith("/")) {
+                        return value.substring(0, value.length() - 1);
+                }
+
+                return value;
+        }
 }
