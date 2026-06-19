@@ -112,7 +112,7 @@ public class UdpCoordinator implements AutoCloseable {
             String payload) throws IOException {
         byte[] bytes = UdpPacket.encode(type, payload);
 
-        Console.log("Sending to " + target.toString() + " type " + type + " payload: " + payload);
+        Console.log("Sending to " + target.toString() + " type " + type);
 
         DatagramPacket packet = new DatagramPacket(
                 bytes,
@@ -146,22 +146,22 @@ public class UdpCoordinator implements AutoCloseable {
                 submit(envelope);
             } catch (SocketException ex) {
                 if (running) {
-                    Console.log("UDP Socket error: " + ex.getMessage(), Constant.RED);
+                    Console.logError("UDP Socket error: " + ex.getMessage());
                 }
             } catch (IOException ex) {
                 if (running) {
-                    Console.log("UDP receive error: " + ex.getMessage(), Constant.RED);
+                    Console.logError("UDP receive error: " + ex.getMessage());
                 }
             } catch (Exception ex) {
                 if (running) {
-                    Console.log("Unexpected error in UDP receive loop: " + ex.getMessage(), Constant.RED);
+                    Console.logError("Unexpected error in UDP receive loop: " + ex.getMessage());
                 }
             }
         }
     }
 
     private void submit(UdpEnvelope envelope) {
-        Console.log("RECEIVED: " + envelope.payload());
+        // Console.log("RECEIVED: " + envelope.payload());
         if (envelope.istype(UdpPacketType.MEMBERSHIP)) {
             membershipExecutor.submit(() -> dispatch(envelope, membershipConsumer));
         } else if (envelope.istype(UdpPacketType.RECOVERY)) {
@@ -177,7 +177,7 @@ public class UdpCoordinator implements AutoCloseable {
                 consumer.accept(envelope);
             }
         } catch (Exception ex) {
-            Console.log("UDP dispatch error: " + ex.getMessage(), Constant.RED);
+            Console.logError("UDP dispatch error: " + ex.getMessage());
         }
     }
 

@@ -188,23 +188,19 @@ public class RecoveryUDPService implements AutoCloseable {
                 }
 
                 try {
-                    send(neighbor,
-                            new RecoveryMessage(message.type(), message.messageId(),
-                                    message.repairEpoch(), localAddress, message.subject(),
-                                    message.target(), message.neighbors(),
-                                    Math.max(message.ttl() - 1, 0),
-                                    System.currentTimeMillis(), message.incarnation()));
+                    send(neighbor, new RecoveryMessage(message.type(), message.messageId(),
+                            message.repairEpoch(), localAddress, message.subject(),
+                            message.target(), message.neighbors(),
+                            Math.max(message.ttl() - 1, 0),
+                            System.currentTimeMillis(), message.incarnation()));
 
                     Console.log(
                             "Gossiping DEFICIENT message [" + message.messageId() + "] to " + neighbor.nodeId()
                                     + " success?",
                             Constant.CYAN + Constant.BOLD);
                 } catch (IOException e) {
-                    Console.log(
-                            "Failed to gossip message [" + message.messageId() + "] to " + neighbor.nodeId()
-                                    + " because "
-                                    + e.getMessage(),
-                            Constant.RED);
+                    Console.logError("Failed to gossip message [" + message.messageId() + "] to " + neighbor.nodeId()
+                            + " because " + e.getMessage());
                 }
             }
         }

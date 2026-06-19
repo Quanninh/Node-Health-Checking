@@ -1,6 +1,5 @@
 package com.monitoring.agent.node.recovery;
 
-import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,53 +15,8 @@ import com.monitoring.agent.util.Console;
  */
 public class NetworkTopologyCache {
 
-    /** The map of a node and its neighbors. */
-    @Deprecated
-    private final Map<String, Set<NodeAddress>> adjacencyCache = new ConcurrentHashMap<>();
-
     /** Deficient nodes discovered through recovery gossip, keyed by node id. */
     private final Map<String, DeficientNodeRecord> deficientNodes = new ConcurrentHashMap<>();
-
-    /**
-     * Stores a connection between a node and its neighbor.
-     * 
-     * @param nodeId    the node
-     * @param neighbors its neighbor
-     */
-    @Deprecated
-    public void storeNeighbors(String nodeId, Set<NodeAddress> neighbors) {
-        adjacencyCache.put(nodeId, neighbors);
-    }
-
-    /**
-     * Finds the neighbors of a node.
-     * 
-     * @param nodeId the node
-     * @return its neighbors
-     */
-    @Deprecated
-    public Set<NodeAddress> neighborsOf(String nodeId) {
-        return adjacencyCache.getOrDefault(nodeId, Set.of());
-    }
-
-    /**
-     * Checks if two nodes are adjacent.
-     * 
-     * @return whether the two nodes are adjacent
-     */
-    @Deprecated
-    public boolean areAdjacent(String a, String b) {
-        return neighborsOf(a).stream().anyMatch(n -> n.nodeId().equals(b));
-    }
-
-    /**
-     * Marks a node as deficient.
-     * 
-     * @param node the deficient node
-     */
-    public void markDeficient(NodeAddress node) {
-        markDeficient(new DeficientNodeRecord(node, -1, "", Instant.now(), 0));
-    }
 
     /**
      * Stores the latest deficient-node record for a node.

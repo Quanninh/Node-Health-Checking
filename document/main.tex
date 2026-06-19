@@ -1075,7 +1075,14 @@ public ResponseEntity<List<FailureReport>> getFailureReports() {
 
 \section{Evaluation \& Experimental Results}
 \label{sec:evaluation_and_experimental_results}
-Describe how the system is evaluated. Define the test environment, number of nodes, failure scenarios, workload, network conditions, and metrics.
+
+\subsection{Evaluation Environment}
+\label{subsec:evaluation_environment}
+% Describe how the system is evaluated. Define the test environment, number of nodes, failure scenarios, workload, network conditions, and metrics.
+The system was implemented in Java and evaluated on a Lenovo laptop running Microsoft Windows 11 Pro (Build 26200).
+The system was equipped with an Intel Core i7-10850H processor operating at 2.70 GHz, 32 GB of RAM, and a 512 GB SSD.
+All experiments were executed using Java SE 25 LTS.
+To simulate a distributed environment, multiple nodes were executed as independent Java processes on the same machine.
 
 \subsection{Evaluation Metrics}
 \label{subsec:evaluation_metrics}

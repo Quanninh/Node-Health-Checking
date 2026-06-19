@@ -161,18 +161,17 @@ public final class RewiringCoordinator {
      */
     public boolean attemptRewiring(NodeAddress defA, NodeAddress defB) {
         if (!localAddress.nodeId().equals(defA.nodeId())) {
-            Console.log("[REWIRE] Self is not defA -> skip");
+            Console.logWarning("[REWIRE] Self is not defA -> skip");
             return false;
         }
 
         if (defA.nodeId().equals(defB.nodeId())) {
-            Console.log("[REWIRE] Refused: defA and defB are the same node.", Constant.ORANGE);
+            Console.logWarning("[REWIRE] Refused: defA and defB are the same node.");
             return false;
         }
 
         if (!canStartDeficientRecovery()) {
-            Console.log("[REWIRE] Refused: local node is not eligible to start deficient recovery.",
-                    Constant.ORANGE);
+            Console.logWarning("[REWIRE] Refused: local node is not eligible to start deficient recovery.");
             return false;
         }
 
@@ -181,13 +180,12 @@ public final class RewiringCoordinator {
                 boolean directOk = tryDirectRepair(defA, defB);
 
                 if (directOk) {
-                    Console.log("[REWIRE] Direct repair succeeded: " + defA.nodeId() + " <-> " + defB.nodeId(),
-                            Constant.GREEN);
+                    Console.logSuccess("[REWIRE] Direct repair succeeded: " + defA.nodeId() + " <-> " + defB.nodeId());
                     return true;
                 }
             }
-            Console.log("[REWIRE] Direct repair with " + defA.nodeId() + " and " + defB.nodeId()
-                    + " failed. Now run full rewiring", Constant.RED);
+            Console.logWarning("[REWIRE] Direct repair with " + defA.nodeId() + " and " + defB.nodeId()
+                    + " failed. Now run full rewiring");
 
             return runFullRewiring(defA, defB);
         } finally {
@@ -595,9 +593,8 @@ public final class RewiringCoordinator {
          * then no valid C exists, so B rejects early.
          */
         if (allNeighborsOfAExistInNeighborsOfB(defANeighbors, defBNeighbors)) {
-            Console.log("[REWIRE] Denied REWIRE_REQ from "
-                    + message.sender().nodeId()
-                    + " because all neighbors of defA are neighbors of defB.", Constant.ORANGE);
+            Console.logWarning("[REWIRE] Denied REWIRE_REQ from " + message.sender().nodeId()
+                    + " because all neighbors of defA are neighbors of defB.");
 
             sendOnly(message.sender(), RewireMessage.of(
                     RecoveryMessageType.REWIRE_DENY,
@@ -840,9 +837,6 @@ public final class RewiringCoordinator {
             return null;
         }
 
-        // BUG: This doesn't seem to be the list for neighbors of C? It seems to be
-        // neighbors of A (the node calling this method(?))
-        // UPDATE: this is C, since its the one handling handleNeighborsQuery, not A
         List<NodeAddress> localNeighborsOfC = new ArrayList<>(connectionManager.neighborAddresses());
         Collections.shuffle(localNeighborsOfC);
 

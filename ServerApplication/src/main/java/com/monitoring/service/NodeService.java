@@ -21,7 +21,6 @@ public class NodeService {
 
     @Autowired
     private NodeRepository nodeRepository;
-
     @Autowired
     private FailureReportRepository failureReportRepository;
 
@@ -29,7 +28,6 @@ public class NodeService {
      * Process heartbeat from node.
      */
     public void processHeartbeat(Node incomingNode) {
-
         Node node = nodeRepository.findById(incomingNode.getId()).orElse(new Node());
 
         node.setId(incomingNode.getId());
@@ -41,28 +39,20 @@ public class NodeService {
         node.setNeighbors(incomingNode.getNeighbors() != null ? incomingNode.getNeighbors() : new ArrayList<>());
 
         writeGraphFile();
-
         nodeRepository.save(node);
-
-        System.out.println(
-                "[" + LocalDateTime.now() + "] "
-                        + "Heartbeat received from "
-                        + node.getId());
+        System.out.println("[" + LocalDateTime.now() + "] " + "Heartbeat received from " + node.getId());
     }
 
     public void writeGraphFile() {
         List<Node> nodes = nodeRepository.findAll();
 
         try (PrintWriter writer = new PrintWriter("graph.txt")) {
-
-            // Write nodes
             for (Node node : nodes) {
                 if (node.getStatus().equals("UP")) {
                     writer.println(node.getId());
                 }
             }
 
-            // Write edges
             for (Node node : nodes) {
                 if (node.getNeighbors() == null || !node.getStatus().equals("UP")) {
                     continue;
@@ -83,40 +73,24 @@ public class NodeService {
      */
     @Scheduled(fixedRate = 5000)
     public void checkNodeStatus() {
-
         try {
-
-            LocalDateTime cutoffTime = LocalDateTime.now()
-                    .minusSeconds(NODE_TIMEOUT_SECONDS);
-
+            LocalDateTime cutoffTime = LocalDateTime.now().minusSeconds(NODE_TIMEOUT_SECONDS);
             List<Node> nodes = nodeRepository.findAll();
 
             for (Node node : nodes) {
-
                 LocalDateTime lastHeartbeat = node.getLastHeartbeat();
 
-                if (lastHeartbeat != null
-                        && lastHeartbeat.isBefore(cutoffTime)
-                        && !"DOWN".equals(node.getStatus())
-                        && !"FAILED".equals(node.getStatus())) {
-
+                boolean hasNotReceivedHeartbeat = lastHeartbeat != null && lastHeartbeat.isBefore(cutoffTime);
+                boolean isStatusDown = "DOWN".equals(node.getStatus()) || "FAILED".equals(node.getStatus())
+                        || "UNREACHABLE".equals(node.getStatus());
+                if (hasNotReceivedHeartbeat && !isStatusDown) {
                     node.setStatus("DOWN");
-
                     nodeRepository.save(node);
-
-                    System.out.println(
-                            "[" + LocalDateTime.now() + "] "
-                                    + node.getId()
-                                    + " marked as DOWN");
+                    System.out.println("[" + LocalDateTime.now() + "] " + node.getId() + " marked as DOWN");
                 }
             }
-
         } catch (Exception e) {
-
-            System.out.println(
-                    "[" + LocalDateTime.now() + "] "
-                            + "Scheduler skipped: "
-                            + e.getMessage());
+            System.out.println("[" + LocalDateTime.now() + "] " + "Scheduler skipped: " + e.getMessage());
         }
     }
 
@@ -124,49 +98,29 @@ public class NodeService {
      * Process distributed failure report.
      */
     public void processFailureReport(FailureReport report) {
-
         if (report.getTimestamp() == null) {
-
             report.setTimestamp(LocalDateTime.now());
         }
-
-        if (report.getStatus() == null
-                || report.getStatus().isBlank()) {
-
+        if (report.getStatus() == null || report.getStatus().isBlank()) {
             report.setStatus("UNREACHABLE");
         }
 
-        if (report.getMessage() == null
-                || report.getMessage().isBlank()) {
-
+        if (report.getMessage() == null || report.getMessage().isBlank()) {
             report.setMessage(
-                    "Node "
-                            + report.getReporterNodeId()
-                            + " detected "
-                            + report.getFailedNodeId()
-                            + " as unreachable");
+                    "Node " + report.getReporterNodeId() + " detected " + report.getFailedNodeId() + " as unreachable");
         }
 
         failureReportRepository.save(report);
 
-        Node failedNode = nodeRepository
-                .findById(report.getFailedNodeId())
-                .orElseGet(() -> {
+        Node failedNode = nodeRepository.findById(report.getFailedNodeId()).orElseGet(() -> {
+            Node node = new Node();
+            node.setId(report.getFailedNodeId());
+            return node;
+        });
 
-                    Node node = new Node();
-
-                    node.setId(report.getFailedNodeId());
-
-                    return node;
-                });
-
-        failedNode.setStatus("FAILED");
-
+        failedNode.setStatus("UNREACHABLE");
         nodeRepository.save(failedNode);
-
-        System.out.println(
-                "[" + LocalDateTime.now() + "] "
-                        + report.getMessage());
+        System.out.println("[" + LocalDateTime.now() + "] " + report.getMessage());
     }
 
     public List<Node> getAllNodes() {
@@ -174,14 +128,11 @@ public class NodeService {
     }
 
     public Node getNodeById(String id) {
-
-        return nodeRepository
-                .findById(id)
-                .orElse(null);
+        return nodeRepository.findById(id).orElse(null);
     }
 
     public List<FailureReport> getFailureReports() {
-
         return failureReportRepository.findAll();
     }
+
 }

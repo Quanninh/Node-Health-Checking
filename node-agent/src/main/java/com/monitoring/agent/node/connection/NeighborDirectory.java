@@ -9,7 +9,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 import com.monitoring.agent.node.GossipMessageType;
 import com.monitoring.agent.node.NodeAddress;
@@ -37,32 +36,32 @@ public class NeighborDirectory {
 
     /** Index for iterating through neighbors (for failure detection). */
     private int nextIndex = 0;
-    private final List<NodeAddress> shuffledNeighbors;
+    // private final List<NodeAddress> shuffledNeighbors;
 
     public NeighborDirectory(ConnectionManager connectionManager) {
         this.connectionManager = connectionManager;
         syncStatesWithConnections();
-        shuffledNeighbors = connectionManager.neighborAddresses();
+        // shuffledNeighbors = connectionManager.neighborAddresses();
     }
 
     /**
-     * Gets the next node from the list of neighbors. Shuffles the list if the node
-     * has retrieve all neighbors already to simulate randomness.
+     * Gets the next node from the list of neighbors. No longer shuffles the list if
+     * the node has retrieve all neighbors already to simulate randomness.
      * 
      * @return the next node, empty if node has no active neighbors
      */
     public synchronized Optional<NodeAddress> nextTargetNode() {
-        // List<NodeAddress> neighbors = connectionManager.neighborAddresses();
-        if (shuffledNeighbors.isEmpty()) {
+        List<NodeAddress> neighbors = connectionManager.neighborAddresses();
+        if (neighbors.isEmpty()) {
             return Optional.empty();
         }
 
-        if (nextIndex >= shuffledNeighbors.size()) {
-            Collections.shuffle(shuffledNeighbors);
+        if (nextIndex >= neighbors.size()) {
+            // Collections.shuffle(neighbors);
             nextIndex = 0;
         }
 
-        NodeAddress selected = shuffledNeighbors.get(nextIndex);
+        NodeAddress selected = neighbors.get(nextIndex);
         nextIndex++;
         return Optional.of(selected);
     }
