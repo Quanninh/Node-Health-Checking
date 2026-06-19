@@ -59,6 +59,8 @@ public class RecoveryUDPService implements AutoCloseable {
      * @return
      */
     public boolean gossipSelfIfDeficient(String reason) {
+        connectionManager.refreshHealthState();
+
         if (connectionManager.getHealthState() != HealthState.DEFICIENT) {
             Console.log("Bro i'm sufficient ^.^");
             return false;

@@ -30,8 +30,9 @@ import com.monitoring.agent.util.Console;
 public final class RewiringCoordinator {
 
     private static final Duration REQUEST_TIMEOUT = Duration.ofMillis(2_500);
-    private static final Duration SCHEME_COMMIT_TIMEOUT = Duration.ofMillis(3_000);
     private static final int SEND_ATTEMPTS = 3;
+    private static final Duration ASYNC_REPLY_TIMEOUT = REQUEST_TIMEOUT.multipliedBy(SEND_ATTEMPTS).plusMillis(500);
+    private static final Duration SCHEME_COMMIT_TIMEOUT = Duration.ofSeconds(30);
 
     private final NodeAddress localAddress;
     private final ConnectionManager connectionManager;
@@ -125,25 +126,39 @@ public final class RewiringCoordinator {
             return;
         }
 
-        // topologyCache.markDeficient(record);
+        topologyCache.markDeficient(record);
         refreshHealthState();
 
         NodeAddress deficientNode = record.node();
 
-        if (deficientNode.nodeId().equals(localAddress.nodeId())
-                || connectionManager.getHealthState() != HealthState.DEFICIENT) {
-            Console.log("[REWIRE] Deficient node is self or I am healthy -> skip");
-            topologyCache.clearDeficient(deficientNode);
+        if (deficientNode.nodeId().equals(localAddress.nodeId())) {
+            Console.log("[REWIRE] Deficient node is self -> skip");
             return;
         }
 
-        // boolean repaired =
-        attemptRewiring(localAddress, deficientNode);
+        if (connectionManager.getHealthState() != HealthState.DEFICIENT) {
+            Console.log("[REWIRE] I am healthy -> skip deficient-pair recovery");
+            return;
+        }
 
-        // if (repaired) {
-        // topologyCache.clearDeficient(localAddress);
-        topologyCache.clearDeficient(deficientNode);
-        // }
+        boolean repaired = attemptRewiring(localAddress, deficientNode);
+
+        refreshHealthState();
+
+        if (connectionManager.getHealthState() == HealthState.SUFFICIENT) {
+            topologyCache.clearDeficient(localAddress);
+        }
+
+        if (repaired && record.degree() + 1 >= connectionManager.getMaxNeighbors()) {
+            topologyCache.clearDeficient(deficientNode);
+        } else if (repaired) {
+            topologyCache.markDeficient(new DeficientNodeRecord(
+                    deficientNode,
+                    record.degree() + 1,
+                    record.repairEpoch(),
+                    java.time.Instant.now(),
+                    record.incarnationNumber()));
+        }
     }
 
     /**
@@ -214,7 +229,7 @@ public final class RewiringCoordinator {
 
         markInitiatingDeficientRequest(true);
         try {
-            ack = sendAsync(defB, req).get(REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+            ack = sendAsync(defB, req).get(ASYNC_REPLY_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
         } finally {
             /*
@@ -264,7 +279,7 @@ public final class RewiringCoordinator {
 
         sendOnly(defB, commit);
 
-        List<NodeAddress> candidateCs = selectCandidateCs(defANeighbors, defBNeighbors);
+        List<NodeAddress> candidateCs = selectCandidateCs(defANeighbors, defBNeighbors, defA, defB);
 
         Console.log("Candidate Cs: " + candidateCs);
 
@@ -289,7 +304,7 @@ public final class RewiringCoordinator {
             // NEIGHBOR_QUERY_RESPONSE handled here
             RewireMessage response = null;
             try {
-                response = sendAsync(c, query).get(REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+                response = sendAsync(c, query).get(ASYNC_REPLY_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
             } catch (InterruptedException | ExecutionException | TimeoutException e) {
                 // TODO Auto-generated catch block
                 // e.printStackTrace();
@@ -342,7 +357,7 @@ public final class RewiringCoordinator {
 
         RewireMessage response = null;
         try {
-            response = sendAsync(defB, request).get(REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+            response = sendAsync(defB, request).get(ASYNC_REPLY_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             // TODO Auto-generated catch block
             // e.printStackTrace();
@@ -434,9 +449,9 @@ public final class RewiringCoordinator {
         CompletableFuture<RewireMessage> ackB = sendAsync(defB, toB);
 
         try {
-            RewireMessage cAck = ackC.get(REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
-            RewireMessage dAck = ackD.get(REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
-            RewireMessage bAck = ackB.get(REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+            RewireMessage cAck = ackC.get(ASYNC_REPLY_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+            RewireMessage dAck = ackD.get(ASYNC_REPLY_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+            RewireMessage bAck = ackB.get(ASYNC_REPLY_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
 
             boolean allRemoteAccepted = accepted(cAck) && accepted(dAck) && accepted(bAck);
 
@@ -664,7 +679,7 @@ public final class RewiringCoordinator {
      */
     private void handleNeighborsQuery(RewireMessage message) {
         Console.log("[REWIRE] Just received NEIGHBORS_QUERY", Constant.BG_ORANGE);
-        NodeAddress d = findCandidateD(message.nodeC(), message.defANeighbors());
+        NodeAddress d = findCandidateD(message.nodeC(), message.defA(), message.defB(), message.defANeighbors());
 
         if (d == null) {
             sendOnly(message.sender(), reply(message, RecoveryMessageType.NEIGHBORS_QUERY_RESPONSE, false, null));
@@ -702,7 +717,7 @@ public final class RewiringCoordinator {
         // REWIRING_PROPOSE_ACK received here
         RewireMessage dAck = null;
         try {
-            dAck = sendAsync(d, proposal).get(REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
+            dAck = sendAsync(d, proposal).get(ASYNC_REPLY_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
             // TODO Auto-generated catch block
             // e.printStackTrace();
@@ -722,8 +737,7 @@ public final class RewiringCoordinator {
 
     private void handleRewiringPropose(RewireMessage message) {
         Console.log("[REWIRE] Just received REWIRING_PROPOSE", Constant.BG_ORANGE);
-        boolean valid = message.nodeC() != null && message.nodeD() != null
-                && connectionManager.containsNode(message.nodeC().nodeId())
+        boolean canBecome = message.nodeC() != null && message.nodeD() != null
                 && canBecomeRewiringNode(
                         message.recoveryId(),
                         message.nodeC(),
@@ -731,17 +745,15 @@ public final class RewiringCoordinator {
                         message.connectsTo(),
                         message.disconnectsFrom());
 
+        boolean valid = message.nodeC() != null && message.nodeD() != null
+                && connectionManager.containsNode(message.nodeC().nodeId())
+                && canBecome;
+
         Console.log("message.nodeC() != null = " + (message.nodeC() != null)
                 + ", message.nodeD() != null = " + (message.nodeD() != null)
                 + ", contains nodeC = "
                 + (message.nodeC() != null && connectionManager.containsNode(message.nodeC().nodeId()))
-                + ", canBecomeRewiringNode = "
-                + (message.nodeC() != null && message.nodeD() != null && canBecomeRewiringNode(
-                        message.recoveryId(),
-                        message.nodeC(),
-                        message.nodeD(),
-                        message.connectsTo(),
-                        message.disconnectsFrom())),
+                + ", canBecomeRewiringNode = " + canBecome,
                 Constant.BG_PINK);
 
         sendOnly(
@@ -831,7 +843,11 @@ public final class RewiringCoordinator {
      * @param defANeighbors neighbors of A
      * @return
      */
-    private NodeAddress findCandidateD(NodeAddress c, List<NodeAddress> defANeighbors) {
+    private NodeAddress findCandidateD(
+            NodeAddress c,
+            NodeAddress defA,
+            NodeAddress defB,
+            List<NodeAddress> defANeighbors) {
         if (c == null) {
             Console.log("C is invalid");
             return null;
@@ -841,8 +857,10 @@ public final class RewiringCoordinator {
         Collections.shuffle(localNeighborsOfC);
 
         for (NodeAddress d : localNeighborsOfC) {
-            if (d == null || d.nodeId().equals(c.nodeId())) {
-                Console.log("d is null or d == c -> skip");
+            if (d == null || d.nodeId().equals(c.nodeId())
+                    || sameNode(d, defA)
+                    || sameNode(d, defB)) {
+                Console.log("d is null, d == c, or d is deficient endpoint -> skip");
                 continue;
             }
 
@@ -867,8 +885,14 @@ public final class RewiringCoordinator {
      * @param defBNeighbors neighbors of B
      * @return a list of candidates for node C
      */
-    private List<NodeAddress> selectCandidateCs(List<NodeAddress> defANeighbors, List<NodeAddress> defBNeighbors) {
+    private List<NodeAddress> selectCandidateCs(
+            List<NodeAddress> defANeighbors,
+            List<NodeAddress> defBNeighbors,
+            NodeAddress defA,
+            NodeAddress defB) {
         List<NodeAddress> result = defANeighbors.stream()
+                .filter(c -> !sameNode(c, defA))
+                .filter(c -> !sameNode(c, defB))
                 .filter(c -> !contains(defBNeighbors, c.nodeId()))
                 .collect(ArrayList::new, ArrayList::add, ArrayList::addAll);
 
@@ -1497,6 +1521,10 @@ public final class RewiringCoordinator {
         }
 
         return addresses.stream().anyMatch(address -> address != null && address.nodeId().equals(nodeId));
+    }
+
+    private boolean sameNode(NodeAddress a, NodeAddress b) {
+        return a != null && b != null && a.nodeId().equals(b.nodeId());
     }
 
     /**

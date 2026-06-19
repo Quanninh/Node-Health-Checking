@@ -7,6 +7,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.monitoring.agent.constant.Constant;
 import com.monitoring.agent.node.agent.AgentConfig;
 import com.monitoring.agent.node.connection.ConnectionManager;
 import com.monitoring.agent.node.connection.MembershipControlService;
@@ -166,6 +167,7 @@ public class NodeAgent {
         recoveryUdpService.start();
 
         joinCoordinator.joinNetwork();
+        recoveryUdpService.gossipSelfIfDeficient("post-join neighbor count check");
 
         ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
         scheduler.scheduleAtFixedRate(() -> {
@@ -175,6 +177,13 @@ public class NodeAgent {
             } catch (Exception e) {
             }
         }, 0, 10, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(() -> {
+            try {
+                recoveryUdpService.gossipSelfIfDeficient("periodic neighbor count check");
+            } catch (Exception exception) {
+                Console.logError("Periodic recovery check failed: " + exception.getMessage());
+            }
+        }, Constant.DEFAULT_GOSSIP_INTERVAL_SECONDS, Constant.DEFAULT_GOSSIP_INTERVAL_SECONDS, TimeUnit.SECONDS);
         // dashboardReporter.reportSelfAlive(config.advertiseHost(),
         // nodeServer.getPort(),
         // crackingServer.getPort());
