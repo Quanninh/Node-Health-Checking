@@ -144,18 +144,18 @@ distributed systems, node health checking, failure detection, heartbeat, false p
 \section{Introduction}
 \label{sec:introduction}
 
-Distributed systems rely on multiple interconnected nodes that communicate and cooperate to provide services.
-In this kind of environment, node availability is important because a node may crash, become unreachable, respond slowly, or lose connection with other nodes.
-When these problems are not detected and handled properly, they can affect communication, reduce reliability, and weaken the overall operation of the system.
+% Distributed systems rely on multiple interconnected nodes that communicate and cooperate to provide services.
+% In this kind of environment, node availability is important because a node may crash, become unreachable, respond slowly, or lose connection with other nodes.
+% When these problems are not detected and handled properly, they can affect communication, reduce reliability, and weaken the overall operation of the system.
 
-Node health checking is used to observe whether nodes remain active and responsive.
-In many systems, this responsibility is assigned to a central monitoring component because it is easier to collect, manage, and visualize node status from one place.
-However, this structure can introduce a single point of failure when the central component becomes unavailable. This project therefore focuses on a decentralized node health-checking structure, where monitoring responsibility is distributed among the nodes themselves instead of being concentrated in one component.
+% Node health checking is used to observe whether nodes remain active and responsive.
+% In many systems, this responsibility is assigned to a central monitoring component because it is easier to collect, manage, and visualize node status from one place.
+% However, this structure can introduce a single point of failure when the central component becomes unavailable. This project therefore focuses on a decentralized node health-checking structure, where monitoring responsibility is distributed among the nodes themselves instead of being concentrated in one component.
 
-In the proposed system, each node maintains relationships with a limited number of neighboring nodes.
-These relationships define which nodes are responsible for monitoring one another and form the basic structure of the decentralized health-checking mechanism.
-Through node-to-node communication, the system identifies healthy, suspicious, and failed nodes.
-When a node or connection problem is detected, the system updates the affected relationships and attempts to preserve the monitoring structure so that health checking can continue.
+% In the proposed system, each node maintains relationships with a limited number of neighboring nodes.
+% These relationships define which nodes are responsible for monitoring one another and form the basic structure of the decentralized health-checking mechanism.
+% Through node-to-node communication, the system identifies healthy, suspicious, and failed nodes.
+% When a node or connection problem is detected, the system updates the affected relationships and attempts to preserve the monitoring structure so that health checking can continue.
 
 \subsection{Background}
 \label{subsec:background}
