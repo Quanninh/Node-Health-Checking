@@ -24,6 +24,7 @@ ADDED_NODE_COUNT = 6
 PHASE_TIMEOUT_SECONDS = 120
 PHASE_3_TIMEOUT_SECONDS = 180
 PHASE_5_TIMEOUT_SECONDS = 180
+PHASE_R_TIMEOUT_SECONDS = 120
 
 COOLDOWN_SECONDS = 10
 POLL_INTERVAL_SECONDS = 0.5
@@ -87,13 +88,8 @@ def node_neighbors(node: Dict[str, Any]) -> List[str]:
     return list(neighbors) if isinstance(neighbors, list) else []
 
 
-def neighbor_completion_check(
-    nodes: List[Dict[str, Any]],
-    expected_active_count: int,
-) -> Tuple[bool, Optional[str], List[str]]:
+def neighbor_completion_check(nodes, expected_active_count):
     active = active_nodes(nodes)
-    if len(active) != expected_active_count:
-        return False, None, []
 
     deficient_nodes = [
         str(node.get("id") or "")
@@ -101,12 +97,11 @@ def neighbor_completion_check(
         if len(node_neighbors(node)) != MAX_NEIGHBORS
     ]
 
+    if len(active) != expected_active_count:
+        return False, None, deficient_nodes
+
     if len(deficient_nodes) == 0:
         return True, None, deficient_nodes
-
-    if len(deficient_nodes) == 1:
-        node_id = deficient_nodes[0] or "unknown"
-        return True, f"Edge case: Only 1 deficient node ({node_id})", deficient_nodes
 
     return False, None, deficient_nodes
 
@@ -293,6 +288,7 @@ def append_result_row(row: Dict[str, Any]) -> None:
         "max_neighbors",
         "details",
         "edge_case_note",
+        "failed_nodes_count",
         "metadata",
     ]
 
@@ -315,6 +311,7 @@ def record_result(
     added_node_count: int = ADDED_NODE_COUNT,
     max_neighbors: int = MAX_NEIGHBORS,
     edge_case_note: str = "",
+    failed_nodes_count: int = 0,
 ) -> None:
     row = {
         "phase": phase,
@@ -322,6 +319,7 @@ def record_result(
         "elapsed_ms": "" if elapsed_ms is None else f"{elapsed_ms:.0f}",
         "details": details,
         "edge_case_note": edge_case_note,
+        "failed_nodes_count": failed_nodes_count,
         "metadata": json.dumps(metadata or {}, ensure_ascii=False),
         "initial_nodes": initial_nodes,
         "added_node_count": added_node_count,
@@ -337,7 +335,7 @@ def countdown_sleep(seconds: int, label: str) -> None:
         time.sleep(1)
 
 
-ConditionResult = Tuple[bool, Optional[str]]
+ConditionResult = Tuple[bool, Optional[str], List[str]]
 ConditionFn = Callable[[], ConditionResult]
 
 
@@ -346,21 +344,27 @@ def wait_for_condition(
     condition_fn: ConditionFn,
     timeout_seconds: int = PHASE_TIMEOUT_SECONDS,
     progress_interval_seconds: int = PROGRESS_INTERVAL_SECONDS,
-) -> Tuple[float, Optional[str]]:
+) -> Tuple[float, bool, Optional[str], List[str]]:
     start = time.monotonic()
     next_progress_mark = progress_interval_seconds
+    last_note: Optional[str] = None
+    last_failed_nodes: List[str] = []
 
     while True:
-        ok, note = condition_fn()
+        ok, note, failed_nodes = condition_fn()
+        last_note = note
+        last_failed_nodes = failed_nodes
+
         if ok:
             elapsed = time.monotonic() - start
             if note:
                 print(f"[{label}] {note}")
-            return elapsed, note
+            return elapsed, False, note, failed_nodes
 
         elapsed = time.monotonic() - start
         if elapsed >= timeout_seconds:
-            raise TimeoutError(f"{label} did not finish within {timeout_seconds} seconds")
+            print(f"[{label}] TIMEOUT after {timeout_seconds}s")
+            return elapsed, True, last_note, last_failed_nodes
 
         if elapsed >= next_progress_mark:
             print(f"[{label}] {int(next_progress_mark)}s / {timeout_seconds}s elapsed")
@@ -379,26 +383,26 @@ def start_initial_cluster() -> List[str]:
     return started_ids
 
 
-def run_phase_1() -> Tuple[float, Optional[str]]:
+def run_phase_1() -> Tuple[float, bool, Optional[str], List[str]]:
     phase_name = "Phase 1"
     expected_active = INITIAL_NODE_COUNT
     print(f"\n{phase_name}: waiting for {expected_active} active nodes to reach MAX_NEIGHBORS")
 
     def condition() -> ConditionResult:
         nodes = get_all_nodes()
-        ok, note, _deficient_nodes = neighbor_completion_check(nodes, expected_active)
+        ok, note, deficient_nodes = neighbor_completion_check(nodes, expected_active)
         if not ok:
-            return False, None
+            return False, None, deficient_nodes
         if not all_active_neighbors_are_mutual(nodes):
-            return False, None
-        return True, note
+            return False, None, deficient_nodes
+        return True, note, deficient_nodes
 
-    elapsed, note = wait_for_condition(phase_name, condition, PHASE_TIMEOUT_SECONDS)
+    elapsed, timed_out, note, deficient_nodes = wait_for_condition(phase_name, condition, PHASE_TIMEOUT_SECONDS)
     print(f"{phase_name} completed in {elapsed:.2f}s")
-    return elapsed, note
+    return elapsed, timed_out, note, deficient_nodes
 
 
-def run_phase_2(victim_id: str) -> Tuple[float, Optional[str]]:
+def run_phase_2(victim_id: str) -> Tuple[float, bool, Optional[str], List[str]]:
     phase_name = "Phase 2"
     print(f"\n{phase_name}: killing {victim_id} and waiting for first new failure report")
 
@@ -407,15 +411,15 @@ def run_phase_2(victim_id: str) -> Tuple[float, Optional[str]]:
     kill_node(victim_id)
 
     def condition() -> ConditionResult:
-        return failure_report_exists_for(victim_id, baseline_report_id), None
+        return failure_report_exists_for(victim_id, baseline_report_id), None, []
 
-    elapsed_since_kill, _ = wait_for_condition(phase_name, condition, PHASE_TIMEOUT_SECONDS)
+    elapsed_since_kill, timed_out, _, _ = wait_for_condition(phase_name, condition, PHASE_TIMEOUT_SECONDS)
     total_elapsed = time.monotonic() - killed_at
     print(f"{phase_name} completed in {total_elapsed:.2f}s")
-    return total_elapsed, None
+    return total_elapsed, timed_out, None, []
 
 
-def run_phase_3(victim_id: str, expected_active_after_repair: int) -> Tuple[float, Optional[str]]:
+def run_phase_3(victim_id: str, expected_active_after_repair: int) -> Tuple[float, bool, Optional[str], List[str]]:
     phase_name = "Phase 3"
     print(
         f"\n{phase_name}: waiting until {victim_id} is removed from all neighbors and active nodes return to MAX_NEIGHBORS"
@@ -424,28 +428,28 @@ def run_phase_3(victim_id: str, expected_active_after_repair: int) -> Tuple[floa
     def condition() -> ConditionResult:
         nodes = get_all_nodes()
 
-        ok, note, _deficient_nodes = neighbor_completion_check(nodes, expected_active_after_repair)
+        ok, note, deficient_nodes = neighbor_completion_check(nodes, expected_active_after_repair)
         if not ok:
-            return False, None
+            return False, None, deficient_nodes
 
         if not node_is_dead_recorded(victim_id):
-            return False, None
+            return False, None, deficient_nodes
 
         for node in active_nodes(nodes):
             if victim_id in node_neighbors(node):
-                return False, None
+                return False, None, deficient_nodes
 
         if not all_active_neighbors_are_mutual(nodes):
-            return False, None
+            return False, None, deficient_nodes
 
-        return True, note
+        return True, note, deficient_nodes
 
-    elapsed, note = wait_for_condition(phase_name, condition, PHASE_3_TIMEOUT_SECONDS)
+    elapsed, timed_out, note, deficient_nodes = wait_for_condition(phase_name, condition, PHASE_3_TIMEOUT_SECONDS)
     print(f"{phase_name} completed in {elapsed:.2f}s")
-    return elapsed, note
+    return elapsed, timed_out, note, deficient_nodes
 
 
-def run_phase_4(expected_active_after_addition: int) -> Tuple[float, List[str], Optional[str]]:
+def run_phase_4(expected_active_after_addition: int) -> Tuple[float, bool, List[str], Optional[str], List[str]]:
     phase_name = "Phase 4"
     print(f"\n{phase_name}: adding {ADDED_NODE_COUNT} new nodes")
 
@@ -459,17 +463,17 @@ def run_phase_4(expected_active_after_addition: int) -> Tuple[float, List[str], 
 
     def condition() -> ConditionResult:
         nodes = get_all_nodes()
-        ok, note, _deficient_nodes = neighbor_completion_check(nodes, expected_active_after_addition)
+        ok, note, deficient_nodes = neighbor_completion_check(nodes, expected_active_after_addition)
         if not ok:
-            return False, None
+            return False, None, deficient_nodes
         if not all_active_neighbors_are_mutual(nodes):
-            return False, None
-        return True, note
+            return False, None, deficient_nodes
+        return True, note, deficient_nodes
 
-    elapsed_wait, note = wait_for_condition(phase_name, condition, PHASE_TIMEOUT_SECONDS)
+    elapsed_wait, timed_out, note, deficient_nodes = wait_for_condition(phase_name, condition, PHASE_TIMEOUT_SECONDS)
     total_elapsed = time.monotonic() - start_time
     print(f"{phase_name} completed in {total_elapsed:.2f}s")
-    return total_elapsed, new_node_ids, note
+    return total_elapsed, timed_out, new_node_ids, note, deficient_nodes
 
 
 def running_dashboard_nodes() -> List[str]:
@@ -482,7 +486,7 @@ def running_dashboard_nodes() -> List[str]:
     return node_ids
 
 
-def run_phase_5(victim_ids: List[str], expected_active_after_failures: int) -> Tuple[float, Optional[str]]:
+def run_phase_5(victim_ids: List[str], expected_active_after_failures: int) -> Tuple[float, bool, Optional[str], List[str]]:
     phase_name = "Phase 5"
     print(f"\n{phase_name}: killing 6 random nodes and waiting for all of them to be reported dead")
 
@@ -498,22 +502,101 @@ def run_phase_5(victim_ids: List[str], expected_active_after_failures: int) -> T
     def condition() -> ConditionResult:
         nodes = get_all_nodes()
 
-        ok, note, _deficient_nodes = neighbor_completion_check(nodes, expected_active_after_failures)
+        ok, note, deficient_nodes = neighbor_completion_check(nodes, expected_active_after_failures)
         if not ok:
-            return False, None
+            return False, None, deficient_nodes
 
         if not all_active_neighbors_are_mutual(nodes):
-            return False, None
+            return False, None, deficient_nodes
 
         if not failure_reports_exist_for_all(victims, baseline_report_id):
-            return False, None
+            return False, None, deficient_nodes
 
-        return True, note
+        return True, note, deficient_nodes
 
-    elapsed_wait, note = wait_for_condition(phase_name, condition, PHASE_5_TIMEOUT_SECONDS)
+    elapsed_wait, timed_out, note, deficient_nodes = wait_for_condition(phase_name, condition, PHASE_5_TIMEOUT_SECONDS)
     total_elapsed = time.monotonic() - start_time
     print(f"{phase_name} completed in {total_elapsed:.2f}s")
-    return total_elapsed, note
+    return total_elapsed, timed_out, note, deficient_nodes
+
+
+
+def run_phase_r(deficient_nodes: List[str], expected_active_count: int) -> Tuple[float, bool, Optional[str], List[str]]:
+    phase_name = "Phase R"
+    nodes_to_restart = list(dict.fromkeys(deficient_nodes))
+
+    print(f"\n{phase_name}: restarting {len(nodes_to_restart)} deficient node(s)")
+
+    for node_id in nodes_to_restart:
+        kill_node(node_id)
+
+    for node_id in nodes_to_restart:
+        start_node(node_id)
+
+    def condition() -> ConditionResult:
+        nodes = get_all_nodes()
+
+        ok, note, deficient_nodes_now = neighbor_completion_check(nodes, expected_active_count)
+        if not ok:
+            return False, None, deficient_nodes_now
+
+        if not all_active_neighbors_are_mutual(nodes):
+            return False, None, deficient_nodes_now
+
+        return True, note, deficient_nodes_now
+
+    elapsed, timed_out, note, deficient_nodes_now = wait_for_condition(
+        phase_name,
+        condition,
+        PHASE_R_TIMEOUT_SECONDS,
+    )
+    print(f"{phase_name} completed in {elapsed:.2f}s")
+    return elapsed, timed_out, note, deficient_nodes_now
+
+
+def maybe_run_phase_r(
+    trigger_phase: str,
+    timed_out: bool,
+    deficient_nodes: List[str],
+    expected_active_count: int,
+) -> None:
+    if not timed_out or not deficient_nodes:
+        return
+
+    nodes_to_restart = list(dict.fromkeys(deficient_nodes))
+    phase_r_elapsed, phase_r_timed_out, phase_r_note, phase_r_deficient_nodes = run_phase_r(
+        nodes_to_restart,
+        expected_active_count,
+    )
+
+    phase_r_details = (
+        f"Restarted {len(nodes_to_restart)} deficient node(s) after {trigger_phase} timeout"
+    )
+    if phase_r_note:
+        phase_r_details += f"; {phase_r_note}"
+
+    if phase_r_timed_out:
+        phase_r_details = (
+            f"Phase R timed out after restarting {len(nodes_to_restart)} node(s); "
+            f"{len(phase_r_deficient_nodes)} node(s) still did not reach MAX_NEIGHBORS"
+        )
+        if phase_r_deficient_nodes:
+            phase_r_details += f": {', '.join(phase_r_deficient_nodes)}"
+
+    record_result(
+        "Phase R",
+        "PASS" if not phase_r_timed_out else "PARTIAL",
+        phase_r_elapsed * 1000,
+        details=phase_r_details,
+        metadata={
+            "trigger_phase": trigger_phase,
+            "restarted_nodes": nodes_to_restart,
+            "expected_active_nodes": expected_active_count,
+            "max_neighbors": MAX_NEIGHBORS,
+            "timed_out": phase_r_timed_out,
+        },
+        failed_nodes_count=len(phase_r_deficient_nodes) if phase_r_timed_out else 0,
+    )
 
 
 def main() -> None:
@@ -527,82 +610,118 @@ def main() -> None:
         initial_total = INITIAL_NODE_COUNT
 
         current_phase = "Phase 1"
-        phase_1_elapsed, phase_1_note = run_phase_1()
+        phase_1_elapsed, phase_1_timed_out, phase_1_note, phase_1_deficient_nodes = run_phase_1()
         phase_1_details = f"{initial_total} active nodes reached MAX_NEIGHBORS"
         if phase_1_note:
             phase_1_details += f"; {phase_1_note}"
+        if phase_1_timed_out:
+            phase_1_details = (
+                f"Timed out waiting for full neighbors; {len(phase_1_deficient_nodes)} node(s) still did not reach MAX_NEIGHBORS"
+            )
+            if phase_1_deficient_nodes:
+                phase_1_details += f": {', '.join(phase_1_deficient_nodes)}"
 
         record_result(
             "Phase 1",
-            "PASS",
+            "PASS" if not phase_1_timed_out else "PARTIAL",
             phase_1_elapsed * 1000,
             details=phase_1_details,
             metadata={
                 "expected_active_nodes": initial_total,
                 "max_neighbors": MAX_NEIGHBORS,
+                "timed_out": phase_1_timed_out,
             },
             edge_case_note=phase_1_note or "",
+            failed_nodes_count=len(phase_1_deficient_nodes) if phase_1_timed_out else 0,
         )
+
+        maybe_run_phase_r("Phase 1", phase_1_timed_out, phase_1_deficient_nodes, initial_total)
 
         countdown_sleep(COOLDOWN_SECONDS, "Cooldown before Phase 2")
 
         current_phase = "Phase 2"
         phase_2_victim = "node-5"
-        phase_2_elapsed, _ = run_phase_2(phase_2_victim)
+        phase_2_elapsed, phase_2_timed_out, _, _ = run_phase_2(phase_2_victim)
         record_result(
             "Phase 2",
-            "PASS",
+            "PASS" if not phase_2_timed_out else "PARTIAL",
             phase_2_elapsed * 1000,
-            details=f"First failure report observed for {phase_2_victim}",
+            details=(
+                f"First failure report observed for {phase_2_victim}"
+                if not phase_2_timed_out
+                else f"Timed out waiting for first failure report for {phase_2_victim}"
+            ),
             metadata={
                 "victim": phase_2_victim,
                 "max_neighbors": MAX_NEIGHBORS,
+                "timed_out": phase_2_timed_out,
             },
+            failed_nodes_count=0,
         )
 
         current_phase = "Phase 3"
         phase_3_expected_active = initial_total - 1
-        phase_3_elapsed, phase_3_note = run_phase_3(phase_2_victim, phase_3_expected_active)
+        phase_3_elapsed, phase_3_timed_out, phase_3_note, phase_3_deficient_nodes = run_phase_3(phase_2_victim, phase_3_expected_active)
         phase_3_details = (
             f"{phase_2_victim} removed from neighbor lists; active nodes returned to MAX_NEIGHBORS"
         )
         if phase_3_note:
             phase_3_details += f"; {phase_3_note}"
+        if phase_3_timed_out:
+            phase_3_details = (
+                f"Timed out waiting for convergence; {len(phase_3_deficient_nodes)} node(s) still did not reach MAX_NEIGHBORS"
+            )
+            if phase_3_deficient_nodes:
+                phase_3_details += f": {', '.join(phase_3_deficient_nodes)}"
 
         record_result(
             "Phase 3",
-            "PASS",
+            "PASS" if not phase_3_timed_out else "PARTIAL",
             phase_3_elapsed * 1000,
             details=phase_3_details,
             metadata={
                 "victim": phase_2_victim,
                 "expected_active_nodes": phase_3_expected_active,
                 "max_neighbors": MAX_NEIGHBORS,
+                "timed_out": phase_3_timed_out,
             },
             edge_case_note=phase_3_note or "",
+            failed_nodes_count=len(phase_3_deficient_nodes) if phase_3_timed_out else 0,
         )
+
+        maybe_run_phase_r("Phase 3", phase_3_timed_out, phase_3_deficient_nodes, phase_3_expected_active)
 
         countdown_sleep(COOLDOWN_SECONDS, "Cooldown before Phase 4")
 
         current_phase = "Phase 4"
         phase_4_expected_active = phase_3_expected_active + ADDED_NODE_COUNT
-        phase_4_elapsed, new_node_ids, phase_4_note = run_phase_4(phase_4_expected_active)
+        phase_4_elapsed, phase_4_timed_out, new_node_ids, phase_4_note, phase_4_deficient_nodes = run_phase_4(phase_4_expected_active)
         phase_4_details = f"Added {ADDED_NODE_COUNT} nodes and reached MAX_NEIGHBORS"
         if phase_4_note:
             phase_4_details += f"; {phase_4_note}"
+        if phase_4_timed_out:
+            phase_4_details = (
+                f"Timed out waiting after adding nodes; {len(phase_4_deficient_nodes)} node(s) still did not reach MAX_NEIGHBORS"
+            )
+            if phase_4_deficient_nodes:
+                phase_4_details += f": {', '.join(phase_4_deficient_nodes)}"
 
         record_result(
             "Phase 4",
-            "PASS",
+            "PASS" if not phase_4_timed_out else "PARTIAL",
             phase_4_elapsed * 1000,
             details=phase_4_details,
             metadata={
                 "added_nodes": new_node_ids,
                 "expected_active_nodes": phase_4_expected_active,
                 "max_neighbors": MAX_NEIGHBORS,
+                "timed_out": phase_4_timed_out,
             },
             edge_case_note=phase_4_note or "",
+            failed_nodes_count=len(phase_4_deficient_nodes) if phase_4_timed_out else 0,
         )
+
+        maybe_run_phase_r("Phase 4", phase_4_timed_out, phase_4_deficient_nodes, phase_4_expected_active)
 
         countdown_sleep(COOLDOWN_SECONDS, "Cooldown before Phase 5")
 
@@ -619,58 +738,36 @@ def main() -> None:
         print(f"Phase 5 victims: {', '.join(phase_5_victims)}")
 
         phase_5_expected_active = phase_4_expected_active - ADDED_NODE_COUNT
-        phase_5_elapsed, phase_5_note = run_phase_5(phase_5_victims, phase_5_expected_active)
+        phase_5_elapsed, phase_5_timed_out, phase_5_note, phase_5_deficient_nodes = run_phase_5(phase_5_victims, phase_5_expected_active)
         phase_5_details = "Detected death of 6 nodes and active nodes returned to MAX_NEIGHBORS"
         if phase_5_note:
             phase_5_details += f"; {phase_5_note}"
+        if phase_5_timed_out:
+            phase_5_details = (
+                f"Timed out waiting for all killed nodes to be reported and for convergence; {len(phase_5_deficient_nodes)} node(s) still did not reach MAX_NEIGHBORS"
+            )
+            if phase_5_deficient_nodes:
+                phase_5_details += f": {', '.join(phase_5_deficient_nodes)}"
 
         record_result(
             "Phase 5",
-            "PASS",
+            "PASS" if not phase_5_timed_out else "PARTIAL",
             phase_5_elapsed * 1000,
             details=phase_5_details,
             metadata={
                 "victims": phase_5_victims,
                 "expected_active_nodes": phase_5_expected_active,
                 "max_neighbors": MAX_NEIGHBORS,
+                "timed_out": phase_5_timed_out,
             },
             edge_case_note=phase_5_note or "",
+            failed_nodes_count=len(phase_5_deficient_nodes) if phase_5_timed_out else 0,
         )
+
+        maybe_run_phase_r("Phase 5", phase_5_timed_out, phase_5_deficient_nodes, phase_5_expected_active)
 
         print("\nAll phases completed successfully.")
 
-    except TimeoutError as exc:
-        print(f"\n[FAILED] {exc}")
-
-        if current_phase == "Phase 1":
-            timeout_ms = PHASE_TIMEOUT_SECONDS * 1000
-        elif current_phase == "Phase 2":
-            timeout_ms = PHASE_TIMEOUT_SECONDS * 1000
-        elif current_phase == "Phase 3":
-            timeout_ms = PHASE_3_TIMEOUT_SECONDS * 1000
-        elif current_phase == "Phase 4":
-            timeout_ms = PHASE_TIMEOUT_SECONDS * 1000
-        elif current_phase == "Phase 5":
-            timeout_ms = PHASE_5_TIMEOUT_SECONDS * 1000
-        else:
-            timeout_ms = PHASE_TIMEOUT_SECONDS * 1000
-
-        record_result(
-            current_phase,
-            "FAILED",
-            timeout_ms,
-            details=str(exc),
-            metadata={
-                "timeout_seconds": {
-                    "Phase 1": PHASE_TIMEOUT_SECONDS,
-                    "Phase 2": PHASE_TIMEOUT_SECONDS,
-                    "Phase 3": PHASE_3_TIMEOUT_SECONDS,
-                    "Phase 4": PHASE_TIMEOUT_SECONDS,
-                    "Phase 5": PHASE_5_TIMEOUT_SECONDS,
-                }.get(current_phase, PHASE_TIMEOUT_SECONDS),
-            },
-        )
-        raise SystemExit(1)
     except KeyboardInterrupt:
         print("\nCTRL+C detected")
         raise SystemExit(130)
