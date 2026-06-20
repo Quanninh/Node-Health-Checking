@@ -125,16 +125,17 @@ Node Health Checking
 
 
 \begin{abstract}
-Distributed systems rely on continuous health monitoring to detect node failures, unstable links, and disconnections before they reduce system availability.
-Centralized health-checking designs simplify coordination, but they may introduce a single point of failure when the monitoring entity becomes unavailable.
-This paper presents a decentralized node health-checking system in which failure detection and topology repair are performed directly by participating nodes rather than by a central controller.
-The proposed system uses peer-to-peer monitoring with phi-accrual failure detection.
-Each node observes a fixed number of neighbors, computes a suspicion value, and compares it with a predefined threshold to identify suspicious or failed nodes and connections.
-When a failure or disconnection is detected, the system attempts to repair and rewiring procedures to restore the network structure.
-Each node attempts to maintain a fixed number of neighbors, while a joining procedure allows new nodes to enter the network and become part of the monitoring topology.
-A prototype was implemented and tested with joining, termination, disconnection, and unstable-connection scenarios on various types of devices.
-The results show that the proposed design reduces dependency on a central monitoring entity and supports fault-tolerant health checking in the tested decentralized setting.
-
+Traditional distributed systems often rely on centralized heartbeat-based mechanisms to monitor node health and maintain membership information. 
+While such approaches simplify coordination and system management, they introduce several limitations, including false-positive failure detections, single points of failure, and scalability bottlenecks. 
+This study addresses the challenge of designing a decentralized overlay network that mitigates these limitations while maintaining connectivity and resilience. 
+To achieve this objective, we propose a decentralized membership management framework composed of three key components. 
+First, we introduce FINDING NEMO, a neighbor discovery algorithm that integrates a join-and-evict strategy to distribute connections among newly joining peers while preserving bounded network density and randomness in topology formation. 
+Second, we combine the SWIM protocol with phi-accrual failure detection to improve the accuracy and adaptability of node health monitoring. 
+Third, we develop CHUALANH, a self-healing rewiring mechanism that restores connectivity by coordinating topology repairs among under-connected and sufficiently connected nodes. 
+Experimental evaluation demonstrates the feasibility of the proposed framework and shows that it can maintain decentralized network organization while supporting dynamic membership changes and failure recovery. 
+The results indicate that the combination of adaptive failure detection, structured neighbor discovery, and coordinated rewiring contributes to a resilient and balanced overlay topology.
+In conclusion, the proposed framework offers a practical decentralized alternative to traditional centralized membership management approaches. 
+While the results are promising, further large-scale experimentation is required to evaluate its performance under higher levels of churn and network scale.
 \end{abstract}
 
 \begin{IEEEkeywords}
