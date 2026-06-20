@@ -93,6 +93,9 @@ public class NodeServer {
                 """.formatted(nodeId, LocalDateTime.now());
 
         int statusCode = (connectionManager != null && connectionManager.containsNode(senderNodeId)) ? 200 : 225;
+        if (statusCode == 225) {
+            Console.logWarning(senderNodeId + " is not in my neighbor list. sending code 225 to remove.");
+        }
 
         sendResponse(exchange, statusCode, responseJson);
     }
@@ -119,7 +122,8 @@ public class NodeServer {
 
         NodeAddress targetNode = new NodeAddress(targetNodeId, targetHost, targetPort);
 
-        boolean ackReceived = nodeClient.ping(targetNode).join();
+        int targetStatusCode = nodeClient.ping(targetNode).join();
+        boolean ackReceived = targetStatusCode >= 200 && targetStatusCode < 300;
 
         String responseJson = """
                 {

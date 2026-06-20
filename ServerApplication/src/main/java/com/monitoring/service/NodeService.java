@@ -17,7 +17,7 @@ import com.monitoring.repository.NodeRepository;
 @Service
 public class NodeService {
 
-    private static final long NODE_TIMEOUT_SECONDS = 10;
+    private static final long NODE_TIMEOUT_SECONDS = 30;
 
     @Autowired
     private NodeRepository nodeRepository;

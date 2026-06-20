@@ -9,7 +9,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import com.monitoring.agent.constant.Constant;
-import com.monitoring.agent.node.connection.ConnectionManager;
 import com.monitoring.agent.util.Console;
 
 /**
@@ -20,7 +19,7 @@ public class NodeClient {
     private final String localNodeId;
     private final int ackTimeoutSeconds;
     private final HttpClient httpClient;
-    private ConnectionManager connectionManager;
+    // private ConnectionManager connectionManager;
 
     public NodeClient(String localNodeId, int ackTimeoutSeconds) {
         this.localNodeId = localNodeId;
@@ -30,9 +29,9 @@ public class NodeClient {
                 .build();
     }
 
-    public void setConnectionManager(ConnectionManager connectionManager) {
-        this.connectionManager = connectionManager;
-    }
+    // public void setConnectionManager(ConnectionManager connectionManager) {
+    // this.connectionManager = connectionManager;
+    // }
 
     /**
      * Sends a PING using HTTP to the target node and waits for the response.
@@ -40,7 +39,7 @@ public class NodeClient {
      * @param targetNode the target node
      * @return when the response arrives, true if status code is success
      */
-    public CompletableFuture<Boolean> ping(NodeAddress targetNode) {
+    public CompletableFuture<Integer> ping(NodeAddress targetNode) {
         String json = """
                 {
                   "type": "PING",
@@ -61,15 +60,16 @@ public class NodeClient {
                 .sendAsync(request, HttpResponse.BodyHandlers.ofString())
                 .orTimeout(ackTimeoutSeconds, TimeUnit.SECONDS)
                 .thenApply(response -> {
-                    if (response.statusCode() == 225) {
-                        connectionManager.remove(targetNode.nodeId(),
-                                "The ping target should not be a neighbor of " + localNodeId);
-                        // return false;
-                    }
-
-                    return response.statusCode() >= 200 && response.statusCode() < 300;
+                    // if (response.statusCode() == 225) {
+                    // connectionManager.remove(targetNode.nodeId(),
+                    // "The ping target should not be a neighbor of " + localNodeId);
+                    // // return false;
+                    // }
+                    Console.log(
+                            "[PING CLIENT] target=" + targetNode.nodeId() + ", statusCode=" + response.statusCode());
+                    return response.statusCode();
                 })
-                .exceptionally(error -> false);
+                .exceptionally(error -> -1);
     }
 
     /**

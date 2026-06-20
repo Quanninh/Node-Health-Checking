@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.monitoring.agent.constant.Constant;
 import static com.monitoring.agent.constant.Constant.UNREACHABLE_CLEANUP_INTERVAL_SECONDS;
+import com.monitoring.agent.node.connection.ConnectionManager;
 import com.monitoring.agent.node.connection.NeighborDirectory;
 import com.monitoring.agent.node.recovery.NetworkTopologyCache;
 import com.monitoring.agent.node.recovery.RecoveryUDPService;
@@ -31,6 +32,7 @@ public class FailureDetector {
     private final ScheduledExecutorService scheduler;
     private final double unreachableThreshold;
     private final NetworkTopologyCache networkTopologyCache;
+    private final ConnectionManager connectionManager;
 
     public FailureDetector(
             String localNodeId,
@@ -42,7 +44,7 @@ public class FailureDetector {
             RecoveryUDPService recoveryUdpService,
             int probeIntervalSeconds,
             double unreachableThreshold,
-            NetworkTopologyCache networkTopologyCache) {
+            NetworkTopologyCache networkTopologyCache, ConnectionManager connectionManager) {
         this.localNodeId = localNodeId;
         this.neighborDirectory = neighborDirectory;
         this.nodeClient = nodeClient;
@@ -54,6 +56,7 @@ public class FailureDetector {
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
         this.unreachableThreshold = unreachableThreshold;
         this.networkTopologyCache = networkTopologyCache;
+        this.connectionManager = connectionManager;
     }
 
     /**
@@ -106,18 +109,28 @@ public class FailureDetector {
         Optional<NodeAddress> selectedTarget = neighborDirectory.nextTargetNode();
 
         if (selectedTarget.isEmpty()) {
-            Console.log("No reachable neighbor nodes configured. Nothing to ping.", Constant.ORANGE);
+            Console.logWarning("No reachable neighbor nodes configured. Nothing to ping.");
             return;
         }
 
         NodeAddress targetNode = selectedTarget.get();
-
         long pingSendTime = System.currentTimeMillis();
-
         Console.log("Node " + localNodeId + " directly pings " + targetNode.nodeId());
 
-        nodeClient.ping(targetNode).thenAccept(ackReceived -> {
-            if (ackReceived) {
+        nodeClient.ping(targetNode).thenAccept(statusCode -> {
+            Console.log("[DIRECT PING RESULT] target=" + targetNode.nodeId() + ", statusCode=" + statusCode);
+
+            if (statusCode == 225) {
+                Console.logWarning(targetNode.nodeId() + " reports that " + localNodeId
+                        + " is not its neighbor. Removing stale edge.");
+                try {
+                    connectionManager.remove(targetNode.nodeId(), "Ping target returned status code 225");
+                    Console.logWarning("Removed stale neighbor " + targetNode.nodeId());
+                } catch (Exception exception) {
+                    Console.logError("Failed to remove stale neighbor " + targetNode.nodeId() + ": " + exception);
+                }
+                return;
+            } else if (statusCode >= 200 && statusCode < 300) {
                 handleAckReceived(targetNode, "direct ping", pingSendTime);
                 printLocalNodeStates();
                 Console.log("ACK received!");

@@ -3,6 +3,7 @@ import json
 import random
 import subprocess
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -14,7 +15,7 @@ JAR_PATH = SCRIPT_DIR / "node-agent-1.0.jar"
 LOG_DIR = SCRIPT_DIR / "logs"
 RESULTS_CSV = SCRIPT_DIR / "results.csv"
 
-ADVERTISE_HOST = "10.154.93.32"
+ADVERTISE_HOST = "192.168.1.6"
 MULTICAST_INTERFACE = "wireless_32768"
 
 MAX_NEIGHBORS = 4
@@ -39,11 +40,70 @@ results: List[Dict[str, Any]] = []
 next_node_index = 0
 session = requests.Session()
 
+RESULT_FIELDNAMES = [
+    "timestamp",
+    "phase",
+    "status",
+    "elapsed_ms",
+    "initial_nodes",
+    "added_node_count",
+    "max_neighbors",
+    "details",
+    "edge_case_note",
+    "failed_nodes_count",
+    "metadata",
+]
+
+
+def current_timestamp() -> str:
+    """Return the current local date and time with the UTC offset."""
+    return datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def log(message: str = "") -> None:
+    """Print an evaluation log message prefixed with the local date and time."""
+    timestamp = datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %z")
+    if message.startswith("\n"):
+        print()
+        message = message[1:]
+    print(f"[{timestamp}] {message}")
+
+
+def ensure_results_csv_schema() -> None:
+    """Add the timestamp column to an existing results.csv without losing old rows."""
+    if not RESULTS_CSV.exists() or RESULTS_CSV.stat().st_size == 0:
+        return
+
+    with RESULTS_CSV.open("r", newline="", encoding="utf-8") as source_file:
+        reader = csv.DictReader(source_file)
+        existing_fieldnames = reader.fieldnames or []
+
+        if "timestamp" in existing_fieldnames:
+            return
+
+        existing_rows = list(reader)
+
+    temporary_path = RESULTS_CSV.with_suffix(".csv.tmp")
+    with temporary_path.open("w", newline="", encoding="utf-8") as target_file:
+        writer = csv.DictWriter(
+            target_file,
+            fieldnames=RESULT_FIELDNAMES,
+            extrasaction="ignore",
+        )
+        writer.writeheader()
+
+        for row in existing_rows:
+            row["timestamp"] = ""
+            writer.writerow(row)
+
+    temporary_path.replace(RESULTS_CSV)
+
 
 def ensure_environment() -> None:
     if not JAR_PATH.exists():
         raise FileNotFoundError(f"Jar not found: {JAR_PATH}")
     LOG_DIR.mkdir(parents=True, exist_ok=True)
+    ensure_results_csv_schema()
 
 
 def api_get(path: str, timeout: float = 5.0) -> Optional[Any]:
@@ -221,7 +281,7 @@ def start_node(node_id: str) -> None:
             f"{node_id} exited immediately with code {process.returncode}. Check {node_log_path}"
         )
 
-    print(f"{node_id} started")
+    log(f"{node_id} started")
 
 
 def kill_node(node_id: str) -> None:
@@ -231,7 +291,7 @@ def kill_node(node_id: str) -> None:
 
     process: subprocess.Popen = info["process"]
     if process.poll() is None:
-        print(f"Killing {node_id}")
+        log(f"Killing {node_id}")
         try:
             process.terminate()
         except Exception:
@@ -259,12 +319,12 @@ def kill_node(node_id: str) -> None:
 
 
 def kill_all_nodes() -> None:
-    print("\nShutting down all nodes...")
+    log("\nShutting down all nodes...")
     for node_id in list(processes.keys()):
         try:
             kill_node(node_id)
         except Exception as exc:
-            print(f"Failed to stop {node_id}: {exc}")
+            log(f"Failed to stop {node_id}: {exc}")
 
     for info in list(processes.values()):
         log_file = info.get("log_file")
@@ -279,24 +339,11 @@ def kill_all_nodes() -> None:
 
 
 def append_result_row(row: Dict[str, Any]) -> None:
-    fieldnames = [
-        "phase",
-        "status",
-        "elapsed_ms",
-        "initial_nodes",
-        "added_node_count",
-        "max_neighbors",
-        "details",
-        "edge_case_note",
-        "failed_nodes_count",
-        "metadata",
-    ]
-
-    file_exists = RESULTS_CSV.exists()
+    file_exists = RESULTS_CSV.exists() and RESULTS_CSV.stat().st_size > 0
 
     with RESULTS_CSV.open("a", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
-            f, fieldnames=fieldnames, extrasaction="ignore")
+            f, fieldnames=RESULT_FIELDNAMES, extrasaction="ignore")
         if not file_exists:
             writer.writeheader()
         writer.writerow(row)
@@ -315,6 +362,7 @@ def record_result(
     failed_nodes_count: int = 0,
 ) -> None:
     row = {
+        "timestamp": current_timestamp(),
         "phase": phase,
         "status": status,
         "elapsed_ms": "" if elapsed_ms is None else f"{elapsed_ms:.0f}",
@@ -332,7 +380,7 @@ def record_result(
 
 def countdown_sleep(seconds: int, label: str) -> None:
     for remaining in range(seconds, 0, -1):
-        print(f"[{label}] {remaining}s remaining")
+        log(f"[{label}] {remaining}s remaining")
         time.sleep(1)
 
 
@@ -359,16 +407,16 @@ def wait_for_condition(
         if ok:
             elapsed = time.monotonic() - start
             if note:
-                print(f"[{label}] {note}")
+                log(f"[{label}] {note}")
             return elapsed, False, note, failed_nodes
 
         elapsed = time.monotonic() - start
         if elapsed >= timeout_seconds:
-            print(f"[{label}] TIMEOUT after {timeout_seconds}s")
+            log(f"[{label}] TIMEOUT after {timeout_seconds}s")
             return elapsed, True, last_note, last_failed_nodes
 
         if elapsed >= next_progress_mark:
-            print(
+            log(
                 f"[{label}] {int(next_progress_mark)}s / {timeout_seconds}s elapsed")
             next_progress_mark += progress_interval_seconds
 
@@ -388,7 +436,7 @@ def start_initial_cluster() -> List[str]:
 def run_phase_1() -> Tuple[float, bool, Optional[str], List[str]]:
     phase_name = "Phase 1"
     expected_active = INITIAL_NODE_COUNT
-    print(
+    log(
         f"\n{phase_name}: waiting for {expected_active} active nodes to reach MAX_NEIGHBORS")
 
     def condition() -> ConditionResult:
@@ -403,13 +451,13 @@ def run_phase_1() -> Tuple[float, bool, Optional[str], List[str]]:
 
     elapsed, timed_out, note, deficient_nodes = wait_for_condition(
         phase_name, condition, PHASE_TIMEOUT_SECONDS)
-    print(f"{phase_name} completed in {elapsed:.2f}s")
+    log(f"{phase_name} completed in {elapsed:.2f}s")
     return elapsed, timed_out, note, deficient_nodes
 
 
 def run_phase_2(victim_id: str) -> Tuple[float, bool, Optional[str], List[str]]:
     phase_name = "Phase 2"
-    print(
+    log(
         f"\n{phase_name}: killing {victim_id} and waiting for first new failure report")
 
     baseline_report_id = current_max_failure_report_id()
@@ -422,45 +470,70 @@ def run_phase_2(victim_id: str) -> Tuple[float, bool, Optional[str], List[str]]:
     elapsed_since_kill, timed_out, _, _ = wait_for_condition(
         phase_name, condition, PHASE_TIMEOUT_SECONDS)
     total_elapsed = time.monotonic() - killed_at
-    print(f"{phase_name} completed in {total_elapsed:.2f}s")
+    log(f"{phase_name} completed in {total_elapsed:.2f}s")
     return total_elapsed, timed_out, None, []
 
 
 def run_phase_3(victim_id: str, expected_active_after_repair: int) -> Tuple[float, bool, Optional[str], List[str]]:
     phase_name = "Phase 3"
-    print(
-        f"\n{phase_name}: waiting until {victim_id} is removed from all neighbors and active nodes return to MAX_NEIGHBORS"
+    log(
+        f"\n{phase_name}: waiting until {victim_id} is removed from all neighbors and surviving nodes return to MAX_NEIGHBORS"
     )
 
     def condition() -> ConditionResult:
         nodes = get_all_nodes()
 
-        ok, note, deficient_nodes = neighbor_completion_check(
-            nodes, expected_active_after_repair)
-        if not ok:
+        # The dashboard/database may keep the killed node marked as UP for a while.
+        # Phase 2 has already confirmed its failure report, so Phase 3 should judge
+        # convergence using only the surviving active nodes.
+        surviving_nodes = [
+            node
+            for node in active_nodes(nodes)
+            if str(node.get("id") or "") != victim_id
+        ]
+
+        deficient_nodes = [
+            str(node.get("id") or "")
+            for node in surviving_nodes
+            if len(node_neighbors(node)) != MAX_NEIGHBORS
+        ]
+
+        if len(surviving_nodes) != expected_active_after_repair:
+            return False, (
+                f"Expected {expected_active_after_repair} surviving active nodes, "
+                f"but found {len(surviving_nodes)}"
+            ), deficient_nodes
+
+        if deficient_nodes:
             return False, None, deficient_nodes
 
-        if not node_is_dead_recorded(victim_id):
-            return False, None, deficient_nodes
+        nodes_referencing_victim = [
+            str(node.get("id") or "")
+            for node in surviving_nodes
+            if victim_id in node_neighbors(node)
+        ]
+        if nodes_referencing_victim:
+            return False, (
+                f"{victim_id} is still referenced by: "
+                f"{', '.join(nodes_referencing_victim)}"
+            ), deficient_nodes
 
-        for node in active_nodes(nodes):
-            if victim_id in node_neighbors(node):
-                return False, None, deficient_nodes
+        if not all_active_neighbors_are_mutual(surviving_nodes):
+            return False, "Surviving neighbor relationships are not mutual", deficient_nodes
 
-        if not all_active_neighbors_are_mutual(nodes):
-            return False, None, deficient_nodes
-
-        return True, note, deficient_nodes
+        # wait_for_condition() returns immediately when this becomes True,
+        # so main() proceeds directly to the cooldown before Phase 4.
+        return True, None, []
 
     elapsed, timed_out, note, deficient_nodes = wait_for_condition(
         phase_name, condition, PHASE_3_TIMEOUT_SECONDS)
-    print(f"{phase_name} completed in {elapsed:.2f}s")
+    log(f"{phase_name} completed in {elapsed:.2f}s")
     return elapsed, timed_out, note, deficient_nodes
 
 
 def run_phase_4(expected_active_after_addition: int) -> Tuple[float, bool, List[str], Optional[str], List[str]]:
     phase_name = "Phase 4"
-    print(f"\n{phase_name}: adding {ADDED_NODE_COUNT} new nodes")
+    log(f"\n{phase_name}: adding {ADDED_NODE_COUNT} new nodes")
 
     start_time = time.monotonic()
     new_node_ids: List[str] = []
@@ -483,7 +556,7 @@ def run_phase_4(expected_active_after_addition: int) -> Tuple[float, bool, List[
     elapsed_wait, timed_out, note, deficient_nodes = wait_for_condition(
         phase_name, condition, PHASE_TIMEOUT_SECONDS)
     total_elapsed = time.monotonic() - start_time
-    print(f"{phase_name} completed in {total_elapsed:.2f}s")
+    log(f"{phase_name} completed in {total_elapsed:.2f}s")
     return total_elapsed, timed_out, new_node_ids, note, deficient_nodes
 
 
@@ -499,7 +572,7 @@ def running_dashboard_nodes() -> List[str]:
 
 def run_phase_5(victim_ids: List[str], expected_active_after_failures: int) -> Tuple[float, bool, Optional[str], List[str]]:
     phase_name = "Phase 5"
-    print(f"\n{phase_name}: killing 6 random nodes and waiting for all of them to be reported dead")
+    log(f"\n{phase_name}: killing 6 random nodes and waiting for all of them to be reported dead")
 
     baseline_report_id = current_max_failure_report_id()
     victims = list(victim_ids)
@@ -530,7 +603,7 @@ def run_phase_5(victim_ids: List[str], expected_active_after_failures: int) -> T
     elapsed_wait, timed_out, note, deficient_nodes = wait_for_condition(
         phase_name, condition, PHASE_5_TIMEOUT_SECONDS)
     total_elapsed = time.monotonic() - start_time
-    print(f"{phase_name} completed in {total_elapsed:.2f}s")
+    log(f"{phase_name} completed in {total_elapsed:.2f}s")
     return total_elapsed, timed_out, note, deficient_nodes
 
 
@@ -538,7 +611,7 @@ def run_phase_r(deficient_nodes: List[str], expected_active_count: int) -> Tuple
     phase_name = "Phase R"
     nodes_to_restart = list(dict.fromkeys(deficient_nodes))
 
-    print(f"\n{phase_name}: restarting {len(nodes_to_restart)} deficient node(s)")
+    log(f"\n{phase_name}: restarting {len(nodes_to_restart)} deficient node(s)")
 
     for node_id in nodes_to_restart:
         kill_node(node_id)
@@ -564,7 +637,7 @@ def run_phase_r(deficient_nodes: List[str], expected_active_count: int) -> Tuple
         condition,
         PHASE_R_TIMEOUT_SECONDS,
     )
-    print(f"{phase_name} completed in {elapsed:.2f}s")
+    log(f"{phase_name} completed in {elapsed:.2f}s")
     return elapsed, timed_out, note, deficient_nodes_now
 
 
@@ -620,7 +693,7 @@ def main() -> None:
     current_phase = "Startup"
 
     try:
-        print("Starting initial cluster...")
+        log("Starting initial cluster...")
         start_initial_cluster()
         initial_total = INITIAL_NODE_COUNT
 
@@ -760,7 +833,7 @@ def main() -> None:
 
         random.shuffle(eligible_victims)
         phase_5_victims = eligible_victims[:ADDED_NODE_COUNT]
-        print(f"Phase 5 victims: {', '.join(phase_5_victims)}")
+        log(f"Phase 5 victims: {', '.join(phase_5_victims)}")
 
         phase_5_expected_active = phase_4_expected_active - ADDED_NODE_COUNT
         phase_5_elapsed, phase_5_timed_out, phase_5_note, phase_5_deficient_nodes = run_phase_5(
@@ -794,10 +867,10 @@ def main() -> None:
         maybe_run_phase_r("Phase 5", phase_5_timed_out,
                           phase_5_deficient_nodes, phase_5_expected_active)
 
-        print("\nAll phases completed successfully.")
+        log("\nAll phases completed successfully.")
 
     except KeyboardInterrupt:
-        print("\nCTRL+C detected")
+        log("\nCTRL+C detected")
         raise SystemExit(130)
     finally:
         kill_all_nodes()

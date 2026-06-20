@@ -149,7 +149,7 @@ public class NodeAgent {
                 recoveryUdpService,
                 config.probeIntervalSeconds(),
                 config.unreachableThreshold(),
-                networkTopologyCache);
+                networkTopologyCache, connectionManager);
 
         crackingServer = new NodeHttpServer(config.nodeId(), config.crackingPort(), config.dashboardUrl());
 

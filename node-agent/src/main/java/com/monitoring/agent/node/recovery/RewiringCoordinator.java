@@ -218,6 +218,12 @@ public final class RewiringCoordinator {
      * @return
      */
     private boolean runFullRewiring(NodeAddress defA, NodeAddress defB) {
+        // Not the leader -> skip
+        if (!localAddress.nodeId().equals(electLeader(defA, defB).nodeId())) {
+            Console.log("[REWIRE] I'm not a leader -> skip");
+            return false;
+        }
+
         String requestId = UUID.randomUUID().toString();
 
         List<NodeAddress> defANeighborsAtRequestTime = connectionManager.neighborAddresses();
@@ -246,12 +252,6 @@ public final class RewiringCoordinator {
 
         if (ack.type() != RecoveryMessageType.REWIRE_SESSION_ACK) {
             Console.log("[REWIRE] " + ack.type() + " is not REWIRE_SESSION_ACK");
-            return false;
-        }
-
-        // Not the leader -> skip
-        if (!localAddress.nodeId().equals(electLeader(defA, defB).nodeId())) {
-            Console.log("[REWIRE] I'm not a leader -> skip");
             return false;
         }
 
@@ -508,15 +508,25 @@ public final class RewiringCoordinator {
             return;
         }
 
+        Console.log("[HANDLE] type=" + message.type()
+                + " sender=" + message.sender().nodeId()
+                + " recoveryId=" + message.recoveryId());
+
         if (isReply(message.type())) {
-            CompletableFuture<RewireMessage> pending = pendingReplies
-                    .remove(replyKey(message.recoveryId(), message.sender()));
+            String key = replyKey(message.recoveryId(), message.sender());
+
+            Console.log("[REPLY] key=" + key + " contains=" + pendingReplies.containsKey(key) + " size="
+                    + pendingReplies.size());
+
+            CompletableFuture<RewireMessage> pending = pendingReplies.remove(key);
 
             if (pending != null) {
                 pending.complete(message);
-                Console.log("Idk what's going on here, but pending != null and pending.complete");
+                Console.log("[REPLY] COMPLETING");
                 return;
             }
+
+            Console.log("[REPLY] NO FUTURE FOUND");
         }
 
         switch (message.type()) {
@@ -687,12 +697,7 @@ public final class RewiringCoordinator {
             return;
         }
 
-        boolean reservedByC = canBecomeRewiringNode(
-                message.recoveryId(),
-                message.nodeC(),
-                d,
-                message.defB(),
-                d);
+        boolean reservedByC = canBecomeRewiringNode(message.recoveryId(), message.nodeC(), d, message.defB(), d);
 
         if (!reservedByC) {
             sendOnly(message.sender(), reply(message, RecoveryMessageType.NEIGHBORS_QUERY_RESPONSE, false, null));
@@ -714,25 +719,46 @@ public final class RewiringCoordinator {
                 message.defBNeighbors(),
                 null);
 
-        // REWIRING_PROPOSE_ACK received here
-        RewireMessage dAck = null;
-        try {
-            dAck = sendAsync(d, proposal).get(ASYNC_REPLY_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            // TODO Auto-generated catch block
-            // e.printStackTrace();
-        }
+        sendAsync(d, proposal).orTimeout(ASYNC_REPLY_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS)
+                .whenComplete((dAck, exception) -> {
+                    boolean accepted = exception == null && dAck != null && dAck.status() == RewireStatus.ACCEPTED;
+                    if (!accepted) {
+                        releaseRewiringReservation(message.recoveryId());
+                        sendOnly(message.sender(), reply(message,
+                                RecoveryMessageType.NEIGHBORS_QUERY_RESPONSE,
+                                false, null));
 
-        if (dAck == null || dAck.status() != RewireStatus.ACCEPTED) {
-            releaseRewiringReservation(message.recoveryId());
+                        Console.log("Sent NEIGHBORS_QUERY_RESPONSE false because D rejected or timed out");
+                        return;
+                    }
 
-            sendOnly(message.sender(), reply(message, RecoveryMessageType.NEIGHBORS_QUERY_RESPONSE, false, null));
-            Console.log("Send NEIGHBORS_QUERY_RESPONSE false because dAck is false");
-            return;
-        }
+                    Console.log("Sent NEIGHBORS_QUERY_RESPONSE true");
 
-        Console.log("Send NEIGHBORS_QUERY_RESPONSE true");
-        sendOnly(message.sender(), reply(message, RecoveryMessageType.NEIGHBORS_QUERY_RESPONSE, true, d));
+                    sendOnly(message.sender(), reply(message, RecoveryMessageType.NEIGHBORS_QUERY_RESPONSE, true, d));
+                });
+
+        // // REWIRING_PROPOSE_ACK received here
+        // RewireMessage dAck = null;
+        // try {
+        // dAck = sendAsync(d, proposal).get(ASYNC_REPLY_TIMEOUT.toMillis(),
+        // TimeUnit.MILLISECONDS);
+        // } catch (InterruptedException | ExecutionException | TimeoutException e) {
+        // // TODO Auto-generated catch block
+        // // e.printStackTrace();
+        // }
+
+        // if (dAck == null || dAck.status() != RewireStatus.ACCEPTED) {
+        // releaseRewiringReservation(message.recoveryId());
+
+        // sendOnly(message.sender(), reply(message,
+        // RecoveryMessageType.NEIGHBORS_QUERY_RESPONSE, false, null));
+        // Console.log("Send NEIGHBORS_QUERY_RESPONSE false because dAck is false");
+        // return;
+        // }
+
+        // Console.log("Send NEIGHBORS_QUERY_RESPONSE true");
+        // sendOnly(message.sender(), reply(message,
+        // RecoveryMessageType.NEIGHBORS_QUERY_RESPONSE, true, d));
     }
 
     private void handleRewiringPropose(RewireMessage message) {
@@ -1077,11 +1103,12 @@ public final class RewiringCoordinator {
                         && message.disconnectsFrom() == null;
             }
 
-            if (recoveryRole != RecoveryRole.REWIRING_NODE) {
-                // TODO: a rewiring_node can still be part of multiple rewiring scheme
-                Console.log("Can't accept scheme request becasue " + recoveryRole + " == REWIRING_NODE", Constant.RED);
-                return false;
-            }
+            // if (recoveryRole != RecoveryRole.REWIRING_NODE) {
+            // // TODO: a rewiring_node can still be part of multiple rewiring scheme
+            // Console.log("Can't accept scheme request because " + recoveryRole + " !=
+            // REWIRING_NODE", Constant.RED);
+            // return false;
+            // }
 
             tryBecomeRewiringNode(message.recoveryId(), message.nodeC(), message.nodeD(), message.connectsTo(),
                     message.disconnectsFrom());
@@ -1156,8 +1183,7 @@ public final class RewiringCoordinator {
 
             // DEFICIENT_LEADER and DEFICIENT_FELLOW are exclusive.
             // They don't need to become REWIRING_NODE in another session.
-            if (recoveryRole == RecoveryRole.DEFICIENT_LEADER
-                    || recoveryRole == RecoveryRole.DEFICIENT_FELLOW) {
+            if (recoveryRole == RecoveryRole.DEFICIENT_LEADER || recoveryRole == RecoveryRole.DEFICIENT_FELLOW) {
                 Console.log("Already LEADER or FELLOW");
                 return false;
             }
@@ -1175,10 +1201,8 @@ public final class RewiringCoordinator {
             // TODO: It's returning false here, no one can become rewiring node because
             // existingRecoveryId didn't add anything
             if (existingRecoveryId != null && !existingRecoveryId.equals(recoveryId)) {
-                Console.log("Edge already reserved by recoveryId="
-                        + existingRecoveryId
-                        + ", current recoveryId="
-                        + recoveryId);
+                Console.log("Edge already reserved by recoveryId=" + existingRecoveryId
+                        + ", current recoveryId=" + recoveryId);
                 return false;
             }
 
