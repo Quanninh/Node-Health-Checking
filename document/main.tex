@@ -945,13 +945,6 @@ In particular, message loss or node failure during the update sequence could lea
 To mitigate this issue, the current protocol adopts a more conservative commit procedure, ensuring that topology updates are coordinated before acknowledgements are returned. 
 While temporary degree imbalance may still occur, such situations are subsequently corrected by the rewiring mechanism described later in this work.
 
-\begin{figure*}[!t]
-\centering
-\includegraphics[width=0.95\textwidth]{FINDING_NEMO_actiDi.png}
-\caption{FINDING NEMO protocol flow}
-\label{fig:FINDING_NEMO_protocol}
-\end{figure*}
-
 \subsubsection{Node Rewiring: Degree-Preserving Topology Repair (DPTR) algorithm }
 \label{subsubsec:node_deletion_code}
 \begin{enumerate}
@@ -1237,6 +1230,13 @@ public ResponseEntity<List<FailureReport>> getFailureReports() {
     \label{tab:task_distribution}
 \end{table}
 
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.95\textwidth]{FINDING_NEMO_actiDi.png}
+\caption{FINDING NEMO protocol flow}
+\label{fig:FINDING_NEMO_protocol}
+\end{figure*}
+
 \section{Evaluation \& Experimental Results}
 \label{sec:evaluation_and_experimental_results}
 
@@ -1264,4 +1264,4 @@ Summarize the final system, the main design decisions, and the experimental find
 \bibliographystyle{IEEEtran}     % Uses the IEEE citation style
 \bibliography{references}        % Links to references.bib (OMIT the ".bib" extension here)
 
- \end{document}
+\end{document}
