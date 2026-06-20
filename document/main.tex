@@ -974,10 +974,14 @@ While temporary degree imbalance may still occur, such situations are subsequent
     caption={Direct Rewiring},
     label={lst:direct_rewiring}]
     private boolean tryDirectRepair(NodeAddress defA, NodeAddress defB) {
-        String recoveryId = UUID.randomUUID().toString();
+        String recoveryId = 
+                UUID
+                    .randomUUID()
+                        .toString();
 
-        RewireMessage request = RewireMessage.of(
-                RecoveryMessageType.REWIRE_REQ_DIRECT,
+        RewireMessage request = RewireMessage
+            .of(RecoveryMessageType
+                .REWIRE_REQ_DIRECT,
                 recoveryId,
                 localAddress,
                 defA,
@@ -1011,8 +1015,9 @@ While temporary degree imbalance may still occur, such situations are subsequent
             return false;
         }
 
-        RewireMessage commit = RewireMessage.of(
-                RecoveryMessageType.REWIRE_DIRECT_COMMIT,
+        RewireMessage commit = RewireMessage
+            .of(RecoveryMessageType
+                .REWIRE_DIRECT_COMMIT,
                 recoveryId,
                 localAddress,
                 defA,
@@ -1082,9 +1087,12 @@ While temporary degree imbalance may still occur, such situations are subsequent
     \begin{lstlisting}[language=Java,
     caption={Finding Node C and D},
     label={lst:findcd}]
-    List<NodeAddress> candidateCs = selectCandidateCs( defANeighbors, defBNeighbors); 
+    List<NodeAddress> candidateCs = 
+        selectCandidateCs(
+            defANeighbors, defBNeighbors); 
     for (NodeAddress c : candidateCs) { 
-        RewireMessage response = sendAsync(c, query).get(...); 
+        RewireMessage response = 
+            sendAsync(c, query).get(...); 
         if (response != null && response.nodeD() != null) { 
             NodeAddress d = response.nodeD(); 
             if (executeScheme( recoveryId, defA, defB, c, d)) { 
