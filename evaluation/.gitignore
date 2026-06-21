@@ -2,3 +2,4 @@ log.txt
 packet_log.csv
 logs/
 old/
+__pycache__/
