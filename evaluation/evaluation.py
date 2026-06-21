@@ -13,10 +13,10 @@ API_BASE = "http://localhost:6789/api"
 SCRIPT_DIR = Path(__file__).resolve().parent
 JAR_PATH = SCRIPT_DIR / "node-agent-1.0.jar"
 LOG_DIR = SCRIPT_DIR / "logs"
-RESULTS_CSV = SCRIPT_DIR / "results.csv"
+RESULTS_CSV = SCRIPT_DIR / "results_quan.csv"
 
-ADVERTISE_HOST = "192.168.1.6"
-MULTICAST_INTERFACE = "wireless_32768"
+ADVERTISE_HOST = "192.168.1.239"
+MULTICAST_INTERFACE = "en0"
 
 MAX_NEIGHBORS = 6
 INITIAL_NODE_COUNT = 15
