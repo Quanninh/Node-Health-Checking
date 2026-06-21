@@ -1,0 +1,926 @@
+---
+title: "Node Health Checking Evaluation Report"
+author: "To Huynh Phuc"
+date: "`r format(Sys.Date(), '%d %B %Y')`"
+output:
+  html_document:
+    df_print: paged
+params:
+  csv_file: "results-copy.csv"
+---
+
+```{r setup, include=FALSE}
+required_packages <- c(
+  "tidyverse",
+  "jsonlite",
+  "lubridate",
+  "scales",
+  "knitr"
+)
+
+missing_packages <- required_packages[
+  !vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)
+]
+
+if (length(missing_packages) > 0) {
+  install.packages(
+    missing_packages,
+    repos = "https://cloud.r-project.org"
+  )
+}
+
+invisible(lapply(required_packages, library, character.only = TRUE))
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.align = "center",
+  out.width = "95%"
+)
+
+theme_set(theme_minimal(base_size = 12))
+
+phase_levels <- paste("Phase", 1:5)
+all_phase_levels <- c(phase_levels, "Phase R")
+
+safe_json_field <- function(json_text, field, default = NA) {
+  tryCatch({
+    parsed <- jsonlite::fromJSON(json_text)
+    value <- parsed[[field]]
+    if (is.null(value) || length(value) == 0) default else value[[1]]
+  }, error = function(e) default)
+}
+
+plural_nodes <- function(n) {
+  ifelse(n == 1, "node", "nodes")
+}
+```
+
+# Purpose and Classification Rules
+
+This report evaluates repeated executions of Phases 1--5 and the conditional recovery phase, Phase R.
+
+The following rules are applied consistently:
+
+1.  Phases 1--5 are treated as the main evaluation phases.
+2.  Phase R is analysed separately because it only runs after a phase requires recovery.
+3.  A row whose metadata indicates a timeout but whose `failed_nodes_count` is zero is treated as a **success** in reliability charts.
+4.  Such rows are also recorded as **logging/timing anomalies**.
+5.  Anomalous rows are excluded from completion-time statistics because the timeout duration does not reveal when convergence actually occurred.
+6.  A non-successful row is split by its reported number of failed nodes, for example, “Partial: 1 failed node” or “Partial: 2 failed nodes.”
+
+# Load and Prepare the Data
+
+```{r load-data}
+csv_path <- params$csv_file
+
+if (!file.exists(csv_path)) {
+  stop(
+    paste0(
+      "Cannot find '", csv_path, "'. ",
+      "Place the CSV file in the same folder as this R Markdown file, ",
+      "or change params$csv_file in the YAML header."
+    )
+  )
+}
+
+results_raw <- readr::read_csv(
+  csv_path,
+  show_col_types = FALSE,
+  na = c("", "NA", "null")
+)
+
+required_columns <- c(
+  "timestamp", "phase", "status", "elapsed_ms",
+  "initial_nodes", "added_node_count", "max_neighbors",
+  "details", "failed_nodes_count", "metadata"
+)
+
+missing_columns <- setdiff(required_columns, names(results_raw))
+
+if (length(missing_columns) > 0) {
+  stop(
+    paste(
+      "The CSV is missing required columns:",
+      paste(missing_columns, collapse = ", ")
+    )
+  )
+}
+
+results <- results_raw %>%
+  mutate(
+    timestamp_parsed = lubridate::ymd_hms(timestamp, quiet = TRUE),
+    phase = factor(phase, levels = all_phase_levels),
+    status = stringr::str_to_upper(stringr::str_trim(status)),
+    timed_out = purrr::map_lgl(
+      metadata,
+      ~ isTRUE(safe_json_field(.x, "timed_out", FALSE))
+    ),
+    trigger_phase = purrr::map_chr(
+      metadata,
+      ~ as.character(safe_json_field(.x, "trigger_phase", NA_character_))
+    ),
+    timeout_zero_anomaly =
+      timed_out &
+      failed_nodes_count == 0,
+    effective_success =
+      status == "PASS" |
+      timeout_zero_anomaly,
+    valid_timing_success =
+      effective_success &
+      !timeout_zero_anomaly,
+    binary_outcome = if_else(
+      effective_success,
+      "Success",
+      "Failure"
+    ),
+    outcome_category = case_when(
+      effective_success ~ "Success",
+      failed_nodes_count > 0 ~ paste0(
+        "Partial: ",
+        failed_nodes_count,
+        " failed ",
+        plural_nodes(failed_nodes_count)
+      ),
+      TRUE ~ paste0(status, ": 0 failed nodes reported")
+    ),
+    elapsed_seconds = elapsed_ms / 1000,
+    configuration = paste0(
+      initial_nodes,
+      " initial nodes, k = ",
+      max_neighbors
+    )
+  ) %>%
+  arrange(timestamp_parsed, timestamp) %>%
+  group_by(phase) %>%
+  mutate(phase_run_number = row_number()) %>%
+  ungroup()
+
+main_results <- results %>%
+  filter(phase %in% phase_levels)
+
+recovery_results <- results %>%
+  filter(phase == "Phase R")
+```
+
+```{r data-preview}
+cat(
+  "Loaded **", nrow(results), "** rows from `",
+  csv_path, "`.\n\n",
+  sep = ""
+)
+
+knitr::kable(
+  head(results_raw, 8),
+  caption = "Preview of the imported evaluation data"
+)
+```
+
+# Overall Evaluation Summary
+
+```{r overview-table}
+overview <- tibble::tibble(
+  Metric = c(
+    "Total CSV rows",
+    "Main phase executions (Phases 1-5)",
+    "Phase R executions",
+    "Effective main-phase successes",
+    "Effective main-phase failures",
+    "Timeout-with-zero-failed-node anomalies"
+  ),
+  Value = c(
+    nrow(results),
+    nrow(main_results),
+    nrow(recovery_results),
+    sum(main_results$effective_success),
+    sum(!main_results$effective_success),
+    sum(results$timeout_zero_anomaly)
+  )
+)
+
+knitr::kable(
+  overview,
+  caption = "High-level evaluation totals"
+)
+```
+
+## Number of Executions per Main Phase
+
+```{r phase-execution-counts, fig.height=4.8}
+phase_execution_counts <- main_results %>%
+  count(phase, name = "executions") %>%
+  tidyr::complete(
+    phase = factor(phase_levels, levels = phase_levels),
+    fill = list(executions = 0)
+  )
+
+knitr::kable(
+  phase_execution_counts,
+  caption = "Number of executions for Phases 1-5"
+)
+
+ggplot(
+  phase_execution_counts,
+  aes(x = phase, y = executions)
+) +
+  geom_col() +
+  geom_text(
+    aes(label = executions),
+    vjust = -0.35,
+    size = 4
+  ) +
+  scale_y_continuous(
+    expand = expansion(mult = c(0, 0.10))
+  ) +
+  labs(
+    title = "Execution Count by Main Phase",
+    x = NULL,
+    y = "Number of executions"
+  )
+```
+
+## Effective Success Rate by Main Phase
+
+```{r overall-success-rate, fig.height=5}
+main_binary_summary <- main_results %>%
+  count(phase, binary_outcome, name = "runs") %>%
+  group_by(phase) %>%
+  mutate(share = runs / sum(runs)) %>%
+  ungroup()
+
+ggplot(
+  main_binary_summary,
+  aes(x = phase, y = share, fill = binary_outcome)
+) +
+  geom_col(position = "fill") +
+  geom_text(
+    aes(label = paste0(runs, "\n", scales::percent(share, accuracy = 0.1))),
+    position = position_fill(vjust = 0.5),
+    size = 3.4
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Effective Success and Failure Rate by Phase",
+    subtitle = "Timeout rows with zero failed nodes are counted as successes",
+    x = NULL,
+    y = "Share of executions",
+    fill = "Outcome"
+  )
+```
+
+# Phase-by-Phase Outcomes and Successful Completion Times
+
+Each phase receives:
+
+- a pie chart separating successes from partial results by the number of failed nodes; and
+- a completion-time distribution for successful, non-anomalous runs.
+
+```{r phase-by-phase, results='asis', fig.width=8, fig.height=5}
+for (phase_name in phase_levels) {
+  cat("\n\n## ", phase_name, "\n\n", sep = "")
+
+  phase_data <- main_results %>%
+    filter(as.character(phase) == phase_name)
+
+  outcome_data <- phase_data %>%
+    count(outcome_category, name = "runs") %>%
+    mutate(
+      share = runs / sum(runs),
+      label = paste0(
+        runs,
+        "\n",
+        scales::percent(share, accuracy = 0.1)
+      )
+    )
+
+  cat("### Outcome distribution\n\n")
+
+  outcome_plot <- ggplot(
+    outcome_data,
+    aes(x = "", y = runs, fill = outcome_category)
+  ) +
+    geom_col(width = 1) +
+    coord_polar(theta = "y") +
+    geom_text(
+      aes(label = label),
+      position = position_stack(vjust = 0.5),
+      size = 3.5
+    ) +
+    labs(
+      title = paste(phase_name, "Outcome Distribution"),
+      fill = "Outcome"
+    ) +
+    theme_void(base_size = 12) +
+    theme(
+      legend.position = "bottom",
+      plot.title = element_text(hjust = 0.5)
+    )
+
+  print(outcome_plot)
+
+  cat("\n\n### Successful completion-time distribution\n\n")
+
+  timing_data <- phase_data %>%
+    filter(valid_timing_success)
+
+  if (nrow(timing_data) == 0) {
+    cat("No valid successful completion-time observations are available.\n\n")
+  } else {
+    bin_count <- max(5, min(15, ceiling(sqrt(nrow(timing_data)))))
+    median_time <- median(timing_data$elapsed_seconds, na.rm = TRUE)
+
+    timing_plot <- ggplot(
+      timing_data,
+      aes(x = elapsed_seconds)
+    ) +
+      geom_histogram(
+        bins = bin_count,
+        boundary = 0
+      ) +
+      geom_vline(
+        xintercept = median_time,
+        linetype = "dashed",
+        linewidth = 0.8
+      ) +
+      annotate(
+        "text",
+        x = median_time,
+        y = Inf,
+        label = paste0(
+          "Median = ",
+          round(median_time, 2),
+          " s"
+        ),
+        vjust = 1.5,
+        hjust = -0.05,
+        size = 3.6
+      ) +
+      labs(
+        title = paste(phase_name, "Successful Completion Times"),
+        subtitle = "Anomalous timeout-with-zero-failure rows are excluded",
+        x = "Elapsed time (seconds)",
+        y = "Number of runs"
+      )
+
+    print(timing_plot)
+  }
+
+  cat("\n\n### Numerical summary\n\n")
+
+  phase_summary <- tibble::tibble(
+    Executions = nrow(phase_data),
+    `Effective successes` = sum(phase_data$effective_success),
+    `Effective failures` = sum(!phase_data$effective_success),
+    `Success rate` = scales::percent(
+      mean(phase_data$effective_success),
+      accuracy = 0.1
+    ),
+    `Valid timing observations` = nrow(timing_data),
+    `Median successful time (s)` = ifelse(
+      nrow(timing_data) > 0,
+      round(median(timing_data$elapsed_seconds, na.rm = TRUE), 2),
+      NA_real_
+    )
+  )
+
+  print(
+    knitr::kable(
+      phase_summary,
+      caption = paste(phase_name, "summary")
+    )
+  )
+
+  cat("\n\n")
+}
+```
+
+# Successful Completion-Time Comparison
+
+## Summary Statistics
+
+```{r timing-summary-table}
+successful_timing_summary <- main_results %>%
+  filter(valid_timing_success) %>%
+  group_by(phase) %>%
+  summarise(
+    successful_runs = n(),
+    mean_seconds = mean(elapsed_seconds, na.rm = TRUE),
+    median_seconds = median(elapsed_seconds, na.rm = TRUE),
+    p95_seconds = quantile(
+      elapsed_seconds,
+      probs = 0.95,
+      na.rm = TRUE,
+      names = FALSE
+    ),
+    minimum_seconds = min(elapsed_seconds, na.rm = TRUE),
+    maximum_seconds = max(elapsed_seconds, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    across(
+      c(
+        mean_seconds,
+        median_seconds,
+        p95_seconds,
+        minimum_seconds,
+        maximum_seconds
+      ),
+      ~ round(.x, 2)
+    )
+  )
+
+knitr::kable(
+  successful_timing_summary,
+  caption = "Successful completion-time summary by phase"
+)
+```
+
+## Distribution Comparison
+
+```{r timing-boxplot, fig.height=5.5}
+ggplot(
+  main_results %>% filter(valid_timing_success),
+  aes(x = phase, y = elapsed_seconds)
+) +
+  geom_boxplot(
+    outlier.shape = NA,
+    alpha = 0.25
+  ) +
+  geom_jitter(
+    aes(
+      color = initial_nodes,
+      size = max_neighbors
+    ),
+    width = 0.16,
+    alpha = 0.6
+  ) +
+  scale_color_gradient(
+    low = "skyblue",
+    high = "darkblue",
+    name = "Initial nodes"
+  ) +
+  scale_size_continuous(
+    name = "Maximum neighbors",
+    range = c(1.5, 4)
+  ) +
+  labs(
+    title = "Successful Completion-Time Distribution Across Phases",
+    subtitle = paste(
+      "Point color represents the initial node count;",
+      "point size represents the maximum neighbor count"
+    ),
+    x = NULL,
+    y = "Elapsed time (seconds)"
+  ) +
+  theme(
+    legend.position = "right"
+  )
+```
+
+## Performance Over Repeated Runs
+
+This plot helps reveal warm-up effects, system slowdown, unstable periods, or changes between configurations.
+
+```{r time-trend, fig.height=7}
+ggplot(
+  main_results %>% filter(valid_timing_success),
+  aes(
+    x = phase_run_number,
+    y = elapsed_seconds
+  )
+) +
+  geom_point(alpha = 0.55, size = 1.5) +
+  geom_smooth(
+    method = "loess",
+    se = FALSE,
+    linewidth = 0.8
+  ) +
+  facet_wrap(
+    ~ phase,
+    scales = "free_y",
+    ncol = 1
+  ) +
+  labs(
+    title = "Successful Completion Time Over Repeated Executions",
+    x = "Execution number within phase",
+    y = "Elapsed time (seconds)"
+  )
+```
+
+# Phase R Recovery Analysis
+
+Phase R is conditional and therefore should not be interpreted as having the same workload as Phases 1--5.
+
+## Phase R Success/Failure Pie Chart
+
+```{r phase-r-pie, fig.height=5.5}
+phase_r_binary <- recovery_results %>%
+  count(binary_outcome, name = "runs") %>%
+  mutate(
+    share = runs / sum(runs),
+    label = paste0(
+      runs,
+      "\n",
+      scales::percent(share, accuracy = 0.1)
+    )
+  )
+
+ggplot(
+  phase_r_binary,
+  aes(x = "", y = runs, fill = binary_outcome)
+) +
+  geom_col(width = 1) +
+  coord_polar(theta = "y") +
+  geom_text(
+    aes(label = label),
+    position = position_stack(vjust = 0.5),
+    size = 4
+  ) +
+  labs(
+    title = "Phase R Effective Success and Failure",
+    subtitle = "Timeout rows with zero failed nodes are counted as successes",
+    fill = "Outcome"
+  ) +
+  theme_void(base_size = 12) +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```
+
+## Phase R Outcomes by Triggering Phase
+
+```{r phase-r-trigger-summary, fig.height=5.5}
+phase_r_by_trigger <- recovery_results %>%
+  mutate(
+    trigger_phase = replace_na(trigger_phase, "Unknown trigger")
+  ) %>%
+  group_by(trigger_phase) %>%
+  summarise(
+    executions = n(),
+    successes = sum(effective_success),
+    failures = sum(!effective_success),
+    success_rate = mean(effective_success),
+    median_valid_time_seconds = ifelse(
+      sum(valid_timing_success) > 0,
+      median(
+        elapsed_seconds[valid_timing_success],
+        na.rm = TRUE
+      ),
+      NA_real_
+    ),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    success_rate_label = scales::percent(
+      success_rate,
+      accuracy = 0.1
+    ),
+    median_valid_time_seconds = round(
+      median_valid_time_seconds,
+      2
+    )
+  )
+
+knitr::kable(
+  phase_r_by_trigger,
+  caption = "Phase R effectiveness by triggering phase"
+)
+
+ggplot(
+  recovery_results %>%
+    mutate(trigger_phase = replace_na(trigger_phase, "Unknown trigger")),
+  aes(x = trigger_phase, fill = binary_outcome)
+) +
+  geom_bar(position = "fill") +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Phase R Outcome by Triggering Phase",
+    x = "Triggering phase",
+    y = "Share of Phase R executions",
+    fill = "Outcome"
+  )
+```
+
+## Phase R Failure Severity
+
+```{r phase-r-failure-severity}
+phase_r_failure_severity <- recovery_results %>%
+  filter(!effective_success) %>%
+  count(failed_nodes_count, name = "runs") %>%
+  arrange(failed_nodes_count)
+
+if (nrow(phase_r_failure_severity) == 0) {
+  cat("No effective Phase R failures were recorded.")
+} else {
+  knitr::kable(
+    phase_r_failure_severity,
+    caption = "Number of failed nodes remaining after unsuccessful Phase R executions"
+  )
+}
+```
+
+# Configuration-Based Reliability
+
+The following analysis compares outcomes using `initial_nodes` and `max_neighbors`. Because the dataset may contain only some combinations, the report shows only configurations that actually occurred.
+
+## Configuration Summary Table
+
+```{r configuration-table}
+configuration_summary <- main_results %>%
+  group_by(
+    initial_nodes,
+    max_neighbors
+  ) %>%
+  summarise(
+    executions = n(),
+    successes = sum(effective_success),
+    failures = sum(!effective_success),
+    success_rate = mean(effective_success),
+    median_valid_time_seconds = ifelse(
+      sum(valid_timing_success) > 0,
+      median(
+        elapsed_seconds[valid_timing_success],
+        na.rm = TRUE
+      ),
+      NA_real_
+    ),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    success_rate = scales::percent(
+      success_rate,
+      accuracy = 0.1
+    ),
+    median_valid_time_seconds = round(
+      median_valid_time_seconds,
+      2
+    )
+  )
+
+knitr::kable(
+  configuration_summary,
+  caption = "Reliability summary by initial node count and maximum-neighbor setting"
+)
+```
+
+## Success Rate Heatmap by Phase and Configuration
+
+```{r configuration-heatmap, fig.height=6}
+configuration_phase_summary <- main_results %>%
+  group_by(
+    phase,
+    initial_nodes,
+    max_neighbors
+  ) %>%
+  summarise(
+    executions = n(),
+    successes = sum(effective_success),
+    success_rate = mean(effective_success),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    label = paste0(
+      scales::percent(success_rate, accuracy = 0.1),
+      "\n",
+      successes,
+      "/",
+      executions
+    )
+  )
+
+ggplot(
+  configuration_phase_summary,
+  aes(
+    x = factor(initial_nodes),
+    y = factor(max_neighbors),
+    fill = success_rate
+  )
+) +
+  geom_tile(
+    linewidth = 0.7
+  ) +
+  geom_text(
+    aes(label = label),
+    size = 3.7
+  ) +
+  facet_wrap(~ phase) +
+  scale_fill_gradient(
+    limits = c(0, 1),
+    labels = scales::percent
+  ) +
+  labs(
+    title = "Success Rate by Initial Nodes and Maximum Neighbors",
+    subtitle = "Labels show success percentage and successful runs / total runs",
+    x = "Initial node count",
+    y = "Maximum neighbors (k)",
+    fill = "Success rate"
+  )
+```
+
+## Success/Failure Proportions by Configuration
+
+```{r configuration-stacked-bars, fig.height=6}
+configuration_binary <- main_results %>%
+  count(
+    phase,
+    configuration,
+    binary_outcome,
+    name = "runs"
+  ) %>%
+  group_by(phase, configuration) %>%
+  mutate(share = runs / sum(runs)) %>%
+  ungroup()
+
+ggplot(
+  configuration_binary,
+  aes(
+    x = configuration,
+    y = share,
+    fill = binary_outcome
+  )
+) +
+  geom_col(position = "fill") +
+  facet_wrap(~ phase) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "Outcome Proportions by Experimental Configuration",
+    x = NULL,
+    y = "Share of executions",
+    fill = "Outcome"
+  ) +
+  theme(
+    axis.text.x = element_text(
+      angle = 25,
+      hjust = 1
+    )
+  )
+```
+
+```{r}
+configuration_summary <- main_results %>%
+  group_by(
+    phase,
+    initial_nodes,
+    max_neighbors
+  ) %>%
+  summarise(
+    runs = n(),
+    successes = sum(binary_outcome == "Success"),
+    failures = sum(binary_outcome == "Failure"),
+    success_rate = successes / runs,
+    .groups = "drop"
+  )
+
+ggplot(
+  configuration_summary,
+  aes(
+    x = factor(initial_nodes),
+    y = factor(max_neighbors),
+    fill = success_rate
+  )
+) +
+  geom_tile(
+    color = "white",
+    linewidth = 0.6
+  ) +
+  geom_text(
+    aes(
+      label = paste0(
+        scales::percent(success_rate, accuracy = 1),
+        "\n",
+        "n = ", runs
+      )
+    ),
+    size = 3.3
+  ) +
+  facet_wrap(~ phase) +
+  scale_fill_gradient(
+    low = "yellow",
+    high = "lightgreen",
+    limits = c(0, 1),
+    labels = scales::percent,
+    name = "Success rate"
+  ) +
+  labs(
+    title = "Success Rate by Experimental Configuration",
+    subtitle = paste(
+      "Color represents the effective success rate;",
+      "labels show the success percentage and number of executions"
+    ),
+    x = "Initial node count",
+    y = "Maximum neighbors"
+  ) +
+  theme(
+    panel.grid = element_blank(),
+    legend.position = "right"
+  )
+```
+
+# Failure Severity
+
+This section shows how many nodes remained deficient when a main phase did not succeed.
+
+```{r failure-severity, fig.height=5.5}
+failure_severity <- main_results %>%
+  filter(!effective_success) %>%
+  count(
+    phase,
+    failed_nodes_count,
+    name = "runs"
+  )
+
+if (nrow(failure_severity) == 0) {
+  cat("No effective failures were recorded in Phases 1-5.")
+} else {
+  ggplot(
+    failure_severity,
+    aes(
+      x = factor(failed_nodes_count),
+      y = runs,
+      fill = phase
+    )
+  ) +
+    geom_col(position = "dodge") +
+    labs(
+      title = "Failure Severity by Main Phase",
+      x = "Number of failed/deficient nodes remaining",
+      y = "Number of executions",
+      fill = "Phase"
+    )
+}
+```
+
+# Timeout-With-Zero-Failure Anomalies
+
+These rows reported a timeout even though zero nodes were still below `MAX_NEIGHBORS`. They are counted as successes for reliability, but should be investigated as evaluation-script or event-ordering errors.
+
+```{r anomaly-summary}
+anomalies <- results %>%
+  filter(timeout_zero_anomaly) %>%
+  transmute(
+    timestamp,
+    phase,
+    original_status = status,
+    elapsed_seconds = round(elapsed_seconds, 3),
+    initial_nodes,
+    max_neighbors,
+    failed_nodes_count,
+    details
+  )
+
+anomaly_count_by_phase <- anomalies %>%
+  count(phase, name = "anomaly_count")
+
+cat(
+  "Total timeout-with-zero-failure anomalies: **",
+  nrow(anomalies),
+  "**.\n\n",
+  sep = ""
+)
+
+if (nrow(anomaly_count_by_phase) > 0) {
+  knitr::kable(
+    anomaly_count_by_phase,
+    caption = "Anomaly count by phase"
+  )
+}
+
+if (nrow(anomalies) > 0) {
+  knitr::kable(
+    anomalies,
+    caption = "Rows classified as timeout-with-zero-failure anomalies"
+  )
+}
+```
+
+## Likely Meaning of the Anomaly
+
+A likely explanation is a race between the timeout check and the final topology observation:
+
+- the phase timeout expires;
+- the script marks the phase as `PARTIAL`;
+- a final node-state query sees zero deficient nodes; and
+- both results are written into the same row.
+
+Another possibility is that the script calculates `timed_out` before its last successful convergence check. The evaluation code should ideally perform one final state check immediately after the wait ends and derive both `status` and `failed_nodes_count` from that same snapshot.
+
+# Recommended Metrics for the Research Report
+
+The generated figures already cover reliability, failure severity, recovery effectiveness, configuration effects, timing distributions, and performance trends. For the final research report, the most useful reported metrics are:
+
+1.  **Phase success rate** after applying the documented anomaly rule.
+2.  **Median and 95th-percentile completion time**, rather than only the average.
+3.  **Failure severity**, measured by the number of nodes still deficient at timeout.
+4.  **Phase R recovery success rate**, grouped by the phase that triggered recovery.
+5.  **Configuration-specific success rate**, especially when increasing `initial_nodes` or `max_neighbors`.
+6.  **Run-order timing trends**, which may reveal CPU contention when many Java processes run on one machine.
+7.  **Anomaly count**, kept separate from protocol failures because it represents measurement quality.
+
+# Reproducibility Information
+
+```{r session-info}
+sessionInfo()
+```
