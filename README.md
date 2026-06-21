@@ -186,7 +186,10 @@ When launching a `NodeAgent`, the following parameters are used to configure its
 ## Local Deployment Steps
 
 To simulate the decentralized network on your local machine, open four separate terminal windows and run the following commands sequentially.
-
+### Command:
+```bash
+mvn exec:java "-Dexec.mainClass=com.monitoring.agent.App" "-Dexec.args=--bind-host 0.0.0.0 --advertise-host 172.16.130.143 --max-neighbors 4 --multicast-interface en0 --dashboard-url http://localhost:6789/api --node-id node-1"
+```
 ### Step 1: Start Node A
 Node A will listen on port `9001` and attempt to connect with Node B and Node C.
 ```bash
