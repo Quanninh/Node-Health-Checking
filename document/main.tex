@@ -158,6 +158,13 @@ distributed systems, node health checking, failure detection, heartbeat, false p
 % Through node-to-node communication, the system identifies healthy, suspicious, and failed nodes.
 % When a node or connection problem is detected, the system updates the affected relationships and attempts to preserve the monitoring structure so that health checking can continue.
 
+% Consider the removal of citations in the first sentence
+Node health checking is a fundamental requirement in distributed systems because the timely detection of failed or unreachable nodes directly affects service continuity, coordination correctness, and system reconfiguration \cite{liEnergyefficientLazyGroup2025} \cite{yangMedleyMembershipService2022}. 
+The impact of an undetected node failure can be severe, particularly when the failed node is topologically or functionally critical; in interdependent networks, even a small fraction of node failures can trigger recursive cascades and widespread fragmentation \cite{buldyrevCatastrophicCascadeFailures2010}. 
+A concrete real-world example is the 2003 FirstEnergy alarm system failure, in which a critical software node stalled silently due to an unmonitored race condition, blinding operators and allowing a localized grid anomaly to propagate into a catastrophic, multi-regional cascading blackout \cite{Blackout20032003}.
+
+A common health-checking paradigm relies on centralized supervision, in which a server or a small set of servers monitors nodes through periodic liveness messages or heartbeat-style reporting
+
 \subsection{Background}
 \label{subsec:background}
 
