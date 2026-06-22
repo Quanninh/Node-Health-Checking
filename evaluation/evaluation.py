@@ -13,14 +13,14 @@ API_BASE = "http://localhost:6789/api"
 SCRIPT_DIR = Path(__file__).resolve().parent
 JAR_PATH = SCRIPT_DIR / "node-agent-1.0.jar"
 LOG_DIR = SCRIPT_DIR / "logs"
-RESULTS_CSV = SCRIPT_DIR / "results_phuc.csv"
+RESULTS_CSV = SCRIPT_DIR / "results_khanh.csv"
 
-ADVERTISE_HOST = "192.168.1.6"
+ADVERTISE_HOST = "172.16.133.57"
 MULTICAST_INTERFACE = "wireless_32768"
 
-MAX_NEIGHBORS = 10
-INITIAL_NODE_COUNT = 20
-ADDED_NODE_COUNT = 5
+MAX_NEIGHBORS = 4
+INITIAL_NODE_COUNT = 8
+ADDED_NODE_COUNT = 6
 PHASE_5_VICTIM_COUNT = 5
 
 PHASE_TIMEOUT_SECONDS = 120
@@ -176,7 +176,6 @@ def get_all_nodes() -> List[Dict[str, Any]]:
     return data if isinstance(data, list) else []
 
 
-
 def get_failure_reports() -> List[Dict[str, Any]]:
     data = api_get("/failure-reports")
     return data if isinstance(data, list) else []
@@ -220,7 +219,8 @@ def topology_convergence_check(
     """
     excluded: Set[str] = set(excluded_node_ids or [])
     all_active = active_nodes(nodes)
-    all_active_ids = {node_id_of(node) for node in all_active if node_id_of(node)}
+    all_active_ids = {node_id_of(node)
+                      for node in all_active if node_id_of(node)}
 
     excluded_still_active = sorted(excluded.intersection(all_active_ids))
     if require_excluded_inactive and excluded_still_active:

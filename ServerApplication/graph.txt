@@ -1,0 +1,34 @@
+node-7
+node-4
+node-3
+node-2
+node-6
+node-0
+node-5
+node-7 node-4
+node-7 node-13
+node-7 node-6
+node-7 node-3
+node-4 node-7
+node-4 node-1
+node-4 node-3
+node-4 node-5
+node-3 node-4
+node-3 node-2
+node-3 node-6
+node-3 node-7
+node-2 node-0
+node-2 node-10
+node-2 node-3
+node-2 node-1
+node-6 node-5
+node-6 node-7
+node-6 node-0
+node-0 node-4
+node-0 node-2
+node-0 node-1
+node-0 node-7
+node-5 node-1
+node-5 node-11
+node-5 node-2
+node-5 node-4
