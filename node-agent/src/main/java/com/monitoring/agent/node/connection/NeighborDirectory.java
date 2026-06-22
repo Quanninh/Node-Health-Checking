@@ -45,25 +45,46 @@ public class NeighborDirectory {
     }
 
     /**
-     * Gets the next node from the list of neighbors. No longer shuffles the list if
-     * the node has retrieve all neighbors already to simulate randomness.
-     * 
-     * @return the next node, empty if node has no active neighbors
+     * Gets the next neighbor that has not been marked UNREACHABLE.
+     *
+     * <p>
+     * Each neighbor is checked at most once per call. If every neighbor is
+     * unreachable, an empty Optional is returned.
+     * </p>
+     *
+     * @return the next reachable neighbor, or empty if none is available
      */
     public synchronized Optional<NodeAddress> nextTargetNode() {
+        syncStatesWithConnections();
+
         List<NodeAddress> neighbors = connectionManager.neighborAddresses();
         if (neighbors.isEmpty()) {
+            nextIndex = 0;
             return Optional.empty();
         }
 
-        if (nextIndex >= neighbors.size()) {
-            // Collections.shuffle(neighbors);
-            nextIndex = 0;
+        int checkedNeighbors = 0;
+
+        while (checkedNeighbors < neighbors.size()) {
+            if (nextIndex >= neighbors.size()) {
+                nextIndex = 0;
+            }
+
+            NodeAddress candidate = neighbors.get(nextIndex);
+            nextIndex++;
+            checkedNeighbors++;
+
+            NodeState state = nodeStates.get(candidate.nodeId());
+
+            // A current neighbor should normally always have a state.
+            // Treat a missing state as selectable rather than accidentally
+            // excluding a newly added neighbor.
+            if (state == null || state.getStatus() != NodeStatus.UNREACHABLE) {
+                return Optional.of(candidate);
+            }
         }
 
-        NodeAddress selected = neighbors.get(nextIndex);
-        nextIndex++;
-        return Optional.of(selected);
+        return Optional.empty();
     }
 
     /**
