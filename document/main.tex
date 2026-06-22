@@ -155,7 +155,25 @@ distributed systems, node health checking, failure detection, heartbeat, false p
 % These relationships define which nodes are responsible for monitoring one another and form the basic structure of the decentralized health-checking mechanism.
 % Through node-to-node communication, the system identifies healthy, suspicious, and failed nodes.
 % When a node or connection problem is detected, the system updates the affected relationships and attempts to preserve the monitoring structure so that health checking can continue.
-
+In decentralized health checking, nodes monitor one another without relying on a single global coordinator 
+\cite{nikolicSelfHealingDilemmasDistributed2021}
+\cite{yangMedleyMembershipService2022}.
+% Keywords: decentralized, single, health, universal, central
+% Nikolic
+% 2020 --> feel indirectly implying
+% Yang
+% 2022
+This design improves robustness and reduces dependence on central infrastructure, but it also introduces harder problems in membership maintenance, coordination, and incomplete local knowledge 
+\cite{nikolicSelfHealingDilemmasDistributed2021}.
+% Keywords: Decentralized, byzantine, malicious, incorrect, large-scale
+% Nikolic
+% 2020
+% Rodr'iguez
+% 2020 --> can't see citations/ referneces
+Within this line of work, three recurring research concerns are network formation or neighbor discovery, failure detection accuracy and efficiency, and fault tolerance or self-healing after a node failure 
+\cite{rodriguezDecentralisedSelfHealingApproach2021}.
+% Rodr'iguez
+% 2020
 \subsection{Background}
 \label{subsec:background}
 
@@ -225,32 +243,36 @@ Overall, this project contributes a working prototype of a decentralized node he
 \label{sec:problem_statement}
 Despite these advances, important limitations remain. 
 Centralized approaches still suffer from the familiar risks of concentration, including service disruption when the monitoring server fails and performance bottlenecks when a small number of servers must supervise very large populations of clients 
-\cite{guoDecentralizedMultiVenueRealTime2025}
+\cite{guoDecentralizedMultiVenueRealTime2025}.
+% (Keywords: bottlenecks, centralized, decentralized)
 % Guo
 % 2025
 % Banerjee
-% 2022
+% 2022 --> can't find citation
 Decentralized approaches avoid some of these issues, but they are not straightforward replacements because failure detection in asynchronous environments is inherently uncertain:
 a missing heartbeat or probe response can indicate a crashed node, but it can also reflect transient delay, packet loss, or local slowness 
 \cite{nikolicSelfHealingDilemmasDistributed2021}
 \cite{dadgarLifeguardLocalHealth2018}.
+%(Keywords: False positive, heartbeat, latency)
 % Nikolic
 % 2020
 % Dadgar
 % 2017
-
 This uncertainty has practical consequences. 
 SWIM achieves strong scalability, but real deployments have shown that slow message processing can produce false positive failure detections.
 \cite{dadgarLifeguardLocalHealth2018}.
+%(Keywords: False positive)
 % Dadgar
 % 2017
 Lifeguard addresses this problem by incorporating local health awareness, reducing false positives by more than 50× in controlled tests 
 \cite{dadgarLifeguardLocalHealth2018}.
+%(Keywords: Lifeguard, False positive, reduce)
 % Dadgar
 % 2017
 Yet this line of work remains focused primarily on improving failure detection itself, rather than providing an end-to-end mechanism that also integrates topology recovery or service restoration.
 \cite{dasSWIMScalableWeaklyconsistent2002}
 \cite{dadgarLifeguardLocalHealth2018}.
+%(Keywords: False positive, failure detect, fix, restore, recover)
 % Das
 % 2002
 % Dadgar
@@ -258,10 +280,12 @@ Yet this line of work remains focused primarily on improving failure detection i
 
 Similarly, self-healing studies often emphasize recovery after failure once some form of local detection has already occurred. In one decentralized topology-maintenance approach, neighboring nodes detect failures via heartbeat checks and then coordinate locally to recreate and reconnect the missing node based on stored topology knowledge 
 \cite{rodriguezDecentralisedSelfHealingApproach2021}.
+%(Keywords: stored, recover, restore, reconnect, local)
 % Rodr'iguez
 % 2020
 Other recent systems combine layered fault detection with dynamic reconstruction to preserve continuity under link or node disruption 
 \cite{guoDecentralizedMultiVenueRealTime2025}.
+%(Keywords: reconstruct, reconnect, continuity, preserve, ensure)
 % Guo
 % 2025
 These results are promising, but they also indicate that the literature frequently treats detection, topology knowledge dissemination, and post-failure healing as separable modules rather than as a unified framework.
