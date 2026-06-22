@@ -3,3 +3,5 @@ packet_log.csv
 logs/
 old/
 __pycache__/
+.rdata
+.rhistory
