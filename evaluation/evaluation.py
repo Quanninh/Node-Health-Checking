@@ -75,7 +75,7 @@ PROCESS_DIAGNOSTIC_PRINT_LINES = 40
 CLEAN_GENERATED_LOGS = True
 GENERATED_LOG_PATHS = [
     SCRIPT_DIR / "logs",
-    SCRIPT_DIR / "packet_log.csv",
+    SCRIPT_DIR / "packet_log",
     SCRIPT_DIR / "log.txt",
 ]
 
