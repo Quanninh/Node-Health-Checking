@@ -1255,13 +1255,27 @@ The system was equipped with an Intel Core i7-10850H processor operating at 2.70
 All experiments were executed using Java SE 25 LTS.
 To simulate a distributed environment, multiple nodes were executed as independent Java processes on the same machine.
 
-\subsection{Evaluation Metrics}
-\label{subsec:evaluation_metrics}
-Use metrics such as detection latency, false-positive rate, recovery time, message overhead, CPU usage, and memory usage.
 
 \subsection{Experimental Scenarios}
 \label{subsec:experimental_scenarios}
 List the experiments: normal operation, node crash, delayed response, temporary network loss, node recovery, and multiple simultaneous failures.
+
+\subsection{Evaluation Results}
+\label{subsec:evaluation_results}
+
+Figure~\ref{fig:success_failure_by_phase} illustrates the percentages of successes and failures categorized by each phase.
+The thing that stands out the most is in phase 2, the success rate is 100\%.
+This is due to phase 2 being the easiest phase, it only aims to measure the time for any node to detect a single node failure.
+
+Phase 3 and 5 both have a success rate of more than 80\%.
+This shows that the system excels at recovery from failed nodes, even though it is only one node failed or multiple node failed.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\textwidth]{evaluation/success-failure-by-phase.png}
+    \caption{Success and Failure Rates by Phase}
+    \label{fig:success_failure_by_phase}
+\end{figure}
 
 \section{Conclusion and Future Work}
 \label{sec:conclusion}
