@@ -190,6 +190,12 @@ Within this line of work, three recurring research concerns are network formatio
 \cite{rodriguezDecentralisedSelfHealingApproach2021}.
 % Rodr'iguez
 % 2020
+
+A representative decentralized protocol is SWIM, which will be discussed at length in section~\ref{sec:related_work} \cite{dasSWIMScalableWeaklyconsistent2002}. 
+Its main advantage over traditional heartbeating is scalability: SWIM separates failure detection from membership dissemination, and both the expected detection time and expected message load per member remain independent of group size \cite{dasSWIMScalableWeaklyconsistent2002}. 
+Related systems have extended this direction to specialized environments. For example, Medley adapts decentralized membership and failure detection to wireless IoT settings through spatially biased probing, reducing the product of detection time and communication cost while maintaining low false positive rates \cite{yangMedleyMembershipService2022}. 
+Other work has shown that decentralized self-healing can rely on locally maintained neighborhood topology information to recreate and reconnect failed nodes after detection \cite{rodriguezDecentralisedSelfHealingApproach2021}. 
+
 \subsection{Background}
 \label{subsec:background}
 
