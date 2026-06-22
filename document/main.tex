@@ -129,9 +129,9 @@ Traditional distributed systems often rely on centralized heartbeat-based mechan
 While such approaches simplify coordination and system management, they introduce several limitations, including false-positive failure detections, single points of failure, and scalability bottlenecks. 
 This study addresses the challenge of designing a decentralized overlay network that mitigates these limitations while maintaining connectivity and resilience. 
 To achieve this objective, we propose a decentralized membership management framework composed of three key components. 
-New nodes are integrated into the overlay through FINDING NEMO, a neighbor discovery algorithm that employs a join-and-evict strategy to distribute connections while preserving bounded network density and randomness in topology formation. 
-Once nodes become members of the network, a hybrid failure detection scheme combining the SWIM protocol and phi-accrual failure detection continuously monitors node health with improved accuracy and adaptability. 
-Upon detecting peer failures that may leave portions of the overlay under-connected, CHUALANH, a self-healing rewiring mechanism, coordinates topology repairs among deficient and sufficiently connected nodes to restore connectivity.
+First, we introduce FINDING NEMO, a neighbor discovery algorithm that integrates a join-and-evict strategy to distribute connections among newly joining peers while preserving bounded network density and randomness in topology formation. 
+Second, we combine the SWIM protocol with phi-accrual failure detection to improve the accuracy and adaptability of node health monitoring. 
+Third, we develop CHUALANH, a self-healing rewiring mechanism that restores connectivity by coordinating topology repairs among under-connected and sufficiently connected nodes. 
 Experimental evaluation demonstrates the feasibility of the proposed framework and shows that it can maintain decentralized network organization while supporting dynamic membership changes and failure recovery. 
 The results indicate that the combination of adaptive failure detection, structured neighbor discovery, and coordinated rewiring contributes to a resilient and balanced overlay topology.
 In conclusion, the proposed framework offers a practical decentralized alternative to traditional centralized membership management approaches. 
@@ -139,7 +139,7 @@ While the results are promising, further large-scale experimentation is required
 \end{abstract}
 
 \begin{IEEEkeywords}
-distributed systems, node health checking, failure detection, heartbeat, false positives, fault tolerance, neighbor discovery, self-healing topology.
+distributed systems, node health checking, failure detection, heartbeat, false positives, fault tolerance
 \end{IEEEkeywords}
 
 \section{Introduction}
@@ -157,13 +157,6 @@ distributed systems, node health checking, failure detection, heartbeat, false p
 % These relationships define which nodes are responsible for monitoring one another and form the basic structure of the decentralized health-checking mechanism.
 % Through node-to-node communication, the system identifies healthy, suspicious, and failed nodes.
 % When a node or connection problem is detected, the system updates the affected relationships and attempts to preserve the monitoring structure so that health checking can continue.
-
-% Consider the removal of citations in the first sentence
-Node health checking is a fundamental requirement in distributed systems because the timely detection of failed or unreachable nodes directly affects service continuity, coordination correctness, and system reconfiguration \cite{liEnergyefficientLazyGroup2025} \cite{yangMedleyMembershipService2022}. 
-The impact of an undetected node failure can be severe, particularly when the failed node is topologically or functionally critical; in interdependent networks, even a small fraction of node failures can trigger recursive cascades and widespread fragmentation \cite{buldyrevCatastrophicCascadeFailures2010}. 
-A concrete real-world example is the 2003 FirstEnergy alarm system failure, in which a critical software node stalled silently due to an unmonitored race condition, blinding operators and allowing a localized grid anomaly to propagate into a catastrophic, multi-regional cascading blackout \cite{Blackout20032003}.
-
-A common health-checking paradigm relies on centralized supervision, in which a server or a small set of servers monitors nodes through periodic liveness messages or heartbeat-style reporting
 
 \subsection{Background}
 \label{subsec:background}
@@ -952,6 +945,13 @@ In particular, message loss or node failure during the update sequence could lea
 To mitigate this issue, the current protocol adopts a more conservative commit procedure, ensuring that topology updates are coordinated before acknowledgements are returned. 
 While temporary degree imbalance may still occur, such situations are subsequently corrected by the rewiring mechanism described later in this work.
 
+\begin{figure*}[!t]
+\centering
+\includegraphics[width=0.95\textwidth]{FINDING_NEMO_actiDi.png}
+\caption{FINDING NEMO protocol flow}
+\label{fig:FINDING_NEMO_protocol}
+\end{figure*}
+
 \subsubsection{Node Rewiring: Degree-Preserving Topology Repair (DPTR) algorithm }
 \label{subsubsec:node_deletion_code}
 \begin{enumerate}
@@ -974,14 +974,10 @@ While temporary degree imbalance may still occur, such situations are subsequent
     caption={Direct Rewiring},
     label={lst:direct_rewiring}]
     private boolean tryDirectRepair(NodeAddress defA, NodeAddress defB) {
-        String recoveryId = 
-                UUID
-                    .randomUUID()
-                        .toString();
+        String recoveryId = UUID.randomUUID().toString();
 
-        RewireMessage request = RewireMessage
-            .of(RecoveryMessageType
-                .REWIRE_REQ_DIRECT,
+        RewireMessage request = RewireMessage.of(
+                RecoveryMessageType.REWIRE_REQ_DIRECT,
                 recoveryId,
                 localAddress,
                 defA,
@@ -1015,9 +1011,8 @@ While temporary degree imbalance may still occur, such situations are subsequent
             return false;
         }
 
-        RewireMessage commit = RewireMessage
-            .of(RecoveryMessageType
-                .REWIRE_DIRECT_COMMIT,
+        RewireMessage commit = RewireMessage.of(
+                RecoveryMessageType.REWIRE_DIRECT_COMMIT,
                 recoveryId,
                 localAddress,
                 defA,
@@ -1087,12 +1082,9 @@ While temporary degree imbalance may still occur, such situations are subsequent
     \begin{lstlisting}[language=Java,
     caption={Finding Node C and D},
     label={lst:findcd}]
-    List<NodeAddress> candidateCs = 
-        selectCandidateCs(
-            defANeighbors, defBNeighbors); 
+    List<NodeAddress> candidateCs = selectCandidateCs( defANeighbors, defBNeighbors); 
     for (NodeAddress c : candidateCs) { 
-        RewireMessage response = 
-            sendAsync(c, query).get(...); 
+        RewireMessage response = sendAsync(c, query).get(...); 
         if (response != null && response.nodeD() != null) { 
             NodeAddress d = response.nodeD(); 
             if (executeScheme( recoveryId, defA, defB, c, d)) { 
@@ -1237,13 +1229,6 @@ public ResponseEntity<List<FailureReport>> getFailureReports() {
     \label{tab:task_distribution}
 \end{table}
 
-\begin{figure*}[!t]
-\centering
-\includegraphics[width=0.95\textwidth]{FINDING_NEMO_actiDi.png}
-\caption{FINDING NEMO protocol flow}
-\label{fig:FINDING_NEMO_protocol}
-\end{figure*}
-
 \section{Evaluation \& Experimental Results}
 \label{sec:evaluation_and_experimental_results}
 
@@ -1271,4 +1256,4 @@ Summarize the final system, the main design decisions, and the experimental find
 \bibliographystyle{IEEEtran}     % Uses the IEEE citation style
 \bibliography{references}        % Links to references.bib (OMIT the ".bib" extension here)
 
-\end{document}
+ \end{document}
