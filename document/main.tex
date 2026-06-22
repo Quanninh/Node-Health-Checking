@@ -127,9 +127,9 @@ Traditional distributed systems often rely on centralized heartbeat-based mechan
 While such approaches simplify coordination and system management, they introduce several limitations, including false-positive failure detections, single points of failure, and scalability bottlenecks. 
 This study addresses the challenge of designing a decentralized overlay network that mitigates these limitations while maintaining connectivity and resilience. 
 To achieve this objective, we propose a decentralized membership management framework composed of three key components. 
-First, we introduce FINDING NEMO, a neighbor discovery algorithm that integrates a join-and-evict strategy to distribute connections among newly joining peers while preserving bounded network density and randomness in topology formation. 
-Second, we combine the SWIM protocol with phi-accrual failure detection to improve the accuracy and adaptability of node health monitoring. 
-Third, we develop CHUALANH, a self-healing rewiring mechanism that restores connectivity by coordinating topology repairs among under-connected and sufficiently connected nodes. 
+New nodes are integrated into the overlay through FINDING NEMO, a neighbor discovery algorithm that employs a join-and-evict strategy to distribute connections while preserving bounded network density and randomness in topology formation. 
+Once nodes become members of the network, a hybrid failure detection scheme combining the SWIM protocol and phi-accrual failure detection continuously monitors node health with improved accuracy and adaptability. 
+Upon detecting peer failures that may leave portions of the overlay under-connected, CHUALANH, a self-healing rewiring mechanism, coordinates topology repairs among deficient and sufficiently connected nodes to restore connectivity.
 Experimental evaluation demonstrates the feasibility of the proposed framework and shows that it can maintain decentralized network organization while supporting dynamic membership changes and failure recovery. 
 The results indicate that the combination of adaptive failure detection, structured neighbor discovery, and coordinated rewiring contributes to a resilient and balanced overlay topology.
 In conclusion, the proposed framework offers a practical decentralized alternative to traditional centralized membership management approaches. 
@@ -137,7 +137,7 @@ While the results are promising, further large-scale experimentation is required
 \end{abstract}
 
 \begin{IEEEkeywords}
-distributed systems, node health checking, failure detection, heartbeat, false positives, fault tolerance
+distributed systems, node health checking, failure detection, heartbeat, false positives, fault tolerance, neighbor discovery, self-healing topology.
 \end{IEEEkeywords}
 
 \section{Introduction}
@@ -156,20 +156,6 @@ distributed systems, node health checking, failure detection, heartbeat, false p
 % Through node-to-node communication, the system identifies healthy, suspicious, and failed nodes.
 % When a node or connection problem is detected, the system updates the affected relationships and attempts to preserve the monitoring structure so that health checking can continue.
 
-<<<<<<< HEAD
-=======
-% Consider the removal of citations in the first sentence
-Node health checking is a fundamental requirement in distributed systems because the timely detection of failed or unreachable nodes directly affects service continuity, coordination correctness, and system reconfiguration \cite{liEnergyefficientLazyGroup2025} \cite{yangMedleyMembershipService2022}. 
-The impact of an undetected node failure can be severe, particularly when the failed node is topologically or functionally critical; in interdependent networks, even a small fraction of node failures can trigger recursive cascades and widespread fragmentation \cite{buldyrevCatastrophicCascadeFailures2010}. 
-A concrete real-world example is the 2003 FirstEnergy alarm system failure, in which a critical software node stalled silently due to an unmonitored race condition, blinding operators and allowing a localized grid anomaly to propagate into a catastrophic, multi-regional cascading blackout \cite{Blackout20032003}.
-
-A common health-checking paradigm relies on centralized supervision, in which a server or a small set of servers monitors nodes through periodic liveness messages or heartbeat-style reporting \cite{vanrenesseGossipStyleFailureDetection1998} \cite{kawazoeaguileraHeartbeatTimeoutfreeFailure1997}. 
-Heartbeat-based detection remains widely used because timeout on missing periodic messages provides a simple operational rule for identifying suspected failures \cite{vanrenesseGossipStyleFailureDetection1998} \cite{kawazoeaguileraHeartbeatTimeoutfreeFailure1997}. 
-Such designs are also attractive from an engineering perspective because centralized control simplifies operational management and supports a more coherent view of membership and monitoring state; distributed-systems research continues to build many higher-level services on top of membership knowledge \cite{huntZooKeeperWaitfreeCoordination}. 
- 
-
-
->>>>>>> 00df936f9248a9afd825583ffb2b9c036959cc56
 \subsection{Background}
 \label{subsec:background}
 
@@ -739,7 +725,7 @@ List<NodeAddress> helperNodes =
 \end{lstlisting}
 
 The selected helper nodes are intended to perform
-\texttt{PING\_REQ} operations on behalf of the original sender.
+\texttt{PING\_REQ} operations on behalf of tfhe original sender.
 Each helper node attempts to contact the target node and
 reports the result back to the requester. If at least one
 helper node successfully receives an acknowledgment, the
@@ -957,7 +943,6 @@ In particular, message loss or node failure during the update sequence could lea
 To mitigate this issue, the current protocol adopts a more conservative commit procedure, ensuring that topology updates are coordinated before acknowledgements are returned. 
 While temporary degree imbalance may still occur, such situations are subsequently corrected by the rewiring mechanism described later in this work.
 
-<<<<<<< HEAD
 \begin{figure*}[!t]
 \centering
 \includegraphics[width=0.95\textwidth]{FINDING_NEMO_actiDi.png}
@@ -966,9 +951,6 @@ While temporary degree imbalance may still occur, such situations are subsequent
 \end{figure*}
 
 \subsubsection{Node Rewiring: Degree-Preserving Topology Repair (DPTR) algorithm }
-=======
-\subsubsection{Node Rewiring: Connectivity Healing through Under-connected and Adaptive Link Adjustment for Network Health (CHUALANH)}
->>>>>>> 00df936f9248a9afd825583ffb2b9c036959cc56
 \label{subsubsec:node_deletion_code}
 \begin{enumerate}
     \item{\textbf{Direct Rewiring: }}
@@ -1243,20 +1225,7 @@ public ResponseEntity<List<FailureReport>> getFailureReports() {
         5 & Evaluation, experiments, and report writing & All team members \\ \hline
     \end{tabular}
     \label{tab:task_distribution}
-\end{table}
-
-\section{Evaluation \& Experimental Results}
-\label{sec:evaluation_and_experimental_results}
-
-\subsection{Evaluation Environment}
-\label{subsec:evaluation_environment}
-% Describe how the system is evaluated. Define the test environment, number of nodes, failure scenarios, workload, network conditions, and metrics.
-The system was implemented in Java and evaluated on a Lenovo laptop running Microsoft Windows 11 Pro (Build 26200).
-The system was equipped with an Intel Core i7-10850H processor operating at 2.70 GHz, 32 GB of RAM, and a 512 GB SSD.
-All experiments were executed using Java SE 25 LTS.
-To simulate a distributed environment, multiple nodes were executed as independent Java processes on the same machine.
-
-
+    \end{table}
 \subsection{Experimental Scenarios}
 \label{subsec:experimental_scenarios}
 The objective of the evaluation is to assess the performance of the FINDING NEMO neighbor discovery protocol, the Hybrid SWIMPHI failure detector, and the CHUALANH mechanism under dynamic membership changes. 
@@ -1329,4 +1298,4 @@ Summarize the final system, the main design decisions, and the experimental find
 \bibliographystyle{IEEEtran}     % Uses the IEEE citation style
 \bibliography{references}        % Links to references.bib (OMIT the ".bib" extension here)
 
- \end{document}
+\end{document}
