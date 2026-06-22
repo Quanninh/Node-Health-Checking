@@ -163,7 +163,11 @@ Node health checking is a fundamental requirement in distributed systems because
 The impact of an undetected node failure can be severe, particularly when the failed node is topologically or functionally critical; in interdependent networks, even a small fraction of node failures can trigger recursive cascades and widespread fragmentation \cite{buldyrevCatastrophicCascadeFailures2010}. 
 A concrete real-world example is the 2003 FirstEnergy alarm system failure, in which a critical software node stalled silently due to an unmonitored race condition, blinding operators and allowing a localized grid anomaly to propagate into a catastrophic, multi-regional cascading blackout \cite{Blackout20032003}.
 
-A common health-checking paradigm relies on centralized supervision, in which a server or a small set of servers monitors nodes through periodic liveness messages or heartbeat-style reporting
+A common health-checking paradigm relies on centralized supervision, in which a server or a small set of servers monitors nodes through periodic liveness messages or heartbeat-style reporting \cite{vanrenesseGossipStyleFailureDetection1998} \cite{kawazoeaguileraHeartbeatTimeoutfreeFailure1997}. 
+Heartbeat-based detection remains widely used because timeout on missing periodic messages provides a simple operational rule for identifying suspected failures \cite{vanrenesseGossipStyleFailureDetection1998} \cite{kawazoeaguileraHeartbeatTimeoutfreeFailure1997}. 
+Such designs are also attractive from an engineering perspective because centralized control simplifies operational management and supports a more coherent view of membership and monitoring state; distributed-systems research continues to build many higher-level services on top of membership knowledge \cite{huntZooKeeperWaitfreeCoordination}. 
+ 
+
 
 \subsection{Background}
 \label{subsec:background}
