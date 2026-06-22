@@ -26,12 +26,12 @@ JAR_PATH = SCRIPT_DIR / "node-agent-1.0.jar"
 # =============================================================================
 # CHANGE THIS TO results_yourname.csv
 # =============================================================================
-RESULTS_CSV = SCRIPT_DIR / "results_yourname.csv"
+RESULTS_CSV = SCRIPT_DIR / "results_Phuc.csv"
 
 # =============================================================================
 # CHANGE THIS TO your.ip.add.ress
 # =============================================================================
-ADVERTISE_HOST = "172.16.132.30"
+ADVERTISE_HOST = "192.168.1.6"
 # =============================================================================
 # CHANGE THIS TO wireless_32768 ON WINDOWS AND en0 ON MACOS
 # =============================================================================
@@ -41,10 +41,10 @@ MULTICAST_INTERFACE = "wireless_32768"
 # CONFIGURE THIS
 # =============================================================================
 
-MAX_NEIGHBORS = 4
-INITIAL_NODE_COUNT = 10
-ADDED_NODE_COUNT = 5
-REMOVED_NODE_COUNT = 5
+MAX_NEIGHBORS = 8
+INITIAL_NODE_COUNT = 20
+ADDED_NODE_COUNT = 8
+REMOVED_NODE_COUNT = 12
 
 # =============================================================================
 # =============================================================================
