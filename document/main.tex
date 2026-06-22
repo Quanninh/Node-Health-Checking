@@ -54,9 +54,7 @@
 \begin{document}
 
 \title{
-Distributed System Project Report
-
-Node Health Checking
+Distributed Node Health Monitoring Framework
 \thanks{}
 }
 
@@ -571,14 +569,14 @@ This process maintains a bounded network density while preserving randomness in 
 In practice, a hybrid selection strategy is employed. Nodes whose neighbor lists are not yet full are prioritized during the acknowledgement phase. 
 By preferentially connecting to such nodes, the algorithm accelerates the completion of underpopulated neighbor lists while remaining consistent with the network's connectivity constraints.
 
-\subsection{Degree-Preserving Topology Repair (DPTR) Algorithm}
+\subsection{Connectivity Healing through Under-connected and Adaptive Link Adjustment for Network Health (CHUALANH) algorithm:}
 \label{subsec:node_deletion}
 
 \subsubsection{\textbf{Topology Repair Mechanism}}
 \label{subsubsec:repair_mechanism}
 In a decentralized architecture, node failures may disrupt the desired network structure. Specifically, when a node unexpectedly fails, all of its incident edges are deleted. Consequently, some neighboring nodes lose one connection and their degree decreases from $k$ to $k - 1$. These nodes are referred to as \textbf{deficient nodes} 
 
-Since the system is designed to maintain k neighbors for every node, a topology repair process is required to restore the desired degree constraint. To address this problem, we propose a \textbf{Degree-Preserving Topology Repair} algorithm.
+Since the system is designed to maintain k neighbors for every node, a topology repair process is required to restore the desired degree constraint. To address this problem, we propose a \textbf{Connectivity Healing through Under-connected and Adaptive Link Adjustment for Network Health (CHUALANH)} algorithm.
 
 \subsubsection{\textbf{Deficient Nodes}}
 \label{subsubsec:deficient_node}
@@ -956,7 +954,7 @@ In particular, message loss or node failure during the update sequence could lea
 To mitigate this issue, the current protocol adopts a more conservative commit procedure, ensuring that topology updates are coordinated before acknowledgements are returned. 
 While temporary degree imbalance may still occur, such situations are subsequently corrected by the rewiring mechanism described later in this work.
 
-\subsubsection{Node Rewiring: Degree-Preserving Topology Repair (DPTR) algorithm }
+\subsubsection{Node Rewiring: Connectivity Healing through Under-connected and Adaptive Link Adjustment for Network Health (CHUALANH)}
 \label{subsubsec:node_deletion_code}
 \begin{enumerate}
     \item{\textbf{Direct Rewiring: }}
@@ -1087,7 +1085,7 @@ While temporary degree imbalance may still occur, such situations are subsequent
     \end{lstlisting}
 
     The leader then computes a set of candidate nodes, denoted by (C), where each node (C) is a neighbor of node (A) but is not directly connected to node (B). This candidate set is obtained by examining the entire neighbor list of node (A) and filtering out all nodes that also appear in the neighbor list of node (B).
-    For each candidate (C), the leader sends a query message containing neighbor lists of node A and B, along with the recovery status. Upon receiving the query, node (C) searches for a node (D) that is a neighbor of (C) but not a neighbor of node (A). Once such a pair ((C,D)) is identified, the DPTR algorithm is executed to restructure the topology while preserving node degrees.
+    For each candidate (C), the leader sends a query message containing neighbor lists of node A and B, along with the recovery status. Upon receiving the query, node (C) searches for a node (D) that is a neighbor of (C) but not a neighbor of node (A). Once such a pair ((C,D)) is identified, the CHUALANH algorithm is executed to restructure the topology while preserving node degrees.
     \begin{lstlisting}[language=Java,
     caption={Finding Node C and D},
     label={lst:findcd}]
@@ -1106,7 +1104,7 @@ While temporary degree imbalance may still occur, such situations are subsequent
     }
     \end{lstlisting}
 
-    If such a node (D) exists, node (A) invokes the \texttt{executeScheme()} method, which applies the \textbf{Degree-Preserving Topology Repair (DPTR) algorithm} for \textbf{Case 2: Existing Connection}, as described in Section~\ref{subsec:node_deletion}. 
+    If such a node (D) exists, node (A) invokes the \texttt{executeScheme()} method, which applies the \textbf{Connectivity Healing through Under-connected and Adaptive Link Adjustment for Network Health (CHUALANH)} for \textbf{Case 2: Existing Connection}, as described in Section~\ref{subsec:node_deletion}. 
     The algorithm restructures the network by replacing selected edges while preserving the degree constraints of the participating nodes.
     Consequently, the deficient nodes recover their missing connections and the topology is repaired without altering the predefined node degree (k)
 \end{enumerate}
