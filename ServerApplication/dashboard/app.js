@@ -109,7 +109,14 @@ function updateNodeTable(nodes) {
         return;
     }
 
-    for (const node of nodes) {
+    const sortedNodes = [...nodes].sort((a, b) =>
+        String(a.id || "").localeCompare(String(b.id || ""), undefined, {
+            numeric: true,
+            sensitivity: "base",
+        }),
+    );
+
+    for (const node of sortedNodes) {
         const row = document.createElement("tr");
 
         if (node.id === selectedNodeId) {

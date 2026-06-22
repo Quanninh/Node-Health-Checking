@@ -262,9 +262,8 @@ ggplot(
   scale_y_continuous(labels = scales::percent) +
   labs(
     title = "Effective Success and Failure Rate by Phase",
-    subtitle = "Timeout rows with zero failed nodes are counted as successes",
     x = NULL,
-    y = "Share of executions",
+    y = "Proportion",
     fill = "Outcome"
   )
 ```
