@@ -223,10 +223,60 @@ Overall, this project contributes a working prototype of a decentralized node he
 
 \section{Problem Statement}
 \label{sec:problem_statement}
-Many health checking systems rely on a centralized structure, where a single central entity collects information and makes decisions for the entire network.
-Although this approach is simple to manage, it may introduce a bottleneck and a single point of failure \cite{kingCentralizedDecentralizedComputing1983} \cite{patsiasTaskAllocationMethods2023} .
-To address this limitation, this project adopts a decentralized approach.
-Instead of depending entirely on one central controller, nodes participate in monitoring one another and responding to failures.
+Despite these advances, important limitations remain. 
+Centralized approaches still suffer from the familiar risks of concentration, including service disruption when the monitoring server fails and performance bottlenecks when a small number of servers must supervise very large populations of clients 
+\cite{guoDecentralizedMultiVenueRealTime2025}
+% Guo
+% 2025
+% Banerjee
+% 2022
+Decentralized approaches avoid some of these issues, but they are not straightforward replacements because failure detection in asynchronous environments is inherently uncertain:
+a missing heartbeat or probe response can indicate a crashed node, but it can also reflect transient delay, packet loss, or local slowness 
+\cite{nikolicSelfHealingDilemmasDistributed2021}
+\cite{dadgarLifeguardLocalHealth2018}.
+% Nikolic
+% 2020
+% Dadgar
+% 2017
+
+This uncertainty has practical consequences. 
+SWIM achieves strong scalability, but real deployments have shown that slow message processing can produce false positive failure detections.
+\cite{dadgarLifeguardLocalHealth2018}.
+% Dadgar
+% 2017
+Lifeguard addresses this problem by incorporating local health awareness, reducing false positives by more than 50× in controlled tests 
+\cite{dadgarLifeguardLocalHealth2018}.
+% Dadgar
+% 2017
+Yet this line of work remains focused primarily on improving failure detection itself, rather than providing an end-to-end mechanism that also integrates topology recovery or service restoration.
+\cite{dasSWIMScalableWeaklyconsistent2002}
+\cite{dadgarLifeguardLocalHealth2018}.
+% Das
+% 2002
+% Dadgar
+% 2017
+
+Similarly, self-healing studies often emphasize recovery after failure once some form of local detection has already occurred. In one decentralized topology-maintenance approach, neighboring nodes detect failures via heartbeat checks and then coordinate locally to recreate and reconnect the missing node based on stored topology knowledge 
+\cite{rodriguezDecentralisedSelfHealingApproach2021}.
+% Rodr'iguez
+% 2020
+Other recent systems combine layered fault detection with dynamic reconstruction to preserve continuity under link or node disruption 
+\cite{guoDecentralizedMultiVenueRealTime2025}.
+% Guo
+% 2025
+These results are promising, but they also indicate that the literature frequently treats detection, topology knowledge dissemination, and post-failure healing as separable modules rather than as a unified framework.
+
+Accordingly, the research gap is not the absence of decentralized node health-checking techniques, but the limited availability of unified end-to-end designs that jointly address neighbor awareness, failure detection, membership update, and recovery orchestration within one coherent architecture 
+\cite{fuSystematicReviewFuture2025}.
+% Fu
+% 2024
+This motivates the design of a decentralized framework that does not stop at detecting failures, but also supports coordinated healing actions and sustained system operation after disruption.
+
+% Many health checking systems rely on a centralized structure, where a single central entity collects information and makes decisions for the entire network.
+% Although this approach is simple to manage, it may introduce a bottleneck and a single point of failure \cite{kingCentralizedDecentralizedComputing1983} \cite{patsiasTaskAllocationMethods2023} .
+% To address this limitation, this project adopts a decentralized approach.
+% Instead of depending entirely on one central controller, nodes participate in monitoring one another and responding to failures.
+
 %A dashboard may be used as a visual aid to observe the system state, but the health checking and recovery logic remain decentralized.
 
 % \section{...}
