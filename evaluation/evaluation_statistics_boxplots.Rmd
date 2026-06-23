@@ -55,6 +55,13 @@ STATUS_LEVELS <- c(
   "FAIL"
 )
 
+PRIMARY_PHASES <- c(
+  "Phase 1",
+  "Phase 3",
+  "Phase 4",
+  "Phase 5"
+)
+
 RECOVERY_PHASES <- c(
   "R1",
   "R3",
@@ -62,16 +69,20 @@ RECOVERY_PHASES <- c(
   "R5"
 )
 
-STABILITY_PHASES <- c(
+DIRECT_STABILITY_PHASES <- c(
   "S1",
   "S3",
   "S4",
-  "S5",
+  "S5"
+)
+
+STABILITY_PHASES <- c(
+  DIRECT_STABILITY_PHASES,
   "SR"
 )
 
 # Entries may exceed the configured timeout by up to 10 seconds.
-TIMEOUT_GRACE_SECONDS <- 10
+TIMEOUT_GRACE_SECONDS <- 30
 
 # Recovery entries below 10 seconds are treated as not executed.
 MINIMUM_RECOVERY_SECONDS <- 10
@@ -120,48 +131,47 @@ raw_results <- read_csv(
     .direction = "down"
   ) %>%
   mutate(
-    # Associates each SR stability check with the recovery phase
-    # that immediately preceded it.
+    # Associates each SR row with the recovery phase that preceded it.
     sr_parent_recovery = if_else(
       phase == "SR",
       recovery_context,
       NA_character_
     ),
-    
+
     timeout_seconds = unname(
       PHASE_TIMEOUT_SECONDS[phase]
     ),
-    
+
     effective_timeout_seconds = if_else(
       !is.na(timeout_seconds),
       timeout_seconds + TIMEOUT_GRACE_SECONDS,
       NA_real_
     ),
-    
+
     exceeds_timeout = (
       !is.na(effective_timeout_seconds) &
         elapsed_seconds > effective_timeout_seconds
     ),
-    
+
     recovery_not_run = (
       phase %in% RECOVERY_PHASES &
         elapsed_seconds < MINIMUM_RECOVERY_SECONDS
     ),
-    
-    # Identifies which primary phase an R or S entry depends on.
+
+    # Identifies the main phase to which an R, S, or SR row belongs.
     dependency_primary_phase = case_when(
       phase %in% c("R1", "S1") ~
         "Phase 1",
-      
+
       phase %in% c("R3", "S3") ~
         "Phase 3",
-      
+
       phase %in% c("R4", "S4") ~
         "Phase 4",
-      
+
       phase %in% c("R5", "S5") ~
         "Phase 5",
-      
+
       phase == "SR" ~ recode(
         sr_parent_recovery,
         "R1" = "Phase 1",
@@ -170,22 +180,18 @@ raw_results <- read_csv(
         "R5" = "Phase 5",
         .default = NA_character_
       ),
-      
+
       TRUE ~ NA_character_
     )
   ) %>%
   ungroup()
 
-# Primary phases excluded for exceeding their effective timeout.
+# A main phase beyond its timeout plus grace period is invalid.
+# Its directly dependent R and S rows are removed as well.
 invalid_primary_phases <- raw_results %>%
   filter(
     exceeds_timeout,
-    phase %in% c(
-      "Phase 1",
-      "Phase 3",
-      "Phase 4",
-      "Phase 5"
-    )
+    phase %in% PRIMARY_PHASES
   ) %>%
   transmute(
     run_id,
@@ -194,8 +200,8 @@ invalid_primary_phases <- raw_results %>%
   ) %>%
   distinct()
 
-# Recovery phases excluded because they exceeded the timeout
-# or completed in less than 10 seconds.
+# A recovery row is invalid when it exceeds the timeout plus grace
+# period or lasts less than 10 seconds. Its SR row is removed as well.
 invalid_recovery_phases <- raw_results %>%
   filter(
     phase %in% RECOVERY_PHASES,
@@ -228,41 +234,39 @@ filtered_results <- raw_results %>%
       invalid_primary,
       FALSE
     ),
-    
+
     invalid_recovery = replace_na(
       invalid_recovery,
       FALSE
     ),
-    
-    # Removes R and S entries belonging to an invalid primary phase.
+
     remove_due_to_primary = invalid_primary,
-    
-    # Removes SR when its associated recovery phase is invalid.
+
     remove_due_to_recovery = (
       phase == "SR" &
         invalid_recovery
     ),
-    
+
     remove_row = (
       exceeds_timeout |
         recovery_not_run |
         remove_due_to_primary |
         remove_due_to_recovery
     ),
-    
+
     removal_reason = case_when(
       recovery_not_run ~
         "Recovery execution below 10 seconds; treated as not run",
-      
+
       exceeds_timeout ~
         "Elapsed time exceeded configured timeout plus grace period",
-      
+
       remove_due_to_primary ~
         "Dependent recovery or stability entry removed with primary phase",
-      
+
       remove_due_to_recovery ~
         "SR entry removed with invalid recovery phase",
-      
+
       TRUE ~
         "Kept"
     )
@@ -280,53 +284,15 @@ results <- filtered_results %>%
     )
   )
 
-# Recovery rows that remain valid after filtering.
-valid_recovery_rows <- results %>%
-  filter(phase %in% RECOVERY_PHASES) %>%
+# One valid row for each main phase that can trigger recovery.
+main_phase_rows <- results %>%
+  filter(phase %in% PRIMARY_PHASES) %>%
   transmute(
     run_id,
-    
-    phase_group = recode(
-      phase,
-      "R1" = "Phase 1",
-      "R3" = "Phase 3",
-      "R4" = "Phase 4",
-      "R5" = "Phase 5"
-    ),
-    
-    recovery_phase = phase,
-    recovery_status = as.character(status)
-  )
 
-# Uses filtered results so discarded recovery entries are treated
-# as not executed.
-# Recovery attempts used for outcome classification.
-#
-# A recovery below 10 seconds is considered not executed.
-# A recovery of at least 10 seconds counts as executed, even when its
-# result row is later excluded from completion-time statistics.
-recovery_outcomes <- raw_results %>%
-  filter(
-    phase %in% RECOVERY_PHASES,
-    elapsed_seconds >= MINIMUM_RECOVERY_SECONDS
-  ) %>%
-  transmute(
-    run_id,
-    
-    phase_group = recode(
-      phase,
-      "R1" = "Phase 1",
-      "R3" = "Phase 3",
-      "R4" = "Phase 4",
-      "R5" = "Phase 5"
-    ),
-    
-    recovery_phase = phase,
-    
-    recovery_status = case_when(
-      status == "PASS" & !exceeds_timeout ~ "PASS",
-      TRUE ~ "FAIL"
-    )
+    phase_group = phase,
+
+    primary_status = as.character(status)
   ) %>%
   distinct(
     run_id,
@@ -334,84 +300,157 @@ recovery_outcomes <- raw_results %>%
     .keep_all = TRUE
   )
 
-phase_outcomes <- bind_rows(
-  results %>%
-    filter(phase == "Phase 1") %>%
-    transmute(
-      run_id,
-      phase_group = "Phase 1",
-      primary_status = as.character(status)
+# The direct stability check determines whether a main-phase success
+# remained valid without replacement-based recovery.
+direct_stability_rows <- results %>%
+  filter(phase %in% DIRECT_STABILITY_PHASES) %>%
+  transmute(
+    run_id,
+
+    phase_group = recode(
+      phase,
+      "S1" = "Phase 1",
+      "S3" = "Phase 3",
+      "S4" = "Phase 4",
+      "S5" = "Phase 5"
     ),
-  
-  results %>%
-    filter(
-      phase %in% c(
-        "Phase 2.1",
-        "Phase 2.2"
-      )
-    ) %>%
-    group_by(run_id) %>%
-    summarise(
-      phase_group = "Phase 2",
-      
-      primary_status = if_else(
-        n_distinct(phase) == 2 &&
-          all(status == "PASS"),
-        "PASS",
-        "TIMEOUT"
-      ),
-      
-      .groups = "drop"
+
+    direct_stability_status = as.character(status)
+  ) %>%
+  distinct(
+    run_id,
+    phase_group,
+    .keep_all = TRUE
+  )
+
+# Only recovery rows that survived all filtering are valid attempts.
+# These same rows are used by the outcome tables, recovery charts,
+# and recovery summary table.
+valid_recovery_rows <- results %>%
+  filter(phase %in% RECOVERY_PHASES) %>%
+  transmute(
+    run_id,
+
+    phase_group = recode(
+      phase,
+      "R1" = "Phase 1",
+      "R3" = "Phase 3",
+      "R4" = "Phase 4",
+      "R5" = "Phase 5"
     ),
-  
-  results %>%
-    filter(phase == "Phase 3") %>%
-    transmute(
-      run_id,
-      phase_group = "Phase 3",
-      primary_status = as.character(status)
-    ),
-  
-  results %>%
-    filter(phase == "Phase 4") %>%
-    transmute(
-      run_id,
-      phase_group = "Phase 4",
-      primary_status = as.character(status)
-    ),
-  
-  results %>%
-    filter(phase == "Phase 5") %>%
-    transmute(
-      run_id,
-      phase_group = "Phase 5",
-      primary_status = as.character(status)
+
+    recovery_phase = phase,
+    recovery_status = as.character(status)
+  ) %>%
+  distinct(
+    run_id,
+    phase_group,
+    .keep_all = TRUE
+  )
+
+# Phase 2 has two required measurements. A run is included in the
+# Phase 2 outcome data only when both Phase 2.1 and Phase 2.2 remain.
+# An incomplete pair is therefore represented as "Not run" later.
+phase_2_rows <- results %>%
+  filter(
+    phase %in% c(
+      "Phase 2.1",
+      "Phase 2.2"
     )
+  ) %>%
+  group_by(run_id) %>%
+  summarise(
+    phase_2_1_present = any(
+      phase == "Phase 2.1"
+    ),
+
+    phase_2_2_present = any(
+      phase == "Phase 2.2"
+    ),
+
+    phase_2_1_pass = any(
+      phase == "Phase 2.1" &
+        status == "PASS"
+    ),
+
+    phase_2_2_pass = any(
+      phase == "Phase 2.2" &
+        status == "PASS"
+    ),
+
+    .groups = "drop"
+  ) %>%
+  filter(
+    phase_2_1_present,
+    phase_2_2_present
+  ) %>%
+  transmute(
+    run_id,
+    phase_group = "Phase 2",
+
+    primary_status = if_else(
+      phase_2_1_pass &
+        phase_2_2_pass,
+      "PASS",
+      "TIMEOUT"
+    ),
+
+    direct_stability_status = NA_character_
+  )
+
+phase_outcomes <- bind_rows(
+  main_phase_rows %>%
+    left_join(
+      direct_stability_rows,
+      by = c(
+        "run_id",
+        "phase_group"
+      )
+    ),
+
+  phase_2_rows
 ) %>%
   left_join(
-    recovery_outcomes,
+    valid_recovery_rows,
     by = c(
       "run_id",
       "phase_group"
     )
   ) %>%
   mutate(
-    recovery_ran = !is.na(recovery_phase),
-    
+    recovery_ran = !is.na(
+      recovery_phase
+    ),
+
+    direct_success = case_when(
+      phase_group == "Phase 2" ~
+        primary_status == "PASS",
+
+      TRUE ~
+        primary_status == "PASS" &
+          coalesce(
+            direct_stability_status == "PASS",
+            FALSE
+          )
+    ),
+
+    # A valid recovery attempt takes precedence over the direct result.
+    # This correctly handles recovery triggered by a failed S check
+    # even when the preceding main phase itself recorded PASS.
     outcome = case_when(
-      primary_status == "PASS" ~
-        "Success (no recovery)",
-      
       recovery_status == "PASS" ~
         "Success (with recovery)",
-      
+
       recovery_ran ~
         "Failure (with recovery)",
-      
+
+      direct_success ~
+        "Success (no recovery)",
+
       TRUE ~
         "Failure (no recovery)"
     ),
-    
+
     final_outcome = if_else(
       outcome %in% c(
         "Success (no recovery)",
@@ -420,7 +459,7 @@ phase_outcomes <- bind_rows(
       "Success",
       "Failure"
     ),
-    
+
     phase_group = factor(
       phase_group,
       levels = c(
@@ -431,7 +470,7 @@ phase_outcomes <- bind_rows(
         "Phase 5"
       )
     ),
-    
+
     outcome = factor(
       outcome,
       levels = c(
@@ -441,7 +480,7 @@ phase_outcomes <- bind_rows(
         "Failure (with recovery)"
       )
     ),
-    
+
     final_outcome = factor(
       final_outcome,
       levels = c(
@@ -450,6 +489,36 @@ phase_outcomes <- bind_rows(
       )
     )
   )
+
+# Guard against the exact inconsistency where the outcome table and
+# recovery table count different sets of valid recovery attempts.
+valid_recovery_attempt_count <- valid_recovery_rows %>%
+  summarise(attempts = n()) %>%
+  pull(attempts)
+
+classified_recovery_attempt_count <- phase_outcomes %>%
+  filter(recovery_ran) %>%
+  summarise(attempts = n()) %>%
+  pull(attempts)
+
+if (
+  valid_recovery_attempt_count !=
+    classified_recovery_attempt_count
+) {
+  stop(
+    paste(
+      "Recovery-attempt mismatch:",
+      valid_recovery_attempt_count,
+      "valid R rows but",
+      classified_recovery_attempt_count,
+      "recovery-classified phase outcomes."
+    )
+  )
+}
+```
+
+```{r}
+middle_focus_transform <- function( center = 35, spread = 15 ) { scales::new_transform( name = "middle_focus", transform = function(x) { plogis((x - center) / spread) }, inverse = function(x) { center + spread * qlogis(x) }, domain = c(-Inf, Inf) ) }
 ```
 
 ```{r timeout-filter-summary}
@@ -463,7 +532,7 @@ timeout_filter_summary <- removed_entries %>%
 
 kable(
   timeout_filter_summary,
-  caption = "Entries excluded by timeout and dependency filtering.",
+  caption = "Entries excluded by timeout, minimum-duration, and dependency filtering.",
   align = c("l", "l", "r")
 )
 ```
@@ -476,8 +545,8 @@ COLOR_TIMEOUT <- "#FBD786"
 COLOR_FAIL <- "#f7797d"
 
 VALUE_GRADIENT <- c(
-  low = "#9796f0",
-  high = "#fbc7d4"
+  low = "#fbc7d4",
+  high = "#9796f0"
 )
 
 SUCCESS_GRADIENT <- c(
@@ -890,27 +959,30 @@ ggplot(
 ```
 
 ```{r success-rate-table}
-success_rate_table <- phase_outcomes %>%
-  count(
+success_rate_table <- detailed_outcome_chart_data %>%
+  select(
     phase_group,
     outcome,
-    name = "runs"
-  ) %>%
-  complete(
-    phase_group,
-    outcome,
-    fill = list(runs = 0)
+    runs
   ) %>%
   pivot_wider(
     names_from = outcome,
-    values_from = runs
+    values_from = runs,
+    values_fill = 0
   ) %>%
   arrange(phase_group)
 
 kable(
   success_rate_table,
-  caption = "Run counts by phase outcome.",
-  align = c("l", "r", "r", "r", "r")
+  caption = "Run counts by phase outcome, including phases that were not executed.",
+  align = c(
+    "l",
+    "r",
+    "r",
+    "r",
+    "r",
+    "r"
+  )
 )
 ```
 
@@ -979,25 +1051,20 @@ phase1_input_plot <- ggplot(
   ) +
   scale_size_continuous(
     range = c(8, 18),
-    breaks = pretty_breaks(n = 3)
+    breaks = breaks_pretty(n = 3)
   ) +
   scale_x_continuous(
-    breaks = pretty_breaks()
+    breaks = breaks_pretty(), expand = expansion(add = c(0.6, 0.6))
   ) +
   scale_y_continuous(
-    breaks = pretty_breaks()
+    breaks = breaks_pretty(), expand = expansion(add = c(0.6, 0.6))
   ) +
   labs(
     title = paste(
-      "Phase 1 Initial-Network Formation:",
-      "Final Success Rate by Network Size and Neighbor Limit"
-    ),
-    subtitle = paste(
-      "Bubble fill and label show final success rate including successful R1 recovery;",
-      "bubble size shows the number of runs."
+      "Phase 1: Final Success Rate by Network Size and Neighbor Limit"
     ),
     x = "Initial node count",
-    y = "Maximum neighbors per node",
+    y = "Maximum neighbors",
     fill = "Final success rate",
     size = "Number of runs"
   )
@@ -1068,25 +1135,20 @@ phase3_input_plot <- ggplot(
   ) +
   scale_size_continuous(
     range = c(8, 18),
-    breaks = pretty_breaks(n = 3)
+    breaks = breaks_pretty(n = 3)
   ) +
   scale_x_continuous(
-    breaks = pretty_breaks()
+    breaks = breaks_pretty(), expand = expansion(add = c(0.6, 0.6))
   ) +
   scale_y_continuous(
-    breaks = pretty_breaks()
+    breaks = breaks_pretty(), expand = expansion(add = c(0.6, 0.6))
   ) +
   labs(
     title = paste(
-      "Phase 3 Single-Node Failure Repair:",
-      "Final Success Rate by Network Size and Neighbor Limit"
-    ),
-    subtitle = paste(
-      "Bubble fill and label show final success rate including successful R3 recovery;",
-      "bubble size shows the number of runs."
+      "Phase 3: Final Success Rate by Network Size and Neighbor Limit"
     ),
     x = "Initial node count",
-    y = "Maximum neighbors per node",
+    y = "Maximum neighbors",
     fill = "Final success rate",
     size = "Number of runs"
   )
@@ -1157,25 +1219,20 @@ phase4_input_plot <- ggplot(
   ) +
   scale_size_continuous(
     range = c(8, 18),
-    breaks = pretty_breaks(n = 3)
+    breaks = breaks_pretty(n = 3)
   ) +
   scale_x_continuous(
-    breaks = pretty_breaks()
+    breaks = breaks_pretty(), expand = expansion(add = c(0.6, 0.6))
   ) +
   scale_y_continuous(
-    breaks = pretty_breaks()
+    breaks = breaks_pretty(), expand = expansion(add = c(0.6, 0.6))
   ) +
   labs(
     title = paste(
-      "Phase 4 Node Addition:",
-      "Final Success Rate by Added Nodes and Neighbor Limit"
-    ),
-    subtitle = paste(
-      "Bubble fill and label show final success rate including successful R4 recovery;",
-      "bubble size shows the number of runs."
+      "Phase 4: Final Success Rate by Added Nodes and Neighbor Limit"
     ),
     x = "Number of added nodes",
-    y = "Maximum neighbors per node",
+    y = "Maximum neighbors",
     fill = "Final success rate",
     size = "Number of runs"
   )
@@ -1185,7 +1242,7 @@ phase4_input_plot
 
 ## Phase 5: Removing Multiple Nodes
 
-```{r phase5-input-chart}
+```{r phase5-input-chart, fig.width = 8}
 phase5_input_data <- results %>%
   filter(phase == "Phase 5") %>%
   select(
@@ -1246,31 +1303,28 @@ phase5_input_plot <- ggplot(
   ) +
   scale_size_continuous(
     range = c(8, 18),
-    breaks = pretty_breaks(n = 3)
+    breaks = breaks_pretty(n = 3)
   ) +
   scale_x_continuous(
-    breaks = pretty_breaks()
+    breaks = breaks_pretty(), expand = expansion(add = c(0.6, 0.6))
   ) +
   scale_y_continuous(
-    breaks = pretty_breaks()
+    breaks = breaks_pretty(), expand = expansion(add = c(0.6, 0.6))
   ) +
   labs(
     title = paste(
-      "Phase 5 Multiple-Node Failure Repair:",
-      "Final Success Rate by Removed Nodes and Neighbor Limit"
-    ),
-    subtitle = paste(
-      "Bubble fill and label show final success rate including successful R5 recovery;",
-      "bubble size shows the number of runs."
+      "Phase 5: Final Success Rate by Removed Nodes and Neighbor Limit"
     ),
     x = "Number of removed nodes",
-    y = "Maximum neighbors per node",
+    y = "Maximum neighbors",
     fill = "Final success rate",
     size = "Number of runs"
   )
 
 phase5_input_plot
 ```
+
+![](http://127.0.0.1:39058/chunk_output/F9C83C15a463b8af/641E88A1/cgoaeoc4gw66d/000010.png)
 
 ## Combined Input-Variable Comparison
 
@@ -1452,14 +1506,18 @@ ggplot(
   )
 ) +
   geom_boxplot(
-    aes(fill = detection_milestone),
     width = 0.55,
+    fill = "white",
+    color = "grey35",
+    linewidth = 0.45,
     outlier.shape = NA,
-    alpha = 0.65
+    alpha = 0.55
   ) +
   geom_jitter(
-    aes(color = status),
+    aes(fill = status),
+    shape = 21,
     width = 0.12,
+    stroke = 0.35,
     height = 0,
     size = 2.1,
     alpha = 0.8
@@ -1468,30 +1526,43 @@ ggplot(
     yintercept = 120,
     linetype = "dashed",
     linewidth = 0.5,
-    color = "grey30"
+    color = "grey40"
   ) +
   scale_fill_manual(
-    values = ARBITRARY_COLORS[c(2, 9)],
-    limits = levels(
-      phase2_time_data$detection_milestone
+    values = c(
+      "PASS" = COLOR_PASS,
+      "TIMEOUT" = COLOR_TIMEOUT,
+      "FAIL" = COLOR_FAIL
     ),
-    drop = FALSE,
-    guide = "none"
-  ) +
-  scale_color_manual(
-    values = STATUS_COLORS,
     limits = STATUS_LEVELS,
-    labels = STATUS_LABELS,
+    breaks = c("PASS", "TIMEOUT"),
+    labels = STATUS_LABELS[c("PASS", "TIMEOUT")],
     drop = FALSE
   ) +
-  labs(
-    title = "Failure-Detection Time: First Report Compared with Complete Expected Reporting",
-    subtitle = paste(
-      "Phase 2.1 ends at the first failure report; Phase 2.2 ends when all expected",
-      "neighbors have reported. Dashed line: configured 120-second timeout."
+  scale_y_continuous(
+    transform = middle_focus_transform(
+      center = 20,
+      spread = 15
     ),
+    breaks = c(
+      0,5,
+      10,15,
+      20,
+      30,
+      40,
+      50,
+      60,
+      120
+    ),
+    limits = c(0, 130),
+    expand = expansion(
+      mult = c(0.02, 0.04)
+    )
+  ) +
+  labs(
+    title = "Phase 2: Detection Time for First Report and All Expected Reporting",
     x = "Failure-detection milestone",
-    y = "Elapsed time after node termination (seconds)",
+    y = "Elapsed time",
     color = "Recorded status"
   )
 ```
@@ -1517,18 +1588,19 @@ ggplot(
     y = elapsed_seconds
   )
 ) +
+  geom_boxplot( data = phase1_time_data %>% filter(status == "PASS"),aes( group = factor(initial_nodes) ), width = 0.8, fill = "white", color = "grey35", linewidth = 0.45, alpha = 0.45, outlier.shape = NA ) +
   geom_point(
     aes(
       fill = max_neighbors,
       shape = status
     ),
     position = position_jitter(
-      width = 0.13,
+      width = 0.4,
       height = 0
     ),
-    size = 3.4,
+    size = 2.5,
     color = "grey15",
-    stroke = 0.5,
+    stroke = 0.2,
     alpha = 0.85
   ) +
   geom_hline(
@@ -1544,21 +1616,20 @@ ggplot(
   scale_shape_manual(
     values = STATUS_SHAPES,
     limits = STATUS_LEVELS,
-    labels = STATUS_LABELS,
+    breaks = c("PASS", "TIMEOUT"),
+    labels = STATUS_LABELS[c("PASS", "TIMEOUT")],
     drop = FALSE
   ) +
   scale_x_continuous(
-    breaks = pretty_breaks()
-  ) +
+    breaks = breaks_pretty()
+  ) + scale_y_continuous( transform = middle_focus_transform( center = 20, spread = 15 ), breaks = c( 0, 5, 15, 20, 25, 35, 60, 120 ), limits = c(5, 130), expand = expansion(mult = c(0.02, 0.04)) ) +
+  guides( fill = guide_colorbar(order = 1), shape = guide_legend(order = 2) 
+          ) +
   labs(
-    title = "Initial Network Formation Time by Initial Node Count and Neighbor Limit",
-    subtitle = paste(
-      "Point fill represents the maximum neighbors allowed per node;",
-      "point shape represents status. Dashed line: configured 120-second timeout."
-    ),
+    title = "Phase 1: Execution Time by Initial Node Count and Neighbor Limit",
     x = "Initial node count",
-    y = "Time to form a valid full-neighbor topology (seconds)",
-    fill = "Maximum neighbors per node",
+    y = "Time",
+    fill = "Maximum neighbors",
     shape = "Recorded status"
   )
 ```
@@ -1582,18 +1653,31 @@ ggplot(
     y = elapsed_seconds
   )
 ) +
+  geom_boxplot(
+    data = phase3_time_data %>%
+      filter(status == "PASS"),
+    aes(
+      group = factor(initial_nodes)
+    ),
+    width = 0.8,
+    fill = "white",
+    color = "grey35",
+    linewidth = 0.45,
+    alpha = 0.45,
+    outlier.shape = NA
+  ) +
   geom_point(
     aes(
       fill = max_neighbors,
       shape = status
     ),
     position = position_jitter(
-      width = 0.13,
+      width = 0.4,
       height = 0
     ),
-    size = 3.4,
+    size = 2.5,
     color = "grey15",
-    stroke = 0.5,
+    stroke = 0.2,
     alpha = 0.85
   ) +
   geom_hline(
@@ -1609,21 +1693,20 @@ ggplot(
   scale_shape_manual(
     values = STATUS_SHAPES,
     limits = STATUS_LEVELS,
-    labels = STATUS_LABELS,
+    breaks = c("PASS", "TIMEOUT"),
+    labels = STATUS_LABELS[c("PASS", "TIMEOUT")],
     drop = FALSE
   ) +
   scale_x_continuous(
-    breaks = pretty_breaks()
+    breaks = breaks_pretty()
+  ) + scale_y_continuous( transform = middle_focus_transform( center = 50, spread = 40 ), breaks = c( 0, 20,30, 40, 50, 60, 80, 120, 180), limits = c(0, 200), expand = expansion(mult = c(0.02, 0.04)) )+
+  guides( fill = guide_colorbar(order = 1), shape = guide_legend(order = 2) 
   ) +
   labs(
-    title = "Single-Node Failure Repair Time by Initial Node Count and Neighbor Limit",
-    subtitle = paste(
-      "Point fill represents the maximum neighbors allowed per node;",
-      "point shape represents status. Dashed line: configured 180-second timeout."
-    ),
+    title = "Phase 3: Execution Time by Initial Node Count and Neighbor Limit",
     x = "Initial node count",
-    y = "Time to restore a valid full-neighbor topology (seconds)",
-    fill = "Maximum neighbors per node",
+    y = "Time",
+    fill = "Maximum neighbors",
     shape = "Recorded status"
   )
 ```
@@ -1647,18 +1730,31 @@ ggplot(
     y = elapsed_seconds
   )
 ) +
+  geom_boxplot(
+    data = phase4_time_data %>%
+      filter(status == "PASS"),
+    aes(
+      group = factor(added_node_count)
+    ),
+    width = 0.8,
+    fill = "white",
+    color = "grey35",
+    linewidth = 0.45,
+    alpha = 0.45,
+    outlier.shape = NA
+  ) +
   geom_point(
     aes(
       fill = max_neighbors,
       shape = status
     ),
     position = position_jitter(
-      width = 0.13,
+      width = 0.3,
       height = 0
     ),
-    size = 3.4,
+    size = 2.5,
     color = "grey15",
-    stroke = 0.5,
+    stroke = 0.2,
     alpha = 0.85
   ) +
   geom_hline(
@@ -1674,21 +1770,20 @@ ggplot(
   scale_shape_manual(
     values = STATUS_SHAPES,
     limits = STATUS_LEVELS,
-    labels = STATUS_LABELS,
+    breaks = c("PASS", "TIMEOUT"),
+    labels = STATUS_LABELS[c("PASS", "TIMEOUT")],
     drop = FALSE
   ) +
   scale_x_continuous(
-    breaks = pretty_breaks()
+    breaks = breaks_pretty()
+  ) + scale_y_continuous( transform = middle_focus_transform( center = 20, spread = 15 ), breaks = c( 0, 10, 15, 20, 25, 30, 40, 60,120), limits = c(0, 130), expand = expansion(mult = c(0.02, 0.04)) )+
+  guides( fill = guide_colorbar(order = 1), shape = guide_legend(order = 2) 
   ) +
   labs(
-    title = "Node-Addition Convergence Time by Added Node Count and Neighbor Limit",
-    subtitle = paste(
-      "Point fill represents the maximum neighbors allowed per node;",
-      "point shape represents status. Dashed line: configured 120-second timeout."
-    ),
+    title = "Phase 4: Execution Time by Added Node Count and Neighbor Limit",
     x = "Number of added nodes",
-    y = "Time until all active nodes have valid full neighbor sets (seconds)",
-    fill = "Maximum neighbors per node",
+    y = "Time",
+    fill = "Maximum neighbors",
     shape = "Recorded status"
   )
 ```
@@ -1712,18 +1807,31 @@ ggplot(
     y = elapsed_seconds
   )
 ) +
+  geom_boxplot(
+    data = phase5_time_data %>%
+      filter(status == "PASS"),
+    aes(
+      group = factor(removed_node_count)
+    ),
+    width = 0.8,
+    fill = "white",
+    color = "grey35",
+    linewidth = 0.45,
+    alpha = 0.45,
+    outlier.shape = NA
+  ) +
   geom_point(
     aes(
       fill = max_neighbors,
       shape = status
     ),
     position = position_jitter(
-      width = 0.13,
+      width = 0.3,
       height = 0
     ),
-    size = 3.4,
+    size = 2.5,
     color = "grey15",
-    stroke = 0.5,
+    stroke = 0.2,
     alpha = 0.85
   ) +
   geom_hline(
@@ -1739,21 +1847,20 @@ ggplot(
   scale_shape_manual(
     values = STATUS_SHAPES,
     limits = STATUS_LEVELS,
-    labels = STATUS_LABELS,
+    breaks = c("PASS", "TIMEOUT"),
+    labels = STATUS_LABELS[c("PASS", "TIMEOUT")],
     drop = FALSE
   ) +
   scale_x_continuous(
-    breaks = pretty_breaks()
+    breaks = c(4, 5, 6, 8, 10, 12)
+  ) + scale_y_continuous( transform = middle_focus_transform( center = 75, spread = 40 ), breaks = c( 20, 40, 60, 75, 90, 110, 150, 180), limits = c(20, 200), expand = expansion(mult = c(0.02, 0.04)) )+
+  guides( fill = guide_colorbar(order = 1), shape = guide_legend(order = 2) 
   ) +
   labs(
-    title = "Multiple-Node Failure Repair Time by Removed Node Count and Neighbor Limit",
-    subtitle = paste(
-      "Point fill represents the maximum neighbors allowed per node;",
-      "point shape represents status. Dashed line: configured 180-second timeout."
-    ),
+    title = "Phase 5: Execution Time by Removed Node Count and Neighbor Limit",
     x = "Number of removed nodes",
-    y = "Time to restore a valid full-neighbor topology (seconds)",
-    fill = "Maximum neighbors per node",
+    y = "Time",
+    fill = "Maximum neighbors",
     shape = "Recorded status"
   )
 ```
@@ -1809,10 +1916,10 @@ recovery_phase_colors <- setNames(
 )
 
 recovery_phase_labels <- c(
-  "R1" = "R1: after initial formation",
-  "R3" = "R3: after single-node failure repair",
-  "R4" = "R4: after adding nodes",
-  "R5" = "R5: after multiple-node failure repair"
+  "R1" = "R1",
+  "R3" = "R3",
+  "R4" = "R4",
+  "R5" = "R5"
 )
 
 ggplot(
@@ -1854,16 +1961,16 @@ ggplot(
   ) +
   scale_size_continuous(
     range = c(2.5, 5.5),
-    breaks = pretty_breaks(n = 4)
+    breaks = breaks_pretty(n = 4)
   ) +
   scale_x_continuous(
-    breaks = pretty_breaks()
+    breaks = breaks_pretty()
   ) +
   labs(
     title = "Replacement-Based Recovery Time by Triggering Operation and Initial Problem Count",
     subtitle = paste(
       "R1, R3, R4, and R5 restart deficient/problematic nodes and wait for a valid topology.",
-      "Dashed line: configured 120-second recovery timeout."
+      "Dashed line: nominal 120-second timeout; dot-dashed line: 130-second exclusion threshold."
     ),
     x = "Deficient or problematic nodes that triggered recovery",
     y = "Replacement-based recovery time (seconds)",
@@ -1935,18 +2042,17 @@ if (nrow(phase1_problem_data) == 0) {
       guide = "none"
     ) +
     scale_x_continuous(
-      breaks = pretty_breaks()
+      breaks = breaks_pretty()
     ) +
     scale_y_continuous(
-      breaks = pretty_breaks(),
+      breaks = breaks_pretty(),
       expand = expansion(
         mult = c(0, 0.12)
       )
     ) +
     labs(
-      title = "Deficient Nodes Present When Initial Network Formation Failed",
-      subtitle = "Each bar counts failed Phase 1 runs with the displayed number of deficient nodes.",
-      x = "Deficient nodes at the end of Phase 1",
+      title = "Phase 1: Problematic Nodes",
+      x = "Problematic nodes",
       y = "Number of failed runs"
     )
 }
@@ -2012,18 +2118,17 @@ if (nrow(phase3_problem_data) == 0) {
       guide = "none"
     ) +
     scale_x_continuous(
-      breaks = pretty_breaks()
+      breaks = breaks_pretty()
     ) +
     scale_y_continuous(
-      breaks = pretty_breaks(),
+      breaks = breaks_pretty(),
       expand = expansion(
         mult = c(0, 0.12)
       )
     ) +
     labs(
-      title = "Deficient Nodes Remaining When Single-Node Failure Repair Failed",
-      subtitle = "Each bar counts failed Phase 3 runs with the displayed number of deficient nodes.",
-      x = "Deficient nodes at the end of Phase 3",
+      title = "Phase 3: Problematic Nodes",
+      x = "Problematic nodes",
       y = "Number of failed runs"
     )
 }
@@ -2089,18 +2194,17 @@ if (nrow(phase4_problem_data) == 0) {
       guide = "none"
     ) +
     scale_x_continuous(
-      breaks = pretty_breaks()
+      breaks = c(1, 2)
     ) +
     scale_y_continuous(
-      breaks = pretty_breaks(),
+      breaks = breaks_pretty(),
       expand = expansion(
         mult = c(0, 0.12)
       )
     ) +
     labs(
-      title = "Problematic Nodes Remaining When Node Addition Failed",
-      subtitle = "Each bar counts failed Phase 4 runs with the displayed number of problematic nodes.",
-      x = "Problematic nodes at the end of Phase 4",
+      title = "Phase 4: Problematic Nodes",
+      x = "Problematic nodes",
       y = "Number of failed runs"
     )
 }
@@ -2166,18 +2270,17 @@ if (nrow(phase5_problem_data) == 0) {
       guide = "none"
     ) +
     scale_x_continuous(
-      breaks = pretty_breaks()
+      breaks = breaks_pretty()
     ) +
     scale_y_continuous(
-      breaks = pretty_breaks(),
+      breaks = breaks_pretty(),
       expand = expansion(
         mult = c(0, 0.12)
       )
     ) +
     labs(
-      title = "Problematic Nodes Remaining When Multiple-Node Failure Repair Failed",
-      subtitle = "Each bar counts failed Phase 5 runs with the displayed number of problematic nodes.",
-      x = "Problematic nodes at the end of Phase 5",
+      title = "Phase 5: Problematic Nodes",
+      x = "Problematic nodes",
       y = "Number of failed runs"
     )
 }
@@ -2187,10 +2290,10 @@ if (nrow(phase5_problem_data) == 0) {
 
 ```{r recovery-success-chart}
 recovery_labels <- c(
-  "R1" = "After initial formation (R1)",
-  "R3" = "After single-node failure repair (R3)",
-  "R4" = "After adding nodes (R4)",
-  "R5" = "After multiple-node failure repair (R5)"
+  "R1" = "R1",
+  "R3" = "R3",
+  "R4" = "R4",
+  "R5" = "R5"
 )
 
 recovery_success_data <- results %>%
@@ -2230,7 +2333,7 @@ recovery_success_data <- results %>%
       0
     ),
     label = if_else(
-      runs > 0,
+      runs > 0 & share >= 0.1,
       paste0(
         percent(share, accuracy = 0.1),
         "\n(n = ", runs, ")"
@@ -2276,12 +2379,8 @@ ggplot(
     expand = expansion(mult = c(0, 0))
   ) +
   labs(
-    title = "Outcome of Replacement-Based Recovery Attempts by Triggering Operation",
-    subtitle = paste(
-      "Each recovery phase restarts deficient/problematic processes and waits",
-      "up to 120 seconds for a valid full-neighbor topology."
-    ),
-    x = "Operation that triggered replacement-based recovery",
+    title = "Success Rate of Recovery Attempts by Triggering Phase",
+    x = "Triggering Phase",
     y = "Share of valid recovery attempts",
     fill = "Recorded status"
   )
