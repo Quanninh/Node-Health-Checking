@@ -632,7 +632,7 @@ If the network contains at most $k+1$ nodes, the joining node establishes connec
 This allows the node to reach the desired neighbor count without requiring any restructuring of the network topology. 
 
 Figure~\ref{fig:small_network} illustrates this scenario. Consider a network consisting of four nodes and a target neighbor count of $k=4$. 
-When node E joins the network, it establishes connections with all existing nodes, thereby satisfying its neighbor requirement.
+When node $x_5$ joins the network, it establishes connections with all existing nodes, thereby satisfying its neighbor requirement.
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.3\textwidth]{FINDING_NEMO_small_pretty.png}
@@ -650,11 +650,11 @@ The evicted nodes then establish connections with the joining node.
 Consequently, the joining node acquires $k/2$ neighbors from the selected nodes and an additional $k/2$ neighbors from the evicted nodes, resulting in a total of $k$ neighbors.
 
 Figure~\ref{fig:scaled_network} presents an example of this process. 
-Building upon the network shown in Figure~\ref{fig:small_network}, assume that node F requests to join a network of five nodes with $k=4$. 
-One possible outcome of the random selection process is that nodes E and C are selected. 
-Node E subsequently evicts node B, while node C evicts node D. 
-Node F therefore establishes direct connections with E and C, as well as with the evicted nodes B and D. 
-As a result, node F obtains four neighbors while preserving the desired network density.
+Building upon the network shown in Figure~\ref{fig:small_network}, assume that node $x_6$ requests to join a network of five nodes with $k=4$. 
+One possible outcome of the random selection process is that nodes $x_5$ and $x_3$ are selected. 
+Node $x_5$ subsequently evicts node $x_2$, while node $x_3$ evicts node $x_4$. 
+Node $x_6$ therefore establishes direct connections with $x_5$ and $x_3$, as well as with the evicted nodes $x_2$ and $x_4$. 
+As a result, node $x_6$ obtains four neighbors while preserving the desired network density.
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.3\textwidth]{FINDING_NEMO_scaled_pretty.png}
