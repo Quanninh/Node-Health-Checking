@@ -362,22 +362,17 @@ Experimental results from the original work show that the $\phi$ accrual failure
 
 \subsubsection{SWIM protocol}
 
-Traditional heartbeating protocols may also suffer from scalability problems and false-positive failure detection. 
+Traditional heartbeating protocols may also suffer from scalability problems and false-positive failure detection\cite{guptaScalableEfficientDistributed2001}.
 If every node monitors every other node, the number of heartbeat messages increases rapidly as the system grows.
 In addition, if a node misses a heartbeat only because of temporary network problems, it may incorrectly mark another node as failed. 
 Das et al.~\cite{dasSWIMScalableWeaklyconsistent2002} proposed SWIM to address these issues by separating failure detection from membership dissemination and using efficient peer-to-peer probing. 
 In each protocol period, a node selects one target node from its membership and sends a direct ping. 
-If the target replies with an acknowledgement, it is considered reachable. 
-If no acknowledgement is received within the timeout, the probing node does not immediately declare the target as failed. 
-Instead, it asks several helper nodes to perform indirect probes to the same target. 
-If any helper node receives an acknowledgement from the target, it forwards this information back to the original probing node, showing that the target is still alive.
+If the target responds, it is considered alive. If not, helper nodes perform indirect probes; a response through any helper confirms that the target is still reachable.
 
-This indirect checking mechanism reduces false-positive failure detection because the decision is not based on only one communication path. 
 A node is considered failed only when both the direct probe and the indirect probes fail. 
 SWIM also disseminates membership changes using an infection-style, or gossip-style, approach, allowing updates about joins, leaves, suspicions, and failures to spread through the system with low per-node message overhead.
 
 \subsection{System Design}
-
 System architecture is another important design consideration. 
 A common approach for coordinating distributed applications is to introduce a dedicated coordination service, such as ZooKeeper \cite{huntZooKeeperWaitfreeCoordination}. 
 ZooKeeper is a replicated coordination service consisting of multiple servers, one of which acts as the leader. 
