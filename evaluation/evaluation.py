@@ -41,10 +41,10 @@ MULTICAST_INTERFACE = "wireless_32768"
 # CONFIGURE THIS
 # =============================================================================
 
-MAX_NEIGHBORS = 8
-INITIAL_NODE_COUNT = 20
-ADDED_NODE_COUNT = 8
-REMOVED_NODE_COUNT = 12
+MAX_NEIGHBORS = 4
+INITIAL_NODE_COUNT = 10
+ADDED_NODE_COUNT = 6
+REMOVED_NODE_COUNT = 5
 
 # =============================================================================
 # =============================================================================
