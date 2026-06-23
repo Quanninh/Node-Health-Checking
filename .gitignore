@@ -36,4 +36,5 @@ target/
 *.xdv
 document/*.pdf
 *.bib
+document/tex-fmt.exe
 

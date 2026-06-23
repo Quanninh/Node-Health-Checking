@@ -19,6 +19,11 @@
 \usepackage{circuitikz}
 \usepackage{float}
 \usetikzlibrary{arrows.meta}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{booktabs}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
 
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
@@ -156,101 +161,146 @@ distributed systems, node health checking, failure detection, heartbeat, false p
 % Through node-to-node communication, the system identifies healthy, suspicious, and failed nodes.
 % When a node or connection problem is detected, the system updates the affected relationships and attempts to preserve the monitoring structure so that health checking can continue.
 
-\subsection{Background}
-\label{subsec:background}
+Node health checking is a fundamental requirement in distributed systems because the timely detection of failed or unreachable nodes directly affects service continuity, coordination correctness, and system reconfiguration \cite{liEnergyefficientLazyGroup2025} \cite{yangMedleyMembershipService2022}. 
+The impact of an undetected node failure can be severe, particularly when the failed node is topologically or functionally critical; in interdependent networks, even a small fraction of node failures can trigger recursive cascades and widespread fragmentation \cite{buldyrevCatastrophicCascadeFailures2010}. 
+A concrete real-world example is the 2003 FirstEnergy alarm system failure, in which a critical software node stalled silently due to an unmonitored race condition, blinding operators and allowing a localized grid anomaly to propagate into a catastrophic, multi-regional cascading blackout \cite{Blackout20032003}.
 
-A node health-checking system observes the condition of nodes in a distributed environment.
-A node may be considered healthy when it responds to health-check messages within an acceptable time, and unhealthy when it becomes unreachable, stops responding, or behaves abnormally due to system or network issues.
-Health checking is therefore related to failure detection, connection monitoring, and membership management.
+A common health-checking paradigm relies on centralized supervision, in which a server or a small set of servers monitors nodes through periodic liveness messages or heartbeat-style reporting \cite{vanrenesseGossipStyleFailureDetection1998} \cite{kawazoeaguileraHeartbeatTimeoutfreeFailure1997}. 
+Heartbeat-based detection remains widely used because timeout on missing periodic messages provides a simple operational rule for identifying suspected failures \cite{vanrenesseGossipStyleFailureDetection1998} \cite{kawazoeaguileraHeartbeatTimeoutfreeFailure1997}. 
+Such designs are also attractive from an engineering perspective because centralized control simplifies operational management and supports a more coherent view of membership and monitoring state; distributed-systems research continues to build many higher-level services on top of membership knowledge \cite{huntZooKeeperWaitfreeCoordination}. 
 
-In a decentralized health-checking structure, nodes do not need a complete view of the entire system.
-Instead, each node is responsible for monitoring a smaller set of neighboring nodes.
-This reduces the amount of direct monitoring required from each participant and allows the health-checking responsibility to be shared across the network.
-The structure of node relationships is therefore important because it determines how monitoring tasks are distributed and how the system reacts when nodes join, leave, fail, or recover.
+However, centralized monitoring does not scale uniformly well as the system grows. 
+Large-scale and geographically distributed deployments make manual investigation difficult, which is why automatic failure detection becomes essential in IoT and other distributed environments \cite{yangMedleyMembershipService2022} \cite{banerjeeHardwareAssistedHeartbeatMechanism2022}. 
+In addition, centralized streaming and monitoring architectures can encounter bandwidth and concurrency bottlenecks, along with reduced fault tolerance under heavy load
+\cite{guoDecentralizedMultiVenueRealTime2025}
+\cite{weiSwarmCostEfficientVideo2024}.
+These limitations motivate decentralized alternatives.
 
-This project uses a neighbor-based monitoring structure.
-Each node attempts to maintain a fixed number of neighbors, denoted as \textbf{k}.
-The value of \textbf{k} represents the desired number of monitoring relationships for each node. When this number is reduced because of failure or disconnection, the system attempts to repair the missing relationships by connecting to other available nodes.
-In this way, the health-checking structure is not static, but can adapt to changes in the network.
+In decentralized health checking, nodes monitor one another without relying on a single global coordinator 
+\cite{yangMedleyMembershipService2022}
+\cite{nikolicSelfHealingDilemmasDistributed2021}.
+% Keywords: decentralized, single, health, universal, central
+% Nikolic
+% 2020 --> feel indirectly implying
+% Yang
+% 2022
+This design improves robustness and reduces dependence on central infrastructure, but it also introduces harder problems in membership maintenance, coordination, and incomplete local knowledge 
+\cite{nikolicSelfHealingDilemmasDistributed2021}.
+% Keywords: Decentralized, byzantine, malicious, incorrect, large-scale
+% Nikolic
+% 2020
+% Rodr'iguez
+% 2020 --> can't see citations/ referneces
+Within this line of work, three recurring research concerns are network formation or neighbor discovery, failure detection accuracy and efficiency, and fault tolerance or self-healing after a node failure 
+\cite{rodriguezDecentralisedSelfHealingApproach2021}.
+% Rodr'iguez
+% 2020
 
-\subsection{Motivation}
-\label{subsec:motivation}
+A representative decentralized protocol is SWIM, which will be discussed at length in section~\ref{sec:related_work} \cite{dasSWIMScalableWeaklyconsistent2002}. 
+Its main advantage over traditional heartbeating is scalability: SWIM separates failure detection from membership dissemination, and both the expected detection time and expected message load per member remain independent of group size \cite{dasSWIMScalableWeaklyconsistent2002}. 
+Related systems have extended this direction to specialized environments. For example, Medley adapts decentralized membership and failure detection to wireless IoT settings through spatially biased probing, reducing the product of detection time and communication cost while maintaining low false positive rates \cite{yangMedleyMembershipService2022}. 
+Other work has shown that decentralized self-healing can rely on locally maintained neighborhood topology information to recreate and reconnect failed nodes after detection \cite{rodriguezDecentralisedSelfHealingApproach2021}. 
 
-The motivation of this project is to design a health-checking mechanism that remains active through local node cooperation.
-Instead of treating monitoring as a separate external service, the system makes health checking part of the behavior of each node.
-This allows nodes to participate directly in detecting failures, maintaining relationships, and restoring the monitoring structure when changes occur.
+% \subsection{Background}
+% \label{subsec:background}
 
-A decentralized structure is useful when the system must continue operating under partial failure conditions.
-In such conditions, some nodes or connections may fail while others remain functional.
-The health-checking mechanism should therefore avoid depending on a complete and perfect network view. It should instead allow each node to make local decisions based on the neighbors it can observe.
+% A node health-checking system observes the condition of nodes in a distributed environment.
+% A node may be considered healthy when it responds to health-check messages within an acceptable time, and unhealthy when it becomes unreachable, stops responding, or behaves abnormally due to system or network issues.
+% Health checking is therefore related to failure detection, connection monitoring, and membership management.
 
-This project is motivated by the need to combine failure detection with relationship maintenance.
-Detecting that a node is unavailable is not enough by itself; the system must also respond by updating the monitoring topology.
-For this reason, the design focuses not only on identifying unhealthy nodes, but also on preserving the network structure through joining, repair, and rewiring mechanisms.
+% In a decentralized health-checking structure, nodes do not need a complete view of the entire system.
+% Instead, each node is responsible for monitoring a smaller set of neighboring nodes.
+% This reduces the amount of direct monitoring required from each participant and allows the health-checking responsibility to be shared across the network.
+% The structure of node relationships is therefore important because it determines how monitoring tasks are distributed and how the system reacts when nodes join, leave, fail, or recover.
 
-\subsection{Contributions}
-\label{subsec:contribution}
+% This project uses a neighbor-based monitoring structure.
+% Each node attempts to maintain a fixed number of neighbors, denoted as \textbf{k}.
+% The value of \textbf{k} represents the desired number of monitoring relationships for each node. When this number is reduced because of failure or disconnection, the system attempts to repair the missing relationships by connecting to other available nodes.
+% In this way, the health-checking structure is not static, but can adapt to changes in the network.
 
-This project presents a decentralized node health-checking system in which nodes monitor one another through neighbor-based relationships.
-The main contributions are as follows:
+% \subsection{Motivation}
+% \label{subsec:motivation}
 
-\begin{itemize}
+% The motivation of this project is to design a health-checking mechanism that remains active through local node cooperation.
+% Instead of treating monitoring as a separate external service, the system makes health checking part of the behavior of each node.
+% This allows nodes to participate directly in detecting failures, maintaining relationships, and restoring the monitoring structure when changes occur.
 
-\item \textbf{Neighbor-based decentralized structure:}
-The system distributes health-checking responsibility across nodes by assigning each node a limited set of neighbors to monitor.
+% A decentralized structure is useful when the system must continue operating under partial failure conditions.
+% In such conditions, some nodes or connections may fail while others remain functional.
+% The health-checking mechanism should therefore avoid depending on a complete and perfect network view. It should instead allow each node to make local decisions based on the neighbors it can observe.
 
-\item \textbf{Fixed-\(k\) relationship maintenance:}
-Each node attempts to maintain a fixed number of neighbor relationships, allowing the monitoring structure to remain organized as the network changes.
+% This project is motivated by the need to combine failure detection with relationship maintenance.
+% Detecting that a node is unavailable is not enough by itself; the system must also respond by updating the monitoring topology.
+% For this reason, the design focuses not only on identifying unhealthy nodes, but also on preserving the network structure through joining, repair, and rewiring mechanisms.
 
-\item \textbf{Node joining mechanism:}
-The system supports new nodes entering the network and becoming part of the decentralized monitoring topology.
+% \subsection{Contributions}
+% \label{subsec:contribution}
 
-\item \textbf{Failure detection mechanism:}
-Nodes use health-check communication to identify healthy, suspicious, and failed neighbors based on their observed responses.
+% This project presents a decentralized node health-checking system in which nodes monitor one another through neighbor-based relationships.
+% The main contributions are as follows:
 
-\item \textbf{Repair and rewiring mechanism:}
-When nodes or connections become unavailable, the system attempts to replace missing relationships and restore the required monitoring structure.
+% \begin{itemize}
 
-\item \textbf{Optional observation layer:}
-A dashboard, server, and database are included to display node status and failure events, but they are separate from the core decentralized health-checking mechanism.
+% \item \textbf{Neighbor-based decentralized structure:}
+% The system distributes health-checking responsibility across nodes by assigning each node a limited set of neighbors to monitor.
 
-\item \textbf{Experimental evaluation:}
-The system is tested under normal operation, node joining, node crash, temporary disconnection, unstable connection, recovery, and observation-layer unavailability scenarios.
+% \item \textbf{Fixed-\(k\) relationship maintenance:}
+% Each node attempts to maintain a fixed number of neighbor relationships, allowing the monitoring structure to remain organized as the network changes.
 
-\end{itemize}
+% \item \textbf{Node joining mechanism:}
+% The system supports new nodes entering the network and becoming part of the decentralized monitoring topology.
 
-Overall, this project contributes a working prototype of a decentralized node health-checking system that combines local monitoring, relationship maintenance, failure detection, and topology repair. The system demonstrates how node cooperation can be used to maintain health-checking functionality in a changing distributed environment.
+% \item \textbf{Failure detection mechanism:}
+% Nodes use health-check communication to identify healthy, suspicious, and failed neighbors based on their observed responses.
+
+% \item \textbf{Repair and rewiring mechanism:}
+% When nodes or connections become unavailable, the system attempts to replace missing relationships and restore the required monitoring structure.
+
+% \item \textbf{Optional observation layer:}
+% A dashboard, server, and database are included to display node status and failure events, but they are separate from the core decentralized health-checking mechanism.
+
+% \item \textbf{Experimental evaluation:}
+% The system is tested under normal operation, node joining, node crash, temporary disconnection, unstable connection, recovery, and observation-layer unavailability scenarios.
+
+% \end{itemize}
+
+% Overall, this project contributes a working prototype of a decentralized node health-checking system that combines local monitoring, relationship maintenance, failure detection, and topology repair.
+% The system demonstrates how node cooperation can be used to maintain health-checking functionality in a changing distributed environment.
 
 \section{Problem Statement}
 \label{sec:problem_statement}
 Despite these advances, important limitations remain. 
 Centralized approaches still suffer from the familiar risks of concentration, including service disruption when the monitoring server fails and performance bottlenecks when a small number of servers must supervise very large populations of clients 
-\cite{guoDecentralizedMultiVenueRealTime2025}
+\cite{guoDecentralizedMultiVenueRealTime2025}.
+% (Keywords: bottlenecks, centralized, decentralized)
 % Guo
 % 2025
 % Banerjee
-% 2022
+% 2022 --> can't find citation
 Decentralized approaches avoid some of these issues, but they are not straightforward replacements because failure detection in asynchronous environments is inherently uncertain:
 a missing heartbeat or probe response can indicate a crashed node, but it can also reflect transient delay, packet loss, or local slowness 
 \cite{nikolicSelfHealingDilemmasDistributed2021}
 \cite{dadgarLifeguardLocalHealth2018}.
+%(Keywords: False positive, heartbeat, latency)
 % Nikolic
 % 2020
 % Dadgar
 % 2017
-
 This uncertainty has practical consequences. 
 SWIM achieves strong scalability, but real deployments have shown that slow message processing can produce false positive failure detections.
 \cite{dadgarLifeguardLocalHealth2018}.
+%(Keywords: False positive)
 % Dadgar
 % 2017
 Lifeguard addresses this problem by incorporating local health awareness, reducing false positives by more than 50× in controlled tests 
 \cite{dadgarLifeguardLocalHealth2018}.
+%(Keywords: Lifeguard, False positive, reduce)
 % Dadgar
 % 2017
 Yet this line of work remains focused primarily on improving failure detection itself, rather than providing an end-to-end mechanism that also integrates topology recovery or service restoration.
 \cite{dasSWIMScalableWeaklyconsistent2002}
 \cite{dadgarLifeguardLocalHealth2018}.
+%(Keywords: False positive, failure detect, fix, restore, recover)
 % Das
 % 2002
 % Dadgar
@@ -258,10 +308,12 @@ Yet this line of work remains focused primarily on improving failure detection i
 
 Similarly, self-healing studies often emphasize recovery after failure once some form of local detection has already occurred. In one decentralized topology-maintenance approach, neighboring nodes detect failures via heartbeat checks and then coordinate locally to recreate and reconnect the missing node based on stored topology knowledge 
 \cite{rodriguezDecentralisedSelfHealingApproach2021}.
+%(Keywords: stored, recover, restore, reconnect, local)
 % Rodr'iguez
 % 2020
 Other recent systems combine layered fault detection with dynamic reconstruction to preserve continuity under link or node disruption 
 \cite{guoDecentralizedMultiVenueRealTime2025}.
+%(Keywords: reconstruct, reconnect, continuity, preserve, ensure)
 % Guo
 % 2025
 These results are promising, but they also indicate that the literature frequently treats detection, topology knowledge dissemination, and post-failure healing as separable modules rather than as a unified framework.
@@ -299,11 +351,6 @@ This motivates the design of a decentralized framework that does not stop at det
 \label{sec:related_work}
 % Discuss existing approaches to failure detection and membership management in distributed systems. Compare heartbeat-based detection, timeout-based failure detectors, gossip-style membership protocols, and centralized monitoring. Explain which ideas influenced your design.
 \subsection{Failure detection}
-Failure detection is one of the fundamental problem for fault tolerance in distributed system because node may crash in any time. 
-Traditional binary failure detectors classify a node only as "alive" or "unreachable" based on whether it responds within a timeout.
-
-Although this model is simple, it is not flexible enough for dynamic distributed environments as this can cause false positives when a 
-healthy node responds late due to network congestion, packet loss, high CPU usage, or temporary connection problems \cite{chandraUnreliableFailureDetectors1996}.
 
 \subsubsection{\texorpdfstring{$\phi$}{phi} Accrual Calculation}
 
@@ -342,6 +389,29 @@ This increases deployment and operational complexity and makes membership manage
 
 For this reason, our system adopts a decentralized design instead. 
 Rather than relying on an external coordination service, membership management, failure detection, and topology maintenance are distributed across the participating nodes themselves.
+
+\subsection{Contributions}
+\label{subsec:contribution}
+
+The main contributions are as follows:
+
+\begin{itemize}
+
+\item A novel neighbor discovery protocol that orchestrates node integration while preserving the structural properties of a k-regular graph overlay: FINDING NEMO.
+
+\item A hybrid version of SWIM and \texorpdfstring{$\phi$}{phi} accrual failure detector: hybrid SWIMPHI.
+
+\item A new self-healing topology maintainance technique that automatically restores the overlay toward a k-regular graph state following node failures or topology disruptions: CHUALANH.
+
+\item Implementation of the framework including core components above in Java.
+
+\item Direct evaluation of FINDING NEMO, CHUALANH, and the overall system performance via a dashboard that enables the observation of node behavior and the collection of experimental metrics for evaluation.
+
+\end{itemize}
+
+Overall, this project contributes a working prototype of a decentralized node health-checking system that combines local monitoring, relationship maintenance, failure detection, and topology repair.
+The system demonstrates how node cooperation can be used to maintain health-checking functionality in a changing distributed environment.
+
 
 \section{Proposed Approach} % present algorithm
 \label{sec:proposed_approach}
@@ -701,7 +771,7 @@ Explain how the proposed approach is implemented in the project. Mention the pro
 \label{subsec:node_agent}
 Describe the responsibilities of the node agent, including sending or responding to health checks, reporting status, and interacting with the membership control service.
 
-\subsubsection{Failure Detection: Hybrid SWIMPHI}
+\subsubsection{Hybrid SWIMPHI}
 \label{subsubsec:swimphi_code}    
  
 
@@ -846,7 +916,7 @@ statistical failure estimation, gossip dissemination, and
 automated recovery, SWIMPHI provides scalable and resilient
 failure detection for dynamic distributed environments.
 
-\subsubsection{Neighbor Discovery: FINDING NEMO}
+\subsubsection{FINDING NEMO}
 \label{subsubsec:node_discovery_code}
 
 This section highlights several key implementation aspects of FINDING NEMO. 
@@ -1000,7 +1070,7 @@ While temporary degree imbalance may still occur, such situations are subsequent
 \label{fig:FINDING_NEMO_protocol}
 \end{figure*}
 
-\subsubsection{Node Rewiring: Degree-Preserving Topology Repair (DPTR) algorithm }
+\subsubsection{CHUALANH}
 \label{subsubsec:node_deletion_code}
 \begin{enumerate}
     \item{\textbf{Direct Rewiring: }}
@@ -1276,53 +1346,141 @@ public ResponseEntity<List<FailureReport>> getFailureReports() {
     \end{tabular}
     \label{tab:task_distribution}
     \end{table}
+
+\section{Evaluation}
+
 \subsection{Experimental Scenarios}
 \label{subsec:experimental_scenarios}
-The objective of the evaluation is to assess the performance of the FINDING NEMO neighbor discovery protocol, the Hybrid SWIMPHI failure detector, and the CHUALANH mechanism under dynamic membership changes. 
-The evaluation primarily measures execution time for each phase of operation (including join, failure detection, and topology recovery) as well as the success rate of node operations, defined as the proportion of nodes that successfully reach \texttt{MAX\_NEIGHBORS} within the given timeout constraints.
-The evaluation proceeds through a predefined sequence of phases. 
-Phase 1 evaluates initial topology formation. 
-Once the topology is stable, Phase 2 measures failure detection latency and Phase 3 evaluates topology recovery after a node failure. 
-Following recovery, Phase 4 introduces additional nodes and measures the time required for the topology to adapt and restore the desired neighbor relationships. 
-Phase 5 then evaluates the framework under multiple simultaneous node failures. 
-Phase R is an optional recovery phase that is triggered only when a preceding phase fails to satisfy its completion criteria within the configured timeout period. 
+
+The objective of the evaluation is to assess the performance of the FINDING NEMO neighbor discovery protocol
+and the CHUALANH topology-repair mechanism under dynamic membership changes.
+However, the hybrid SWIMPHI failure detector was not evaluated independently under controlled delay or packet
+loss due to the protocol not providing
+network fault injection. Nevertheless, unit tests and observation during manual testing confirmed that the
+implementation correctly invokes indirect helper
+nodes and detect node failure more accurately by reducing the number of false positives.
+
+The evaluation primarily measures execution time for each phase, including topology formation, failure
+detection, node joining and topology recovery. By running many automated tests, we can calculate the
+proportion of successes and failures within the configured timeout.
+The evaluation proceeds through a predefined sequence of tests or phases. Table~\ref{tab:experimental_phases}
+introduces the main phases, what is being executed during each phase, and what is being measured. The timeout
+of each phase is set to ensure that during cases where it is impossible for the network to reach the end condition
+without external forces, such as nodes joining or failing, then the test can terminate and move on to the recovery
+phase R or the next phase.
+
+\begin{table*}[t]
+\centering
+\caption{Summary of Experimental Phases}
+\label{tab:experimental_phases}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabularx}{\textwidth}{
+C{1.5cm}
+Y
+Y
+Y
+C{1.8cm}
+}
+\toprule
+\textbf{Phase} &
+\textbf{Description} &
+\textbf{Start} &
+\textbf{End} &
+\textbf{Timeout} \\
+\midrule
+Phase 1   & Start initial nodes & The final node is started & The network reached convergence & 120s \\
+Phase S1  & Network stabilization check & After phase 1 & Phase timeout & 10s \\
+Phase 2.1 & One node is terminated & After node termination & One failure report is sent & 120s \\
+Phase 2.2 & One node is terminated & After node termination & All failure reports are sent & 120s \\
+Phase 3   & One node is terminated & After node termination & The network reached convergence & 180s \\
+Phase S3  & Network stabilization check & After phase 3 & Phase timeout & 10s \\
+Phase 4   & Multiple nodes join & The final node is started & The network reached convergence & 120s \\
+Phase S4  & Network stabilization check & After phase 4 & Phase timeout & 10s \\
+Phase 5   & Multiple nodes are terminated & The final node is terminated & The network reached convergence & 180s \\
+Phase S5  & Network stabilization check & After phase 5 & Phase timeout & 10s \\
+Phase R   & Optional, when a main phase failed to reach convergence & After previous phase timeout & The network reached convergence & 120s \\
+Phase SR  & Network stabilization check & After phase R & Phase timeout & 10s \\
+\bottomrule
+\end{tabularx}
+\end{table*}
 
 \subsubsection{Phase 1: Initial Topology Formation}
 
-Phase 1 evaluates the network initialization process. 
-The number of nodes are started sequentially, and each node is introduced into the system with a fixed delay of 5 seconds before the next node is launched to prevent simultaneous join bursts that could temporarily overload the network.
-Nodes are then allowed to execute the FINDING NEMO joining protocol.
-The measurement begins when the final node is started and ends when all active nodes have reached \texttt{MAX\_NEIGHBORS}. 
-This phase captures the system’s ability to form the desired monitoring topology.
+Phase 1 evaluates the initial topology formation. After the convergence, a stabilization phase observes the
+topology for 10 seconds to verify that all nodes remain active and maintain the neighbor list appropriately
+with valid, bi-directional connections.
 
-\subsubsection{Phase 2: Failure Detection Latency}
+\subsubsection{Phase 2 \& 3: The Termination of One Node}
 
-After the topology has remained stable for 10 seconds, a node is intentionally terminated. 
-The measurement begins at the moment of termination and ends when the first failure report is generated by a surviving node. 
-This metric reflects the latency required for the system to detect and disseminate a node failure.
+Then, a node is randomly chosen to be terminated. The next three phases runs in parallel.
+Phase 2.1 measures the time from the termination to the first failure report is sent to the dashboard.
+Phase 2.2 measures until all neighbors of the terminated node have sent at least one failure report each.
+Phase 3 measures until the network has returned to a convergence state after the termination.
 
-\subsubsection{Phase 3: Topology Repair After Single Node Failure}
+\subsubsection{Phase 4: Multiple Nodes Joining}
 
-Immediately after Phase 2, the evaluation measures the recovery process following the detected node failure. 
-The measurement ends when the failed node has been removed from all surviving neighbor lists and every remaining node has restored its neighbor count to \texttt{MAX\_NEIGHBORS}. 
-This phase reflects the efficiency of membership dissemination, neighbor removal, and rewiring operations required to restore the desired topology after a failure.
+Phase 4 introduces additional nodes and measures the time required
+for the expanded topology to adapt and restore the desired neighbor relationships. This phase aims to 
+measure the effectiveness of FINDING NEMO on an converged, established network.
 
-\subsubsection{Phase 4: Dynamic Node Joining}
+\subsubsection{Phase 5: Multiple Nodes Terminating}
 
-After the repaired topology remains stable for 10 seconds, additional nodes are introduced into the cluster. 
-The measurement begins when the first additional node starts and ends when all active nodes once again reach \texttt{MAX\_NEIGHBORS}. 
-This phase evaluates how efficiently the topology adapts to membership expansion.
+Phase 5 then evaluates the framework under multiple node failures by measuring the time required to detect
+all injected failures, remove stale neighbor references, and restore the required neighbor count among all
+surviving nodes.
 
-\subsubsection{Phase 5: Multiple Simultaneous Node Failures}
+\subsubsection{Phase S: Stabilization Check}
 
-After the expanded topology remains stable for 10 seconds, multiple nodes are randomly selected and terminated simultaneously. 
-The measurement begins at the moment of failure injection and ends when all failures have been detected, all failed nodes have been removed from neighbor lists, and all surviving nodes have restored their neighbor count to \texttt{MAX\_NEIGHBORS}. 
-Unlike the single-failure experiment in Phases 2 and 3, this phase examines the behavior of the framework under substantial topology disruption caused by multiple concurrent failures.
+Phase S - stabilization - is executed after each time the network topology successfully converges.
+This includes phases 1, 3, 4, 5 and R. The main purpose is to make sure that the network can keep the convergence state
+for a certain period of time, in this case, 10 seconds, during which the phase continuously monitoring the network to check
+for any anomalies and report them.
 
-\subsubsection{Phase R (Optional): Recovery from Incomplete Topology Formation}
+\subsubsection{Phase R: Recovery Phase}
 
-Phase R is executed only when a preceding phase fails to satisfy its completion criteria within the configured timeout period. 
-In such cases, deficient nodes are restarted and allowed to rejoin the network using the standard joining protocol.
+Phase R is an optional recovery phase that is triggered only when a preceding phase fails to satisfy its
+completion criteria within the configured timeout period. During phase R, all nodes with incorrect neighbors
+or has less than the required maximum neighbor count are terminated, and the same number of new nodes is created.
+This is to simulate the node self restarting when they are unable to rewire after a certain amount of time.
+The reasoning for this will be discussed in Section~\ref{sec:conclusion}.
+
+
+% \subsubsection{Phase 1: Initial Topology Formation}
+
+% Phase 1 evaluates the network initialization process. 
+% The number of nodes are started sequentially, and each node is introduced into the system with a fixed delay of 5 seconds before the next node is launched to prevent simultaneous join bursts that could temporarily overload the network.
+% Nodes are then allowed to execute the FINDING NEMO joining protocol.
+% The measurement begins when the final node is started and ends when all active nodes have reached \texttt{MAX\_NEIGHBORS}. 
+% This phase captures the system’s ability to form the desired monitoring topology.
+
+% \subsubsection{Phase 2: Failure Detection Latency}
+
+% After the topology has remained stable for 10 seconds, a node is intentionally terminated. 
+% The measurement begins at the moment of termination and ends when the first failure report is generated by a surviving node. 
+% This metric reflects the latency required for the system to detect and disseminate a node failure.
+
+% \subsubsection{Phase 3: Topology Repair After Single Node Failure}
+
+% Immediately after Phase 2, the evaluation measures the recovery process following the detected node failure. 
+% The measurement ends when the failed node has been removed from all surviving neighbor lists and every remaining node has restored its neighbor count to \texttt{MAX\_NEIGHBORS}. 
+% This phase reflects the efficiency of membership dissemination, neighbor removal, and rewiring operations required to restore the desired topology after a failure.
+
+% \subsubsection{Phase 4: Dynamic Node Joining}
+
+% After the repaired topology remains stable for 10 seconds, additional nodes are introduced into the cluster. 
+% The measurement begins when the first additional node starts and ends when all active nodes once again reach \texttt{MAX\_NEIGHBORS}. 
+% This phase evaluates how efficiently the topology adapts to membership expansion.
+
+% \subsubsection{Phase 5: Multiple Simultaneous Node Failures}
+
+% After the expanded topology remains stable for 10 seconds, multiple nodes are randomly selected and terminated simultaneously. 
+% The measurement begins at the moment of failure injection and ends when all failures have been detected, all failed nodes have been removed from neighbor lists, and all surviving nodes have restored their neighbor count to \texttt{MAX\_NEIGHBORS}. 
+% Unlike the single-failure experiment in Phases 2 and 3, this phase examines the behavior of the framework under substantial topology disruption caused by multiple concurrent failures.
+
+% \subsubsection{Phase R (Optional): Recovery from Incomplete Topology Formation}
+
+% Phase R is executed only when a preceding phase fails to satisfy its completion criteria within the configured timeout period. 
+% In such cases, deficient nodes are restarted and allowed to rejoin the network using the standard joining protocol.
 \subsection{Evaluation Results}
 \label{subsec:evaluation_results}
 
