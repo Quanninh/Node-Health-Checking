@@ -1324,8 +1324,6 @@ phase5_input_plot <- ggplot(
 phase5_input_plot
 ```
 
-![](http://127.0.0.1:39058/chunk_output/F9C83C15a463b8af/641E88A1/cgoaeoc4gw66d/000010.png)
-
 ## Combined Input-Variable Comparison
 
 ```{r combined-input-chart, fig.width=10, fig.height=8.8}
