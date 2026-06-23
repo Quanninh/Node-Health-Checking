@@ -35,13 +35,13 @@ ADVERTISE_HOST = "192.168.1.7"
 # =============================================================================
 # CHANGE THIS TO wireless_32768 ON WINDOWS AND en0 ON MACOS
 # =============================================================================
-MULTICAST_INTERFACE = "wireless_32768"
+MULTICAST_INTERFACE = "en0"
 
 # =============================================================================
 # CONFIGURE THIS
 # =============================================================================
 
-MAX_NEIGHBORS = 8
+MAX_NEIGHBORS = 4
 INITIAL_NODE_COUNT = 20
 ADDED_NODE_COUNT = 8
 REMOVED_NODE_COUNT = 12
