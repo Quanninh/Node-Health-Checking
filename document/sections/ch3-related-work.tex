@@ -1,0 +1,79 @@
+\section{Related Work}
+\label{sec:related_work}
+% Discuss existing approaches to failure detection and membership management in distributed systems. Compare
+% heartbeat-based detection, timeout-based failure detectors, gossip-style membership protocols, and
+% centralized monitoring. Explain which ideas influenced your design.
+\subsection{Failure detection}
+
+\subsubsection{\texorpdfstring{$\phi$}{phi} Accrual Calculation}
+
+Hayashibara et al.~\cite{hayashibaraAccrualFailureDetector2004} proposed the \texorpdfstring{$\phi$}{phi}
+accrual failure detector to improve the flexibility of failure detection.
+Instead of returning a boolean result, such as ``alive'' or ``unreachable'', the detector outputs a
+continuous suspicion level.
+This allows the system or developer to interpret the monitoring information using different thresholds
+depending on the required trade-off between fast detection and false-positive reduction.
+A lower threshold can detect failures more quickly, while a higher threshold can reduce incorrect failure decisions.
+Experimental results from the original work show that the $\phi$ accrual failure detector performs comparably
+to other adaptive failure detection mechanisms such as failure detector of Chen et al
+\cite{chenQualityServiceFailure}. and that of Bertier et al.
+\cite{bertierImplementationPerformanceEvaluation2002a}, while providing greater flexibility for applications
+\cite{hayashibaraAccrualFailureDetector2004}.
+
+\subsubsection{SWIM protocol}
+
+Traditional heartbeating protocols may also suffer from scalability problems and false-positive failure
+detection\cite{guptaScalableEfficientDistributed2001}.
+If every node monitors every other node, the number of heartbeat messages increases rapidly as the system grows.
+In addition, if a node misses a heartbeat only because of temporary network problems, it may incorrectly mark
+another node as failed.
+Das et al.~\cite{dasSWIMScalableWeaklyconsistent2002} proposed SWIM to address these issues by separating
+failure detection from membership dissemination and using efficient peer-to-peer probing.
+In each protocol period, a node selects one target node from its membership and sends a direct ping.
+If the target responds, it is considered alive. If not, helper nodes perform indirect probes; a response
+through any helper confirms that the target is still reachable.
+
+A node is considered failed only when both the direct probe and the indirect probes fail.
+SWIM also disseminates membership changes using an infection-style, or gossip-style, approach, allowing
+updates about joins, leaves, suspicions, and failures to spread through the system with low per-node message overhead.
+
+\subsection{System Design}
+System architecture is another important design consideration.
+A common approach for coordinating distributed applications is to introduce a dedicated coordination service,
+such as ZooKeeper \cite{huntZooKeeperWaitfreeCoordination}.
+ZooKeeper is a replicated coordination service consisting of multiple servers, one of which acts as the leader.
+Clients may connect to any server in the ensemble, where read operations are served locally while write
+operations are forwarded to the leader, ordered, and replicated across the remaining servers.
+
+This architecture provides strong consistency guarantees, high availability, and good scalability for
+read-dominated workloads.
+However, it also introduces a logically centralized coordination layer that must be maintained separately
+from the application nodes.
+This increases deployment and operational complexity and makes membership management dependent on a dedicated
+coordination ensemble.
+
+For this reason, our system adopts a decentralized design instead.
+Rather than relying on an external coordination service, membership management, failure detection, and
+topology maintenance are distributed across the participating nodes themselves.
+
+\subsection{Contributions}
+\label{subsec:contribution}
+
+The main contributions are as follows:
+
+\begin{itemize}
+
+    \item A novel neighbor discovery protocol that orchestrates node integration while preserving the
+        structural properties of a k-regular graph overlay: FINDING NEMO.
+
+    \item A hybrid version of SWIM and \texorpdfstring{$\phi$}{phi} accrual failure detector: hybrid SWIMPHI.
+
+    \item A new self-healing topology maintainance technique that automatically restores the overlay toward a
+        k-regular graph state following node failures or topology disruptions: CHUALANH.
+
+    \item Implementation of the framework including core components above in Java.
+
+    \item Direct evaluation of FINDING NEMO, CHUALANH, and the overall system performance via a dashboard
+        that enables the observation of node behavior and the collection of experimental metrics for evaluation.
+
+\end{itemize}
