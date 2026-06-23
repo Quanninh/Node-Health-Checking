@@ -522,18 +522,13 @@ The indirect heartbeat mechanism reduces false-positive failure detection by all
 \label{subsubsec:indirect_heartbeat_verification}
 
 Each node maintains a neighbor list containing the nodes with which it has a direct bidirectional connection.
-When a node wants to check the availability of one of its neighbors, it sends a ping message and waits for an acknowledgement.
-For example, if node $B$ wants to check node $A$, node $B$ sends a direct ping request to node $A$.
-If node $A$ replies within the expected time range, node $B$ records the response time and classifies node $A$ as reachable.
-This successful response also becomes part of the historical response-time data used later by the $\phi$ accrual detector.
 
-However, if node $B$ does not receive an acknowledgement, it does not immediately mark node $A$ as failed.
-Instead, the system uses indirect heartbeat verification. Specifically, node $B$ requests other nodes in its neighbor list to verify node $A$, such as nodes $C$ and $E$, to ping node $A$ on its behalf.
-If any helper node receives an acknowledgement from node $A$, it notifies node $B$, and node $A$ is treated as alive.
-In this case, the problem is considered a possible connection issue between nodes $A$ and $B$ rather than a complete node failure.
+When a node wants to check the availability of one of its neighbors, it sends a ping message and waits for an acknowledgement. For example, if node $x_2$ wants to check node $x_1$, node $x_2$ sends a direct ping request to node $x_1$. If node $x_1$ replies within the expected time range, node $x_2$ records the response time and classifies node $x_1$ as reachable. This successful response also becomes part of the historical response-time data used later by the $\phi$-accrual detector.
 
-If neither the direct ping nor the indirect pings receive a response from node $A$, the system has stronger evidence that node $A$ may be unreachable. 
-At this stage, the system does not rely only on the missing acknowledgements. Instead, it applies the $\phi$ accrual failure detector to calculate a suspicion value based on recent response-time history.
+However, if node $x_2$ does not receive an acknowledgement, it does not immediately mark node $x_1$ as failed. Instead, the system uses indirect heartbeat verification. Specifically, node $x_2$ requests other nodes in its neighbor list to verify node $x_1$, such as nodes $x_3$ and $x_5$, to ping node $x_1$ on its behalf. If any helper node receives an acknowledgement from node $x_1$, it notifies node $x_2$, and node $x_1$ is treated as alive. In this case, the problem is considered a possible connection issue between nodes $x_1$ and $x_2$ rather than a complete node failure.
+
+If neither the direct ping nor the indirect pings receive a response from node $x_1$, the system has stronger evidence that node $x_1$ may be unreachable. At this stage, the system does not rely only on the missing acknowledgements. Instead, it applies the $\phi$-accrual failure detector to calculate a suspicion value based on recent response-time history.
+
 
 \subsubsection{\texorpdfstring{$\phi$}{phi} Accrual Calculation}
 \label{subsubsec:phi_accrual_calculation}
