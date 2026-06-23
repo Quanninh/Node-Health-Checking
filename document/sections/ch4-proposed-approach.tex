@@ -4,26 +4,22 @@
 \subsection{Complete Architectural Diagram}
 \label{subsec:architecture}
 
-Inside each node, the health-checking process follows an event-driven structure (1) \& (2.b).
-A node regularly checks its neighbors and reacts when abnormal behavior is detected, such as missing
-responses, delayed replies, or unreachable nodes.
-When such an event occurs, the node may request indirect checks from other neighbors, calculate the suspicion
-level of the target node, and categorize it.
-After the status is determined, the result will be broadcasted to the system so that the cluster can maintain
-a consistent view of node conditions.
+Inside each node, the health-checking process follows an event-driven structure (1) \& (2.b). A node regularly checks
+its neighbors and reacts when abnormal behavior is detected, such as missing responses, delayed replies, or unreachable
+nodes. When such an event occurs, the node may request indirect checks from other neighbors, calculate the suspicion
+level of the target node, and categorize it. After the status is determined, the result will be broadcasted to the
+system so that the cluster can maintain a consistent view of node conditions.
 
-The lower part of the diagram (3) represents the supporting observation subsystem.
-This subsystem receives node status information from the decentralized cluster and passes it through several
-logical layers.
-The first layer (3.a) receives reported node status, the next layer (3.c) processes and organizes the
-information, and the storage layer (3.c) \& (3.d) keeps historical records of node states and failure events.
-The visualization layer (3.b) then retrieves this information and presents it in a readable form for users to
-inspect the current and past condition of the cluster.
+The lower part of the diagram (3) represents the supporting observation subsystem. This subsystem receives node status
+information from the decentralized cluster and passes it through several logical layers. The first layer (3.a) receives
+reported node status, the next layer (3.c) processes and organizes the information, and the storage layer (3.c) \&
+(3.d) keeps historical records of node states and failure events. The visualization layer (3.b) then retrieves this
+information and presents it in a readable form for users to inspect the current and past condition of the cluster.
 
-The decentralized cluster (1) is responsible for detection, classification, and reaction, while the
-supporting layers (3) are used only for reporting, storage, and visualization.
-Therefore, the system can continue checking node health and maintaining neighbor status even if the
-observation subsystem, storage component, or visual interface becomes unavailable.
+The decentralized cluster (1) is responsible for detection, classification, and reaction, while the supporting layers
+(3) are used only for reporting, storage, and visualization. Therefore, the system can continue checking node health
+and maintaining neighbor status even if the observation subsystem, storage component, or visual interface becomes
+unavailable.
 
 Fig.~\ref{fig:architecture} shows the complete architecture of the proposed system.
 
@@ -35,10 +31,10 @@ Fig.~\ref{fig:architecture} shows the complete architecture of the proposed syst
 % \end{figure*}
 
 \begin{figure*}[!t]
-    \centering
-    \includegraphics[width=0.95\textwidth]{ArchitecturalDiagram.png}
-    \caption{Complete architectural diagram of the node health-checking system.}
-    \label{fig:architecture}
+  \centering
+  \includegraphics[width=0.95\textwidth]{ArchitecturalDiagram.png}
+  \caption{Complete architectural diagram of the node health-checking system.}
+  \label{fig:architecture}
 \end{figure*}
 
 % \resizebox{0.95\textwidth}{!}{%
@@ -130,24 +126,22 @@ is a real node failure or only a local communication problem.
 After that, the $\phi$ value is used to evaluate the seriousness of the failure suspicion based on the
 response-time history.
 
-By combining these two ideas, the proposed approach aims to improve both scalability and accuracy.
-SWIM contributes a scalable architecture for distributed membership checking, while the $\phi$ accrual
-detector contributes an adaptive decision mechanism for handling delay and message loss.
-Therefore, the system can avoid immediately deleting a node after a single missed heartbeat and can instead
-move through health states such as healthy, suspected, and failed based on both cooperative probing and
-suspicion-level evaluation.
+By combining these two ideas, the proposed approach aims to improve both scalability and accuracy. SWIM contributes a
+scalable architecture for distributed membership checking, while the $\phi$ accrual detector contributes an adaptive
+decision mechanism for handling delay and message loss. Therefore, the system can avoid immediately deleting a node
+after a single missed heartbeat and can instead move through health states such as healthy, suspected, and failed based
+on both cooperative probing and suspicion-level evaluation.
 
-As illustrated in Fig.~\ref{fig:phi_pipeline}, the algorithm combines indirect heartbeat verification with
-the $\phi$ accrual failure detector.
-The indirect heartbeat mechanism reduces false-positive failure detection by allowing neighbor nodes to
-verify a suspicious node, while the $\phi$ accrual detector provides an adaptive suspicion value based on
-recent response-time behavior.
+As illustrated in Fig.~\ref{fig:phi_pipeline}, the algorithm combines indirect heartbeat verification with the $\phi$
+accrual failure detector. The indirect heartbeat mechanism reduces false-positive failure detection by allowing
+neighbor nodes to verify a suspicious node, while the $\phi$ accrual detector provides an adaptive suspicion value
+based on recent response-time behavior.
 
 \begin{figure*}[!t]
-    \centering
-    \includegraphics[width=0.95\textwidth]{FailureDetectionProcedure.png}
-    \caption{Pipeline of indirect heartbeat verification and $\phi$ accrual failure detection.}
-    \label{fig:phi_pipeline}
+  \centering
+  \includegraphics[width=0.95\textwidth]{FailureDetectionProcedure.png}
+  \caption{Pipeline of indirect heartbeat verification and $\phi$ accrual failure detection.}
+  \label{fig:phi_pipeline}
 \end{figure*}
 
 \subsubsection{Indirect Heartbeat Verification}
@@ -156,152 +150,146 @@ recent response-time behavior.
 Each node maintains a neighbor list containing the nodes with which it has a direct bidirectional connection.
 
 When a node wants to check the availability of one of its neighbors, it sends a ping message and waits for an
-acknowledgement. For example, if node $x_2$ wants to check node $x_1$, node $x_2$ sends a direct ping request
-to node $x_1$. If node $x_1$ replies within the expected time range, node $x_2$ records the response time and
-classifies node $x_1$ as reachable. This successful response also becomes part of the historical
-response-time data used later by the $\phi$-accrual detector.
+acknowledgement. For example, if node $x_2$ wants to check node $x_1$, node $x_2$ sends a direct ping request to node
+$x_1$. If node $x_1$ replies within the expected time range, node $x_2$ records the response time and classifies node
+$x_1$ as reachable. This successful response also becomes part of the historical response-time data used later by the
+$\phi$-accrual detector.
 
-However, if node $x_2$ does not receive an acknowledgement, it does not immediately mark node $x_1$ as
-failed. Instead, the system uses indirect heartbeat verification. Specifically, node $x_2$ requests other
-nodes in its neighbor list to verify node $x_1$, such as nodes $x_3$ and $x_5$, to ping node $x_1$ on its
-behalf. If any helper node receives an acknowledgement from node $x_1$, it notifies node $x_2$, and node
-$x_1$ is treated as alive. In this case, the problem is considered a possible connection issue between nodes
-$x_1$ and $x_2$ rather than a complete node failure.
+However, if node $x_2$ does not receive an acknowledgement, it does not immediately mark node $x_1$ as failed. Instead,
+the system uses indirect heartbeat verification. Specifically, node $x_2$ requests other nodes in its neighbor list to
+verify node $x_1$, such as nodes $x_3$ and $x_5$, to ping node $x_1$ on its behalf. If any helper node receives an
+acknowledgement from node $x_1$, it notifies node $x_2$, and node $x_1$ is treated as alive. In this case, the problem
+is considered a possible connection issue between nodes $x_1$ and $x_2$ rather than a complete node failure.
 
-If neither the direct ping nor the indirect pings receive a response from node $x_1$, the system has stronger
-evidence that node $x_1$ may be unreachable. At this stage, the system does not rely only on the missing
-acknowledgements. Instead, it applies the $\phi$-accrual failure detector to calculate a suspicion value
-based on recent response-time history.
+If neither the direct ping nor the indirect pings receive a response from node $x_1$, the system has stronger evidence
+that node $x_1$ may be unreachable. At this stage, the system does not rely only on the missing acknowledgements.
+Instead, it applies the $\phi$-accrual failure detector to calculate a suspicion value based on recent response-time
+history.
 
 \subsubsection{\texorpdfstring{$\phi$}{phi} Accrual Calculation}
 \label{subsubsec:phi_accrual_calculation}
 
-The $\phi$ accrual detector avoids making a binary alive-or-dead decision based solely on a fixed timeout.
-Instead, it calculates a continuous suspicion value, $\phi$.
+The $\phi$ accrual detector avoids making a binary alive-or-dead decision based solely on a fixed timeout. Instead, it
+calculates a continuous suspicion value, $\phi$.
 
-To make this decision, the detector relies on historical response-time data to determine whether the current
-waiting time is normal or abnormal. Each time a ping is sent and an acknowledgement is successfully received,
-the system records the response time.
-These recorded samples represent the recent communication behavior between nodes.
+To make this decision, the detector relies on historical response-time data to determine whether the current waiting
+time is normal or abnormal. Each time a ping is sent and an acknowledgement is successfully received, the system
+records the response time. These recorded samples represent the recent communication behavior between nodes.
 
-To keep the detector adaptive, response-time samples are stored in a sliding window. This window operates
-like a queue: when a new response-time sample is recorded, it is added to the window. If the window has
-already reached its maximum size, the oldest sample is removed.
-As a result, the window always contains the most recent response-time samples.
+To keep the detector adaptive, response-time samples are stored in a sliding window. This window operates like a queue:
+when a new response-time sample is recorded, it is added to the window. If the window has already reached its maximum
+size, the oldest sample is removed. As a result, the window always contains the most recent response-time samples.
 
 Let the response-time samples in the sliding window be:
 
 \begin{equation}
-    X = \{x_1, x_2, x_3, \ldots, x_n\}
+  X = \{x_1, x_2, x_3, \ldots, x_n\}
 \end{equation}
 
 The mean response time and standard deviation are calculated as:
 
 \begin{equation}
-    \mu = \frac{1}{n}\sum_{i=1}^{n}x_i
+  \mu = \frac{1}{n}\sum_{i=1}^{n}x_i
 \end{equation}
 
 \begin{equation}
-    \sigma = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(x_i - \mu)^2}
+  \sigma = \sqrt{\frac{1}{n}\sum_{i=1}^{n}(x_i - \mu)^2}
 \end{equation}
 
-where $n$ is the number of samples, $x_i$ is a recorded response time, $\mu$ is the average response time,
-and $\sigma$ represents response-time variation.
-These values are then used to estimate the response-time distribution for the $\phi$ calculation.
+where $n$ is the number of samples, $x_i$ is a recorded response time, $\mu$ is the average response time, and $\sigma$
+represents response-time variation. These values are then used to estimate the response-time distribution for the
+$\phi$ calculation.
 
-After the response-time distribution is estimated from the sliding window, the system calculates how unusual
-the current waiting time is.
-Let $t$ be the current waiting time since the ping was sent.
-The probability that a normal response time is greater than $t$ is defined as:
+After the response-time distribution is estimated from the sliding window, the system calculates how unusual the
+current waiting time is. Let $t$ be the current waiting time since the ping was sent. The probability that a normal
+response time is greater than $t$ is defined as:
 
 \begin{equation}
-    P(T > t) = 1 - F(t)
+  P(T > t) = 1 - F(t)
 \end{equation}
 
-where $F(t)$ is the cumulative distribution function of the response-time distribution.
-The suspicion value is then calculated as:
+where $F(t)$ is the cumulative distribution function of the response-time distribution. The suspicion value is then
+calculated as:
 
 \begin{equation}
-    \phi(t) = -\log_{10}(P(T > t)) = -\log_{10}(1 - F(t))
+  \phi(t) = -\log_{10}(P(T > t)) = -\log_{10}(1 - F(t))
 \end{equation}
 
-A higher $\phi$ value means that the current waiting time is more unusual compared with recent response-time
-history, so the target node is more likely to be unreachable.
+A higher $\phi$ value means that the current waiting time is more unusual compared with recent response-time history,
+so the target node is more likely to be unreachable.
 
 \subsubsection{Node State Classification}
 \label{subsubsec:node_state_classification}
 
-The final output of the methodology is the classification of the monitored node.
-After the $\phi$ value is calculated, the system compares it with predefined thresholds.
-These thresholds are configurable by the developer depending on how sensitive the failure detection process should be.
-A lower threshold can detect unreachable nodes faster, but may increase false positives.
-A higher threshold can reduce false positives, but may delay failure classification.
+The final output of the methodology is the classification of the monitored node. After the $\phi$ value is calculated,
+the system compares it with predefined thresholds. These thresholds are configurable by the developer depending on how
+sensitive the failure detection process should be. A lower threshold can detect unreachable nodes faster, but may
+increase false positives. A higher threshold can reduce false positives, but may delay failure classification.
 
 \begin{table}[h]
-    \centering
-    \caption{Node state classification based on $\phi$ value}
-    \label{tab:phi_classification}
-    \begin{tabular}{|c|c|}
-        \hline
+  \centering
+  \caption{Node state classification based on $\phi$ value}
+  \label{tab:phi_classification}
+  \begin{tabular}{|c|c|}
+    \hline
 
-        \hline
+    \hline
 
-        \hline
+    \hline
 
-        \hline
+    \hline
 
-        \hline
+    \hline
 
-        \hline
-    \end{tabular}
+    \hline
+  \end{tabular}
 \end{table}
 
-Through this combination of indirect verification and adaptive suspicion calculation, the proposed method can
-reduce false-positive failure detection caused by temporary delay, message loss, or unstable direct connections.
+Through this combination of indirect verification and adaptive suspicion calculation, the proposed method can reduce
+false-positive failure detection caused by temporary delay, message loss, or unstable direct connections.
 
 \subsection{Neighbor Discovery: FINDING NEMO}
 \label{subsec:node_discovery}
 
-FINDING NEMO, short for \textit{Finding Neighbors and Evicting Members of their Own}, is the neighbor
-discovery and network joining algorithm proposed in this work.
-The name reflects the fact that a joining node must identify both prospective neighbors and any existing
-members that are evicted by those neighbors during the joining process, as discussed later in this section.
-To facilitate understanding of the algorithm, several terms and system rules are first defined as follows:
+FINDING NEMO, short for \textit{Finding Neighbors and Evicting Members of their Own}, is the neighbor discovery and
+network joining algorithm proposed in this work. The name reflects the fact that a joining node must identify both
+prospective neighbors and any existing members that are evicted by those neighbors during the joining process, as
+discussed later in this section. To facilitate understanding of the algorithm, several terms and system rules are first
+defined as follows:
 
 \begin{enumerate}
-    \item \textbf{Neighbor}: A bidirectional relationship established between two nodes in the network. If
+  \item \textbf{Neighbor}: A bidirectional relationship established between two nodes in the network. If
         node A is a neighbor of node B, then node B is also considered a neighbor of node A.
 
-    \item \textbf{Neighbor List}: A local data structure maintained by each node that stores information
+  \item \textbf{Neighbor List}: A local data structure maintained by each node that stores information
         about its neighbors, such as their network addresses. The neighbor list has a fixed capacity of $k$,
         where $k$ is an even number. To maintain network connectivity and resilience, each node attempts to
         keep its neighbor list as full as possible whenever sufficient peers are available.
 
 \end{enumerate}
 
-FINDING NEMO begins when a newly created node requests to join the network.
-To promote random neighbor selection, the joining node broadcasts a join request to all existing nodes.
-Assuming ideal network connectivity, two cases are considered:
+FINDING NEMO begins when a newly created node requests to join the network. To promote random neighbor selection, the
+joining node broadcasts a join request to all existing nodes. Assuming ideal network connectivity, two cases are
+considered:
 
 \begin{enumerate}
 
-    \item \textbf{Small Network.}
+  \item \textbf{Small Network.}
         If the network contains at most $k+1$ nodes, the joining node establishes connections with all existing nodes.
         This allows the node to reach the desired neighbor count without requiring any restructuring of the
         network topology.
 
-        Figure~\ref{fig:small_network} illustrates this scenario. Consider a network consisting of four nodes
-        and a target neighbor count of $k=4$.
-        When node $x_5$ joins the network, it establishes connections with all existing nodes, thereby
+        Figure~\ref{fig:small_network} illustrates this scenario. Consider a network consisting of four nodes and a target
+        neighbor count of $k=4$. When node $x_5$ joins the network, it establishes connections with all existing nodes, thereby
         satisfying its neighbor requirement.
         \begin{figure}[H]
-            \centering
-            \includegraphics[width=0.3\textwidth]{FINDING_NEMO_small_pretty.png}
-            \caption{FINDING NEMO in a small network}
-            \label{fig:small_network}
+          \centering
+          \includegraphics[width=0.3\textwidth]{FINDING_NEMO_small_pretty.png}
+          \caption{FINDING NEMO in a small network}
+          \label{fig:small_network}
         \end{figure}
 
-    \item \textbf{Scaled Network.}
+  \item \textbf{Scaled Network.}
         If the network contains more than $k+1$ nodes, all existing nodes are assumed to have already reached
         their target neighbor count.
         Nevertheless, they still acknowledge the join request.
@@ -313,32 +301,29 @@ Assuming ideal network connectivity, two cases are considered:
         Consequently, the joining node acquires $k/2$ neighbors from the selected nodes and an additional
         $k/2$ neighbors from the evicted nodes, resulting in a total of $k$ neighbors.
 
-        Figure~\ref{fig:scaled_network} presents an example of this process.
-        Building upon the network shown in Figure~\ref{fig:small_network}, assume that node $x_6$ requests to
-        join a network of five nodes with $k=4$.
-        One possible outcome of the random selection process is that nodes $x_5$ and $x_3$ are selected.
-        Node $x_5$ subsequently evicts node $x_2$, while node $x_3$ evicts node $x_4$.
-        Node $x_6$ therefore establishes direct connections with $x_5$ and $x_3$, as well as with the evicted
-        nodes $x_2$ and $x_4$.
-        As a result, node $x_6$ obtains four neighbors while preserving the desired network density.
+        Figure~\ref{fig:scaled_network} presents an example of this process. Building upon the network shown in
+        Figure~\ref{fig:small_network}, assume that node $x_6$ requests to join a network of five nodes with $k=4$. One
+        possible outcome of the random selection process is that nodes $x_5$ and $x_3$ are selected. Node $x_5$ subsequently
+        evicts node $x_2$, while node $x_3$ evicts node $x_4$. Node $x_6$ therefore establishes direct connections with $x_5$
+        and $x_3$, as well as with the evicted nodes $x_2$ and $x_4$. As a result, node $x_6$ obtains four neighbors while
+        preserving the desired network density.
         \begin{figure}[H]
-            \centering
-            \includegraphics[width=0.3\textwidth]{FINDING_NEMO_scaled_pretty.png}
-            \caption{FINDING NEMO in a scaled network}
-            \label{fig:scaled_network}
+          \centering
+          \includegraphics[width=0.3\textwidth]{FINDING_NEMO_scaled_pretty.png}
+          \caption{FINDING NEMO in a scaled network}
+          \label{fig:scaled_network}
         \end{figure}
 
 \end{enumerate}
 
-This process maintains a bounded network density while preserving randomness in neighbor assignment, thereby
-reducing the likelihood of node isolation and structural bias within the topology.
-In practice, a hybrid selection strategy is employed. Nodes whose neighbor lists are not yet full are
-prioritized during the acknowledgement phase.
-By preferentially connecting to such nodes, the algorithm accelerates the completion of underpopulated
-neighbor lists while remaining consistent with the network's connectivity constraints.
+This process maintains a bounded network density while preserving randomness in neighbor assignment, thereby reducing
+the likelihood of node isolation and structural bias within the topology. In practice, a hybrid selection strategy is
+employed. Nodes whose neighbor lists are not yet full are prioritized during the acknowledgement phase. By
+preferentially connecting to such nodes, the algorithm accelerates the completion of underpopulated neighbor lists
+while remaining consistent with the network's connectivity constraints.
 
 \subsection{Connectivity Healing through Under-connected and Adaptive Link Adjustment for Network Health
-(CHUALANH) algorithm:}
+  (CHUALANH) algorithm:}
 \label{subsec:node_deletion}
 
 \subsubsection{\textbf{Topology Repair Mechanism}}
@@ -347,17 +332,17 @@ In a decentralized architecture, node failures may disrupt the desired network s
 a node unexpectedly fails, all of its incident edges are deleted. Consequently, some neighboring nodes lose
 one connection and their degree decreases from $k$ to $k - 1$. These nodes are referred to as \textbf{deficient nodes}
 
-Since the system is designed to maintain k neighbors for every node, a topology repair process is required to
-restore the desired degree constraint. To address this problem, we propose a \textbf{Connectivity Healing
-through Under-connected and Adaptive Link Adjustment for Network Health (CHUALANH)} algorithm.
+Since the system is designed to maintain k neighbors for every node, a topology repair process is required to restore
+the desired degree constraint. To address this problem, we propose a \textbf{Connectivity Healing through
+  Under-connected and Adaptive Link Adjustment for Network Health (CHUALANH)} algorithm.
 
 \subsubsection{\textbf{Deficient Nodes}}
 \label{subsubsec:deficient_node}
 Let $G = (V, E)$ denote the network topology, where each node maintains exactly $k$ neighbors. Assume that
 node $v_f$ fails and is removed from the network.
 
-All nodes previously connected to $v_f$ become deficient nodes. Let $A = \{a_1, a_2, \ldots, a_m\}$ denote
-the set of deficient nodes. Each deficient node requires one additional connection to restore its degree to $k$
+All nodes previously connected to $v_f$ become deficient nodes. Let $A = \{a_1, a_2, \ldots, a_m\}$ denote the set of
+deficient nodes. Each deficient node requires one additional connection to restore its degree to $k$
 
 \subsubsection{\textbf{Repair Procedure}}
 \label{subsubsec:repair_procedure}
@@ -365,22 +350,22 @@ The repair process repeatedly selects two deficient nodes, denoted by $x_1$ and 
 missing connection according to the following cases.
 
 \begin{enumerate}
-    \item \textbf{Case 1: No Existing Connection}
+  \item \textbf{Case 1: No Existing Connection}
 
-        If $x_1$ and $x_2$ are not directly connected, a new edge is eslablished between them: $$(x_1, x_2)
-        \in E$$ As a result, both nodes recover one connection.
+        If $x_1$ and $x_2$ are not directly connected, a new edge is eslablished between them: $$(x_1, x_2) \in E$$ As a
+        result, both nodes recover one connection.
 
-    \item \textbf{Case 2: Existing Connection}
+  \item \textbf{Case 2: Existing Connection}
 
-        If an edge already exists between $x_1$ and $x_2$, a direct connection between is impossible because
-        it would create a duplicate connection
+        If an edge already exists between $x_1$ and $x_2$, a direct connection between is impossible because it would create a
+        duplicate connection
 
-        In this case, a connected pair of nodes $x_3$ and $x_4$ is randomly selected such that $$(x_3, x_4)
-        \in E$$ The connection between $x_3$ and $x_4$ is removed and replaced with two new edges. Depending
-        on the local topology, one of the following rewiring patterns is applied: $$(x_3, x_4) \rightarrow
-        (x_1, x_3), (x_2, x_4)$$ or $$(x_3, x_4) \rightarrow (x_1, x_4), (x_2, x_3)$$ The selected pattern
-        must ensure that no duplicate edges are created and that the degree of every involved node remains
-        remains unchanged except for the deficient node $x_1$ and $x_2$, whose degrees increase by one.
+        In this case, a connected pair of nodes $x_3$ and $x_4$ is randomly selected such that $$(x_3, x_4) \in E$$ The
+        connection between $x_3$ and $x_4$ is removed and replaced with two new edges. Depending on the local topology, one of
+        the following rewiring patterns is applied: $$(x_3, x_4) \rightarrow (x_1, x_3), (x_2, x_4)$$ or $$(x_3, x_4)
+          \rightarrow (x_1, x_4), (x_2, x_3)$$ The selected pattern must ensure that no duplicate edges are created and that the
+        degree of every involved node remains remains unchanged except for the deficient node $x_1$ and $x_2$, whose degrees
+        increase by one.
 
 \end{enumerate}
 
@@ -392,36 +377,36 @@ duplicate connections and preserve network consistency.
 Consider four nodes $x_1$, $x_2$. $x_3$, $x_4$.
 
 \begin{enumerate}
-    \item \textbf{Scenario A: General Configuration}
+  \item \textbf{Scenario A: General Configuration}
 
-        The four nodes may already contain several existing edges, including one or two diagonal connections.
-        The rewiring operation is valid provided that the newly created edges do not duplicate any existing
-        connections. In this case, the edge $(x_3, x_4)$ is removed and replaced with $$(x_1, x_3), (x_2, x_4)$$
+        The four nodes may already contain several existing edges, including one or two diagonal connections. The rewiring
+        operation is valid provided that the newly created edges do not duplicate any existing connections. In this case, the
+        edge $(x_3, x_4)$ is removed and replaced with $$(x_1, x_3), (x_2, x_4)$$
         \begin{figure}[H]
-            \centering
-            \includegraphics[width=0.3\textwidth]{Rewiring1.png}
-            \caption{Scenario A: topological constraint}
+          \centering
+          \includegraphics[width=0.3\textwidth]{Rewiring1.png}
+          \caption{Scenario A: topological constraint}
 
-            \vspace{0.5cm}
+          \vspace{0.5cm}
 
-            \includegraphics[width=0.3\textwidth]{Rewiring2.png}
-            \caption{Scenario A after rewiring}
+          \includegraphics[width=0.3\textwidth]{Rewiring2.png}
+          \caption{Scenario A after rewiring}
         \end{figure}
 
-    \item \textbf{Scenario B: Rectangular Configuration}
+  \item \textbf{Scenario B: Rectangular Configuration}
 
-        When the four nodes form a rectangular structure or contain only one existing vertical edges, the
-        alternative rewiring pattern is applied: $$(x_3, x_4) \rightarrow (x_1, x_4), (x_2, x_3)$$ This
-        operation restores the degrees of the deficient nodes while maintaining the degree of all other nodes.
+        When the four nodes form a rectangular structure or contain only one existing vertical edges, the alternative rewiring
+        pattern is applied: $$(x_3, x_4) \rightarrow (x_1, x_4), (x_2, x_3)$$ This operation restores the degrees of the
+        deficient nodes while maintaining the degree of all other nodes.
         \begin{figure}[H]
-            \centering
-            \includegraphics[width=0.3\textwidth]{Rewiring3.png}
-            \caption{Scenario B: topological constraint}
+          \centering
+          \includegraphics[width=0.3\textwidth]{Rewiring3.png}
+          \caption{Scenario B: topological constraint}
 
-            \vspace{0.5cm}
+          \vspace{0.5cm}
 
-            \includegraphics[width=0.3\textwidth]{Rewiring4.png}
-            \caption{Scenario B after rewiring}
+          \includegraphics[width=0.3\textwidth]{Rewiring4.png}
+          \caption{Scenario B after rewiring}
         \end{figure}
 \end{enumerate}
 
@@ -436,14 +421,13 @@ Although the proposed approach significantly reduces false-positive detections, 
 under severe network congestion or temporary network partitions, where the health-checking process is disrupted.
 In such situations, a healthy node may be incorrectly classified as \textbf{UNREACHABLE}.
 
-To maintain consistency of the network topology, nodes classified as \textbf{UNREACHABLE} are removed from
-the active membership view and treated as departed members.
-Once connectivity is restored, the deficient node is required to rejoin the network through the standard
-membership protocol, thereby rebuilding its neighbor relationships and restoring its participation in the system.
+To maintain consistency of the network topology, nodes classified as \textbf{UNREACHABLE} are removed from the active
+membership view and treated as departed members. Once connectivity is restored, the deficient node is required to
+rejoin the network through the standard membership protocol, thereby rebuilding its neighbor relationships and
+restoring its participation in the system.
 
-In this prototype, automatic process recovery is considered a deployment-level concern rather than a
-responsibility of the distributed protocol itself.
-The protocol only determines when a node should be considered unreachable and subsequently rejoin the
-network. In a production environment, this mechanism can be complemented by external supervisors such as
-systemd, Docker restart policies, Kubernetes controllers, or watchdog services to automatically restart
-failed node processes.
+In this prototype, automatic process recovery is considered a deployment-level concern rather than a responsibility of
+the distributed protocol itself. The protocol only determines when a node should be considered unreachable and
+subsequently rejoin the network. In a production environment, this mechanism can be complemented by external
+supervisors such as systemd, Docker restart policies, Kubernetes controllers, or watchdog services to automatically
+restart failed node processes.

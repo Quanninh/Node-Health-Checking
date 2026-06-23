@@ -1,102 +1,97 @@
 \section{Evaluation}
 
-\subsection{Experimental Scenarios}
-\label{subsec:experimental_scenarios}
+\subsection{Five-Phase Evaluation Plan}
+\label{subsec:five_phase_plan}
 
-The objective of the evaluation is to assess the performance of the FINDING NEMO neighbor discovery protocol
-and the CHUALANH topology-repair mechanism under dynamic membership changes.
-However, the hybrid SWIMPHI failure detector was not evaluated independently under controlled delay or packet
-loss due to the protocol not providing
-network fault injection. Nevertheless, unit tests and observation during manual testing confirmed that the
-implementation correctly invokes indirect helper
-nodes and detect node failure more accurately by reducing the number of false positives.
+The objective of the evaluation is to assess the performance of the FINDING NEMO neighbor discovery protocol and the
+CHUALANH topology-repair mechanism under dynamic membership changes. However, the hybrid SWIMPHI failure detector was
+not evaluated independently under controlled delay or packet loss due to the protocol not providing network fault
+injection. Nevertheless, unit tests and observation during manual testing confirmed that the implementation correctly
+invokes indirect helper nodes and detect node failure more accurately by reducing the number of false positives.
 
-The evaluation primarily measures execution time for each phase, including topology formation, failure
-detection, node joining and topology recovery. By running many automated tests, we can calculate the
-proportion of successes and failures within the configured timeout.
-The evaluation proceeds through a predefined sequence of tests or phases. Table~\ref{tab:experimental_phases}
-introduces the main phases, what is being executed during each phase, and what is being measured. The timeout
-of each phase is set to ensure that during cases where it is impossible for the network to reach the end condition
-without external forces, such as nodes joining or failing, then the test can terminate and move on to the recovery
-phase R or the next phase.
+The evaluation primarily measures execution time for each phase, including topology formation, failure detection, node
+joining and topology recovery. By running many automated tests, we can calculate the proportion of successes and
+failures within the configured timeout. The evaluation proceeds through a predefined sequence of tests or phases,
+called the Five-Phase Evaluation Plan. Table~\ref{tab:experimental_phases} introduces the main phases, what is being
+executed during each phase, and what is being measured. The timeout of each phase is set to ensure that during cases
+where it is impossible for the network to reach the end condition without external forces, such as nodes joining or
+failing, then the test can terminate and move on to the recovery phase R or the next phase.
 
-\begin{table*}[t]
-    \centering
-    \caption{Summary of Experimental Phases}
-    \label{tab:experimental_phases}
-    \renewcommand{\arraystretch}{1.3}
-    \begin{tabularx}{\textwidth}{
-            C{1.5cm}
-            Y
-            Y
-            Y
-            C{1.8cm}
-        }
-        \toprule
-        \textbf{Phase} &
-        \textbf{Description} &
-        \textbf{Start} &
-        \textbf{End} &
-        \textbf{Timeout} \\
-        \midrule
-        Phase 1   & Start initial nodes & The final node is started & The network reached convergence & 120s \\
-        Phase S1  & Network stabilization check & After phase 1 & Phase timeout & 10s \\
-        Phase 2.1 & One node is terminated & After node termination & One failure report is sent & 120s \\
-        Phase 2.2 & One node is terminated & After node termination & All failure reports are sent & 120s \\
-        Phase 3   & One node is terminated & After node termination & The network reached convergence & 180s \\
-        Phase S3  & Network stabilization check & After phase 3 & Phase timeout & 10s \\
-        Phase 4   & Multiple nodes join & The final node is started & The network reached convergence & 120s \\
-        Phase S4  & Network stabilization check & After phase 4 & Phase timeout & 10s \\
-        Phase 5   & Multiple nodes are terminated & The final node is terminated & The network reached
-        convergence & 180s \\
-        Phase S5  & Network stabilization check & After phase 5 & Phase timeout & 10s \\
-        Phase R   & Optional, when a main phase failed to reach convergence & After previous phase timeout &
-        The network reached convergence & 120s \\
-        Phase SR  & Network stabilization check & After phase R & Phase timeout & 10s \\
-        \bottomrule
-    \end{tabularx}
+\begin{table*}[htbp]
+  \centering
+  \caption{Summary of Experimental Phases}
+  \label{tab:experimental_phases}
+  \renewcommand{\arraystretch}{1.3}
+  \begin{tabularx}{\textwidth}{
+      C{1.5cm}
+      Y
+      Y
+      Y
+      C{1.8cm}
+    }
+    \toprule
+    \textbf{Phase}                  &
+    \textbf{Description}            &
+    \textbf{Start}                  &
+    \textbf{End}                    &
+    \textbf{Timeout}                                                                                                                                                  \\
+    \midrule
+    Phase 1                         & Start initial nodes                                     & The final node is started    & The network reached convergence & 120s \\
+    Phase S1                        & Network stabilization check                             & After phase 1                & Phase timeout                   & 10s  \\
+    Phase 2.1                       & One node is terminated                                  & After node termination       & One failure report is sent      & 120s \\
+    Phase 2.2                       & One node is terminated                                  & After node termination       & All failure reports are sent    & 120s \\
+    Phase 3                         & One node is terminated                                  & After node termination       & The network reached convergence & 180s \\
+    Phase S3                        & Network stabilization check                             & After phase 3                & Phase timeout                   & 10s  \\
+    Phase 4                         & Multiple nodes join                                     & The final node is started    & The network reached convergence & 120s \\
+    Phase S4                        & Network stabilization check                             & After phase 4                & Phase timeout                   & 10s  \\
+    Phase 5                         & Multiple nodes are terminated                           & The final node is terminated & The network reached
+    convergence                     & 180s                                                                                                                            \\
+    Phase S5                        & Network stabilization check                             & After phase 5                & Phase timeout                   & 10s  \\
+    Phase R                         & Optional, when a main phase failed to reach convergence & After previous phase timeout &
+    The network reached convergence & 120s                                                                                                                            \\
+    Phase SR                        & Network stabilization check                             & After phase R                & Phase timeout                   & 10s  \\
+    \bottomrule
+  \end{tabularx}
 \end{table*}
 
 \subsubsection{Phase 1: Initial Topology Formation}
 
-Phase 1 evaluates the initial topology formation. After the convergence, a stabilization phase observes the
-topology for 10 seconds to verify that all nodes remain active and maintain the neighbor list appropriately
-with valid, bi-directional connections.
+Phase 1 evaluates the initial topology formation. After the convergence, a stabilization phase observes the topology
+for 10 seconds to verify that all nodes remain active and maintain the neighbor list appropriately with valid,
+bi-directional connections.
 
 \subsubsection{Phase 2 \& 3: The Termination of One Node}
 
-Then, a node is randomly chosen to be terminated. The next three phases runs in parallel.
-Phase 2.1 measures the time from the termination to the first failure report is sent to the dashboard.
-Phase 2.2 measures until all neighbors of the terminated node have sent at least one failure report each.
-Phase 3 measures until the network has returned to a convergence state after the termination.
+Then, a node is randomly chosen to be terminated. The next three phases runs in parallel. Phase 2.1 measures the time
+from the termination to the first failure report is sent to the dashboard. Phase 2.2 measures until all neighbors of
+the terminated node have sent at least one failure report each. Phase 3 measures until the network has returned to a
+convergence state after the termination.
 
 \subsubsection{Phase 4: Multiple Nodes Joining}
 
-Phase 4 introduces additional nodes and measures the time required
-for the expanded topology to adapt and restore the desired neighbor relationships. This phase aims to
-measure the effectiveness of FINDING NEMO on an converged, established network.
+Phase 4 introduces additional nodes and measures the time required for the expanded topology to adapt and restore the
+desired neighbor relationships. This phase aims to measure the effectiveness of FINDING NEMO on an converged,
+established network.
 
 \subsubsection{Phase 5: Multiple Nodes Terminating}
 
-Phase 5 then evaluates the framework under multiple node failures by measuring the time required to detect
-all injected failures, remove stale neighbor references, and restore the required neighbor count among all
-surviving nodes.
+Phase 5 then evaluates the framework under multiple node failures by measuring the time required to detect all injected
+failures, remove stale neighbor references, and restore the required neighbor count among all surviving nodes.
 
 \subsubsection{Phase S: Stabilization Check}
 
-Phase S - stabilization - is executed after each time the network topology successfully converges.
-This includes phases 1, 3, 4, 5 and R. The main purpose is to make sure that the network can keep the convergence state
-for a certain period of time, in this case, 10 seconds, during which the phase continuously monitoring the
-network to check
-for any anomalies and report them.
+Phase S - stabilization - is executed after each time the network topology successfully converges. This includes phases
+1, 3, 4, 5 and R. The main purpose is to make sure that the network can keep the convergence state for a certain period
+of time, in this case, 10 seconds, during which the phase continuously monitoring the network to check for any
+anomalies and report them.
 
 \subsubsection{Phase R: Recovery Phase}
 
-Phase R is an optional recovery phase that is triggered only when a preceding phase fails to satisfy its
-completion criteria within the configured timeout period. During phase R, all nodes with incorrect neighbors
-or has less than the required maximum neighbor count are terminated, and the same number of new nodes is created.
-This is to simulate the node self restarting when they are unable to rewire after a certain amount of time.
-The reasoning for this will be discussed in Section~\ref{sec:conclusion}.
+Phase R is an optional recovery phase that is triggered only when a preceding phase fails to satisfy its completion
+criteria within the configured timeout period. During phase R, all nodes with incorrect neighbors or has less than the
+required maximum neighbor count are terminated, and the same number of new nodes is created. This is to simulate the
+node self restarting when they are unable to rewire after a certain amount of time. The reasoning for this will be
+discussed in Section~\ref{sec:conclusion}.
 
 % \subsubsection{Phase 1: Initial Topology Formation}
 
@@ -151,33 +146,32 @@ The reasoning for this will be discussed in Section~\ref{sec:conclusion}.
 
 \subsubsection{Overview}
 
+Table~\ref{tab:valid_runs_by_phase} shows the number of recorded runs following the 5-phase evaluation plan proposed
+
 \begin{table}[H]
-    \centering
-    \caption{Number of Valid Runs Recorded}
-    \label{tab:valid_runs_by_phase}
-    \begin{tabular}{lr}
-        \toprule
-        \textbf{Phase} & \textbf{Number of Runs} \\
-        \midrule
-        Phase 1        & 236 \\
-        Phase 2.1      & 235 \\
-        Phase 2.2      & 234 \\
-        Phase 3        & 233 \\
-        Phase 4        & 228 \\
-        Phase 5        & 221 \\
-        \bottomrule
-    \end{tabular}
+  \centering
+  \caption{Number of Valid Runs Recorded}
+  \label{tab:valid_runs_by_phase}
+  \begin{tabular}{lr}
+    \toprule
+    \textbf{Phase} & \textbf{Number of Runs} \\
+    \midrule
+    Phase 1        & 236                     \\
+    Phase 2.1      & 235                     \\
+    Phase 2.2      & 234                     \\
+    Phase 3        & 233                     \\
+    Phase 4        & 228                     \\
+    Phase 5        & 221                     \\
+    \bottomrule
+  \end{tabular}
 \end{table}
 
-Figure~\ref{fig:success_failure_by_phase} illustrates the percentages of successes and failures categorized
-by each phase.
-The thing that stands out the most is in phase 2, the success rate is 100\%.
-This is due to phase 2 being the easiest phase, it only aims to measure the time for any node to detect a
-single node failure.
+Figure~\ref{fig:success_failure_by_phase} illustrates the percentages of successes and failures categorized by each
+phase. The thing that stands out the most is in phase 2, the success rate is 100\%. This is due to phase 2 being the
+easiest phase, it only aims to measure the time for any node to detect a single node failure.
 
-Phase 3 and 5 both have a success rate of more than 80\%.
-This shows that the system excels at recovery from failed nodes, even though it is only one node failed or
-multiple node failed.
+Phase 3 and 5 both have a success rate of more than 80\%. This shows that the system excels at recovery from failed
+nodes, even though it is only one node failed or multiple node failed.
 
 % \begin{figure}[H]
 %     \centering

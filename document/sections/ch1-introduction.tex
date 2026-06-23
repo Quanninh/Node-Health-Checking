@@ -22,70 +22,64 @@
 % When a node or connection problem is detected, the system updates the affected relationships and attempts
 % to preserve the monitoring structure so that health checking can continue.
 
-Node health checking is a fundamental requirement in distributed systems because the timely detection of
-failed or unreachable nodes directly affects service continuity, coordination correctness, and system
-reconfiguration \cite{liEnergyefficientLazyGroup2025} \cite{yangMedleyMembershipService2022}.
-The impact of an undetected node failure can be severe, particularly when the failed node is topologically or
-functionally critical; in interdependent networks, even a small fraction of node failures can trigger
-recursive cascades and widespread fragmentation \cite{buldyrevCatastrophicCascadeFailures2010}.
-A concrete real-world example is the 2003 FirstEnergy alarm system failure, in which a critical software node
-stalled silently due to an unmonitored race condition, blinding operators and allowing a localized grid
-anomaly to propagate into a catastrophic, multi-regional cascading blackout \cite{Blackout20032003}.
+Node health checking is a fundamental requirement in distributed systems because the timely detection of failed or
+unreachable nodes directly affects service continuity, coordination correctness, and system reconfiguration
+\cite{liEnergyefficientLazyGroup2025} \cite{yangMedleyMembershipService2022}. The impact of an undetected node failure
+can be severe, particularly when the failed node is topologically or functionally critical; in interdependent networks,
+even a small fraction of node failures can trigger recursive cascades and widespread fragmentation
+\cite{buldyrevCatastrophicCascadeFailures2010}. A concrete real-world example is the 2003 FirstEnergy alarm system
+failure, in which a critical software node stalled silently due to an unmonitored race condition, blinding operators
+and allowing a localized grid anomaly to propagate into a catastrophic, multi-regional cascading blackout
+\cite{Blackout20032003}.
 
-A common health-checking paradigm relies on centralized supervision, in which a server or a small set of
-servers monitors nodes through periodic liveness messages or heartbeat-style reporting
-\cite{vanrenesseGossipStyleFailureDetection1998} \cite{kawazoeaguileraHeartbeatTimeoutfreeFailure1997}.
-Heartbeat-based detection remains widely used because timeout on missing periodic messages provides a simple
-operational rule for identifying suspected failures \cite{vanrenesseGossipStyleFailureDetection1998}
-\cite{kawazoeaguileraHeartbeatTimeoutfreeFailure1997}.
-Such designs are also attractive from an engineering perspective because centralized control simplifies
-operational management and supports a more coherent view of membership and monitoring state;
-distributed-systems research continues to build many higher-level services on top of membership knowledge
-\cite{huntZooKeeperWaitfreeCoordination}.
+A common health-checking paradigm relies on centralized supervision, in which a server or a small set of servers
+monitors nodes through periodic liveness messages or heartbeat-style reporting
+\cite{vanrenesseGossipStyleFailureDetection1998} \cite{kawazoeaguileraHeartbeatTimeoutfreeFailure1997}. Heartbeat-based
+detection remains widely used because timeout on missing periodic messages provides a simple operational rule for
+identifying suspected failures \cite{vanrenesseGossipStyleFailureDetection1998}
+\cite{kawazoeaguileraHeartbeatTimeoutfreeFailure1997}. Such designs are also attractive from an engineering perspective
+because centralized control simplifies operational management and supports a more coherent view of membership and
+monitoring state; distributed-systems research continues to build many higher-level services on top of membership
+knowledge \cite{huntZooKeeperWaitfreeCoordination}.
 
-However, centralized monitoring does not scale uniformly well as the system grows.
-Large-scale and geographically distributed deployments make manual investigation difficult, which is why
-automatic failure detection becomes essential in IoT and other distributed environments
-\cite{yangMedleyMembershipService2022} \cite{banerjeeHardwareAssistedHeartbeatMechanism2022}.
-In addition, centralized streaming and monitoring architectures can encounter bandwidth and concurrency
-bottlenecks, along with reduced fault tolerance under heavy load
-\cite{guoDecentralizedMultiVenueRealTime2025}
-\cite{weiSwarmCostEfficientVideo2024}.
-These limitations motivate decentralized alternatives.
+However, centralized monitoring does not scale uniformly well as the system grows. Large-scale and geographically
+distributed deployments make manual investigation difficult, which is why automatic failure detection becomes essential
+in IoT and other distributed environments \cite{yangMedleyMembershipService2022}
+\cite{banerjeeHardwareAssistedHeartbeatMechanism2022}. In addition, centralized streaming and monitoring architectures
+can encounter bandwidth and concurrency bottlenecks, along with reduced fault tolerance under heavy load
+\cite{guoDecentralizedMultiVenueRealTime2025} \cite{weiSwarmCostEfficientVideo2024}. These limitations motivate
+decentralized alternatives.
 
 In decentralized health checking, nodes monitor one another without relying on a single global coordinator
-\cite{yangMedleyMembershipService2022}
-\cite{nikolicSelfHealingDilemmasDistributed2021}.
+\cite{yangMedleyMembershipService2022} \cite{nikolicSelfHealingDilemmasDistributed2021}.
 % Keywords: decentralized, single, health, universal, central
 % Nikolic
 % 2020 --> feel indirectly implying
 % Yang
 % 2022
-This design improves robustness and reduces dependence on central infrastructure, but it also introduces
-harder problems in membership maintenance, coordination, and incomplete local knowledge
+This design improves robustness and reduces dependence on central infrastructure, but it also introduces harder
+problems in membership maintenance, coordination, and incomplete local knowledge
 \cite{nikolicSelfHealingDilemmasDistributed2021}.
 % Keywords: Decentralized, byzantine, malicious, incorrect, large-scale
 % Nikolic
 % 2020
 % Rodr'iguez
 % 2020 --> can't see citations/ referneces
-Within this line of work, three recurring research concerns are network formation or neighbor discovery,
-failure detection accuracy and efficiency, and fault tolerance or self-healing after a node failure
+Within this line of work, three recurring research concerns are network formation or neighbor discovery, failure
+detection accuracy and efficiency, and fault tolerance or self-healing after a node failure
 \cite{rodriguezDecentralisedSelfHealingApproach2021}.
 % Rodr'iguez
 % 2020
 
-A representative decentralized protocol is SWIM, which will be discussed at length in
-section~\ref{sec:related_work} \cite{dasSWIMScalableWeaklyconsistent2002}.
-Its main advantage over traditional heartbeating is scalability: SWIM separates failure detection from
-membership dissemination, and both the expected detection time and expected message load per member remain
-independent of group size \cite{dasSWIMScalableWeaklyconsistent2002}.
-Related systems have extended this direction to specialized environments. For example, Medley adapts
-decentralized membership and failure detection to wireless IoT settings through spatially biased probing,
-reducing the product of detection time and communication cost while maintaining low false positive rates
-\cite{yangMedleyMembershipService2022}.
-Other work has shown that decentralized self-healing can rely on locally maintained neighborhood topology
-information to recreate and reconnect failed nodes after detection \cite{rodriguezDecentralisedSelfHealingApproach2021}.
+A representative decentralized protocol is SWIM, which will be discussed at length in section~\ref{sec:related_work}
+\cite{dasSWIMScalableWeaklyconsistent2002}. Its main advantage over traditional heartbeating is scalability: SWIM
+separates failure detection from membership dissemination, and both the expected detection time and expected message
+load per member remain independent of group size \cite{dasSWIMScalableWeaklyconsistent2002}. Related systems have
+extended this direction to specialized environments. For example, Medley adapts decentralized membership and failure
+detection to wireless IoT settings through spatially biased probing, reducing the product of detection time and
+communication cost while maintaining low false positive rates \cite{yangMedleyMembershipService2022}. Other work has
+shown that decentralized self-healing can rely on locally maintained neighborhood topology information to recreate and
+reconnect failed nodes after detection \cite{rodriguezDecentralisedSelfHealingApproach2021}.
 
 % \subsection{Background}
 % \label{subsec:background}

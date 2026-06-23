@@ -59,8 +59,8 @@ T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \begin{document}
 
 \title{
-    Distributed Node Health Monitoring Framework
-    \thanks{}
+  Distributed Node Health Monitoring Framework
+  \thanks{}
 }
 
 % \author{
@@ -101,59 +101,59 @@ T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 % }
 
 \author{
-    \IEEEauthorblockN{Nguyen Ha Khai}
-    \IEEEauthorblockA{Matriculation number: 10423053\\
+  \IEEEauthorblockN{Nguyen Ha Khai}
+  \IEEEauthorblockA{Matriculation number: 10423053\\
     \textit{Vietnamese-German University}}
-    \and
-    \IEEEauthorblockN{Nguyen Duy Khanh}
-    \IEEEauthorblockA{Matriculation number: 10423056\\
+  \and
+  \IEEEauthorblockN{Nguyen Duy Khanh}
+  \IEEEauthorblockA{Matriculation number: 10423056\\
     \textit{Vietnamese-German University}}
-    \and
-    \IEEEauthorblockN{Vo Minh Duy}
-    \IEEEauthorblockA{Matriculation number: 10423028\\
+  \and
+  \IEEEauthorblockN{Vo Minh Duy}
+  \IEEEauthorblockA{Matriculation number: 10423028\\
     \textit{Vietnamese-German University}}
-    \and
-    \IEEEauthorblockN{\hspace{3cm}Ninh Hoang Quan}
-    \IEEEauthorblockA{\hspace{3cm}Matriculation number: 10423097\\
+  \and
+  \IEEEauthorblockN{\hspace{3cm}Ninh Hoang Quan}
+  \IEEEauthorblockA{\hspace{3cm}Matriculation number: 10423097\\
     \hspace{3cm}\textit{Vietnamese-German University}}
-    \and
-    \IEEEauthorblockN{To Huynh Phuc}
-    \IEEEauthorblockA{Matriculation number: 10423093\\
+  \and
+  \IEEEauthorblockN{To Huynh Phuc}
+  \IEEEauthorblockA{Matriculation number: 10423093\\
     \textit{Vietnamese-German University}}
 }
 
 \maketitle
 
 \begin{abstract}
-    Traditional distributed systems often rely on centralized heartbeat-based mechanisms to monitor node
-    health and maintain membership information.
-    While such approaches simplify coordination and system management, they introduce several limitations,
-    including false-positive failure detections, single points of failure, and scalability bottlenecks.
-    This study addresses the challenge of designing a decentralized overlay network that mitigates these
-    limitations while maintaining connectivity and resilience.
-    To achieve this objective, we propose a decentralized membership management framework composed of three
-    key components.
-    New nodes are integrated into the overlay through FINDING NEMO, a neighbor discovery algorithm that
-    employs a join-and-evict strategy to distribute connections while preserving bounded network density and
-    randomness in topology formation.
-    Once nodes become members of the network, a hybrid failure detection scheme combining the SWIM protocol
-    and phi-accrual failure detection continuously monitors node health with improved accuracy and adaptability.
-    Upon detecting peer failures that may leave portions of the overlay under-connected, CHUALANH, a
-    self-healing rewiring mechanism, coordinates topology repairs among deficient and sufficiently connected
-    nodes to restore connectivity.
-    Experimental evaluation demonstrates the feasibility of the proposed framework and shows that it can
-    maintain decentralized network organization while supporting dynamic membership changes and failure recovery.
-    The results indicate that the combination of adaptive failure detection, structured neighbor discovery,
-    and coordinated rewiring contributes to a resilient and balanced overlay topology.
-    In conclusion, the proposed framework offers a practical decentralized alternative to traditional
-    centralized membership management approaches.
-    While the results are promising, further large-scale experimentation is required to evaluate its
-    performance under higher levels of churn and network scale.
+  Traditional distributed systems often rely on centralized heartbeat-based mechanisms to monitor node
+  health and maintain membership information.
+  While such approaches simplify coordination and system management, they introduce several limitations,
+  including false-positive failure detections, single points of failure, and scalability bottlenecks.
+  This study addresses the challenge of designing a decentralized overlay network that mitigates these
+  limitations while maintaining connectivity and resilience.
+  To achieve this objective, we propose a decentralized membership management framework composed of three
+  key components.
+  New nodes are integrated into the overlay through FINDING NEMO, a neighbor discovery algorithm that
+  employs a join-and-evict strategy to distribute connections while preserving bounded network density and
+  randomness in topology formation.
+  Once nodes become members of the network, a hybrid failure detection scheme combining the SWIM protocol
+  and phi-accrual failure detection continuously monitors node health with improved accuracy and adaptability.
+  Upon detecting peer failures that may leave portions of the overlay under-connected, CHUALANH, a
+  self-healing rewiring mechanism, coordinates topology repairs among deficient and sufficiently connected
+  nodes to restore connectivity.
+  Experimental evaluation demonstrates the feasibility of the proposed framework and shows that it can
+  maintain decentralized network organization while supporting dynamic membership changes and failure recovery.
+  The results indicate that the combination of adaptive failure detection, structured neighbor discovery,
+  and coordinated rewiring contributes to a resilient and balanced overlay topology.
+  In conclusion, the proposed framework offers a practical decentralized alternative to traditional
+  centralized membership management approaches.
+  While the results are promising, further large-scale experimentation is required to evaluate its
+  performance under higher levels of churn and network scale.
 \end{abstract}
 
 \begin{IEEEkeywords}
-    distributed systems, node health checking, failure detection, heartbeat, false positives, fault
-    tolerance, neighbor discovery, self-healing topology.
+  distributed systems, node health checking, failure detection, heartbeat, false positives, fault
+  tolerance, neighbor discovery, self-healing topology.
 \end{IEEEkeywords}
 
 \input{sections/ch1-introduction.tex}
@@ -161,32 +161,32 @@ T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \input{sections/ch3-related-work.tex}
 \input{sections/ch4-proposed-approach.tex}
 \input{sections/ch5-implementation-details.tex}
-\input{sections/ch6-evaluation.tex}
 
 \section{Teamwork}
 \label{sec:teamwork}
 
 \begin{table}[h]
-    \centering
-    \caption{Task Distribution}
-    \begin{tabular}{|c|p{3.6cm}|p{3.2cm}|}
-        \hline
+  \centering
+  \caption{Task Distribution}
+  \begin{tabular}{|c|p{3.6cm}|p{3.2cm}|}
+    \hline
 
-        \hline
-        1 & Problem analysis and failure model definitions & All team members \\
-        \hline
-        2 & Health-checking algorithm and system design    & Khanh, Khai, Phuc \\
-        \hline
-        3 & Node agent implementation                      & All team members \\
-        \hline
-        4 & Server application and membership control      & Quan, Duy \\
-        \hline
-        5 & Evaluation, experiments, and report writing    & All team members \\
-        \hline
-    \end{tabular}
-    \label{tab:task_distribution}
+    \hline
+    1 & Problem analysis and failure model definitions & All team members  \\
+    \hline
+    2 & Health-checking algorithm and system design    & Khanh, Khai, Phuc \\
+    \hline
+    3 & Node agent implementation                      & All team members  \\
+    \hline
+    4 & Server application and membership control      & Quan, Duy         \\
+    \hline
+    5 & Evaluation, experiments, and report writing    & All team members  \\
+    \hline
+  \end{tabular}
+  \label{tab:task_distribution}
 \end{table}
 
+\input{sections/ch6-evaluation.tex}
 \input{sections/ch7-conclusion.tex}
 
 % ====== BIBLIOGRAPHY SETUP HERE ======

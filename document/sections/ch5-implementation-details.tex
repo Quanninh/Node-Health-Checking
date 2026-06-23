@@ -11,16 +11,12 @@ status, and interacting with the membership control service.
 \subsubsection{Hybrid SWIMPHI}
 \label{subsubsec:swimphi_code}
 
+The SWIMPHI is implemented by the \texttt{FailureDetector} class, which combines periodic heartbeat probing inspired by
+SWIM with adaptive suspicion estimation from the $\phi$ Accrual Failure Detector.
 
-The SWIMPHI is implemented by the \texttt{FailureDetector} class, which combines periodic heartbeat probing
-inspired by SWIM with adaptive suspicion estimation from the $\phi$ Accrual Failure Detector.
-
-As shown in Listing~\ref{lst:scheduler}, the
-\texttt{FailureDetector} uses a
-\texttt{ScheduledExecutorService} to schedule periodic
-monitoring tasks. The primary task performs heartbeat probing
-at configurable intervals, enabling each node to continuously
-monitor the availability of its neighbors and detect potential failures in a timely manner.
+As shown in Listing~\ref{lst:scheduler}, the \texttt{FailureDetector} uses a \texttt{ScheduledExecutorService} to
+schedule periodic monitoring tasks. The primary task performs heartbeat probing at configurable intervals, enabling
+each node to continuously monitor the availability of its neighbors and detect potential failures in a timely manner.
 
 \begin{lstlisting}[language=Java,
 caption={Scheduling periodic failure-detection tasks},
@@ -32,12 +28,9 @@ scheduler.scheduleAtFixedRate(
     TimeUnit.SECONDS);
 \end{lstlisting}
 
-During each monitoring cycle, the node selects a target
-neighbor from the \texttt{NeighborDirectory} and sends a
-heartbeat request through the \texttt{NodeClient}. The
-implementation uses Java's \texttt{CompletableFuture}
-framework to perform non-blocking communication, allowing
-monitoring operations to continue without waiting for network
+During each monitoring cycle, the node selects a target neighbor from the \texttt{NeighborDirectory} and sends a
+heartbeat request through the \texttt{NodeClient}. The implementation uses Java's \texttt{CompletableFuture} framework
+to perform non-blocking communication, allowing monitoring operations to continue without waiting for network
 responses.
 
 \begin{lstlisting}[language=Java,
@@ -60,18 +53,12 @@ nodeClient.ping(targetNode)
     });
 \end{lstlisting}
 
-When an acknowledgment (ACK) is received, the monitored node
-is marked as \textit{ALIVE}. The detector records the
-heartbeat arrival time and updates a sliding window of
-historical heartbeat intervals maintained for that neighbor.
-These observations are subsequently used by the
-$\phi$ Accrual Failure Detector to model normal communication
-behavior.
+When an acknowledgment (ACK) is received, the monitored node is marked as \textit{ALIVE}. The detector records the
+heartbeat arrival time and updates a sliding window of historical heartbeat intervals maintained for that neighbor.
+These observations are subsequently used by the $\phi$ Accrual Failure Detector to model normal communication behavior.
 
-If a direct heartbeat probe does not receive an acknowledgment,
-the detector invokes the indirect verification procedure.
-As shown in the implementation, a set of helper nodes is
-selected from the local neighbor table using the
+If a direct heartbeat probe does not receive an acknowledgment, the detector invokes the indirect verification
+procedure. As shown in the implementation, a set of helper nodes is selected from the local neighbor table using the
 \texttt{NeighborDirectory} component.
 
 \begin{lstlisting}[language=Java,
@@ -82,19 +69,14 @@ List<NodeAddress> helperNodes =
         targetNode);
 \end{lstlisting}
 
-The selected helper nodes are intended to perform
-\texttt{PING\_REQ} operations on behalf of tfhe original sender.
-Each helper node attempts to contact the target node and
-reports the result back to the requester. If at least one
-helper node successfully receives an acknowledgment, the
-target node is considered reachable and its heartbeat
-statistics are updated accordingly.
+The selected helper nodes are intended to perform \texttt{PING\_REQ} operations on behalf of tfhe original sender. Each
+helper node attempts to contact the target node and reports the result back to the requester. If at least one helper
+node successfully receives an acknowledgment, the target node is considered reachable and its heartbeat statistics are
+updated accordingly.
 
-If no acknowledgment is received in any helper nodes, the detector evaluates the
-target node using the $\phi$ Accrual algorithm. The
-implementation computes a dynamic suspicion value based on
-the elapsed time since the last successful heartbeat and the
-historical distribution of heartbeat intervals.
+If no acknowledgment is received in any helper nodes, the detector evaluates the target node using the $\phi$ Accrual
+algorithm. The implementation computes a dynamic suspicion value based on the elapsed time since the last successful
+heartbeat and the historical distribution of heartbeat intervals.
 
 \begin{lstlisting}[language=Java,
 caption={Phi Accrual suspicion calculation},
@@ -108,28 +90,18 @@ NodeStatus phiStatus =
     phiDetector.determineStatus(phi);
 \end{lstlisting}
 
-During the initial monitoring period, the detector may not
-have accumulated sufficient heartbeat observations to perform
-reliable $\phi$ estimation. In the current implementation,
-the Phi Accrual Failure Detector requires at least two
-historical heartbeat intervals before meaningful statistical
-analysis can be performed. To address this cold-start problem,
-the system temporarily employs a conservative timeout-based
-strategy. Specifically, a node is not classified as
-\textit{UNREACHABLE} unless it remains unresponsive for a
-duration substantially longer than the configured probe
-interval. This grace period allows the detector to collect
-adequate heartbeat samples and establish a baseline of normal
-communication behavior, thereby reducing the likelihood of
-false-positive failure detections for newly joined nodes.
+During the initial monitoring period, the detector may not have accumulated sufficient heartbeat observations to
+perform reliable $\phi$ estimation. In the current implementation, the Phi Accrual Failure Detector requires at least
+two historical heartbeat intervals before meaningful statistical analysis can be performed. To address this cold-start
+problem, the system temporarily employs a conservative timeout-based strategy. Specifically, a node is not classified
+as \textit{UNREACHABLE} unless it remains unresponsive for a duration substantially longer than the configured probe
+interval. This grace period allows the detector to collect adequate heartbeat samples and establish a baseline of
+normal communication behavior, thereby reducing the likelihood of false-positive failure detections for newly joined
+nodes.
 
-The computed $\phi$ value is mapped to one of four node
-states: \textit{ALIVE}, \textit{WARNING},
-\textit{SUSPECTED}, or \textit{UNREACHABLE}.
-When a node transitions to either the
-\textit{SUSPECTED} or \textit{UNREACHABLE} state, the
-information is disseminated through the gossip subsystem to
-ensure that neighboring nodes gradually converge toward a
+The computed $\phi$ value is mapped to one of four node states: \textit{ALIVE}, \textit{WARNING}, \textit{SUSPECTED},
+or \textit{UNREACHABLE}. When a node transitions to either the \textit{SUSPECTED} or \textit{UNREACHABLE} state, the
+information is disseminated through the gossip subsystem to ensure that neighboring nodes gradually converge toward a
 consistent membership view.
 
 \begin{lstlisting}[language=Java,
@@ -142,33 +114,26 @@ gossipService.gossipUnreachable(
     targetNode);
 \end{lstlisting}
 
-If a node is ultimately classified as
-\textit{UNREACHABLE}, additional recovery procedures are
-triggered. The failed node is removed from the local
-membership view, topology information is updated, and the
-failure event is reported to the monitoring dashboard.
-Furthermore, the self-healing topology subsystem is notified
-to restore missing network connections. Through the
-combination of periodic heartbeat monitoring, adaptive
-statistical failure estimation, gossip dissemination, and
-automated recovery, SWIMPHI provides scalable and resilient
-failure detection for dynamic distributed environments.
+If a node is ultimately classified as \textit{UNREACHABLE}, additional recovery procedures are triggered. The failed
+node is removed from the local membership view, topology information is updated, and the failure event is reported to
+the monitoring dashboard. Furthermore, the self-healing topology subsystem is notified to restore missing network
+connections. Through the combination of periodic heartbeat monitoring, adaptive statistical failure estimation, gossip
+dissemination, and automated recovery, SWIMPHI provides scalable and resilient failure detection for dynamic
+distributed environments.
 
 \subsubsection{FINDING NEMO}
 \label{subsubsec:node_discovery_code}
 
-This section highlights several key implementation aspects of FINDING NEMO.
-One important component is the construction of the \textit{Join Plan}.
-Recall that acknowledgements received by a joining node can be classified into two categories according to
-the state of the responder's neighbor list: \textit{fullNeighborAcks} and \textit{missingNeighborAcks}.
-As discussed in Subsection~\ref{subsec:node_discovery}, a fully connected node must evict one of its existing
-neighbors before accepting a new connection, whereas an under-connected node can directly accommodate the joining node.
-Consequently, the implementation represents a \textit{JoinPlan} as a record containing two components: a list
-of \textit{directTargets}, representing nodes that will establish direct connections with the joining node,
-and a mapping \textit{evictionByDirectTarget}, which associates each fully connected target with its selected
-eviction victim.
-The plan is generated by partitioning acknowledgements into the two categories and determining the number of
-targets to be selected from each group.
+This section highlights several key implementation aspects of FINDING NEMO. One important component is the construction
+of the \textit{Join Plan}. Recall that acknowledgements received by a joining node can be classified into two
+categories according to the state of the responder's neighbor list: \textit{fullNeighborAcks} and
+\textit{missingNeighborAcks}. As discussed in Subsection~\ref{subsec:node_discovery}, a fully connected node must evict
+one of its existing neighbors before accepting a new connection, whereas an under-connected node can directly
+accommodate the joining node. Consequently, the implementation represents a \textit{JoinPlan} as a record containing
+two components: a list of \textit{directTargets}, representing nodes that will establish direct connections with the
+joining node, and a mapping \textit{evictionByDirectTarget}, which associates each fully connected target with its
+selected eviction victim. The plan is generated by partitioning acknowledgements into the two categories and
+determining the number of targets to be selected from each group.
 
 \begin{lstlisting}[language=Java,
 caption={Compute the quantity taken from two lists},
@@ -237,29 +202,23 @@ directTargetAcks.addAll(
                 fullTargetCount));
 \end{lstlisting}
 
-Listing~\ref{lst:quantity_target_list} illustrates the target-selection stage of FINDING NEMO.
-The algorithm prioritizes nodes whose neighbor lists have not yet reached the target size, as these nodes can
-directly establish new connections without requiring any topology reconfiguration.
-Such nodes are selected first and contribute one neighbor each to the joining node.
-The remaining neighbor budget, if any, is then allocated to fully connected nodes.
-Since each fully connected node contributes both itself and one eviction victim, selecting a single
-full-neighbor target effectively provides two neighbors to the joining node.
-Consequently, the number of selected under-connected nodes is rounded down to the nearest even value,
-ensuring that the remaining capacity can be satisfied through the eviction mechanism while maintaining the
-desired target degree.
-Furthermore, the implementation attempts to include at least \verb|MINIMUM_FULL_TARGET_COUNT| fully connected
-nodes whenever possible.
-By forcing new nodes to establish connections with well-integrated regions of the overlay, the algorithm
-reduces the likelihood that bursts of simultaneous join operations create isolated subnetworks and
-consequently mitigates the risk of network partitioning.
+Listing~\ref{lst:quantity_target_list} illustrates the target-selection stage of FINDING NEMO. The algorithm
+prioritizes nodes whose neighbor lists have not yet reached the target size, as these nodes can directly establish new
+connections without requiring any topology reconfiguration. Such nodes are selected first and contribute one neighbor
+each to the joining node. The remaining neighbor budget, if any, is then allocated to fully connected nodes. Since each
+fully connected node contributes both itself and one eviction victim, selecting a single full-neighbor target
+effectively provides two neighbors to the joining node. Consequently, the number of selected under-connected nodes is
+rounded down to the nearest even value, ensuring that the remaining capacity can be satisfied through the eviction
+mechanism while maintaining the desired target degree. Furthermore, the implementation attempts to include at least
+\verb|MINIMUM_FULL_TARGET_COUNT| fully connected nodes whenever possible. By forcing new nodes to establish connections
+with well-integrated regions of the overlay, the algorithm reduces the likelihood that bursts of simultaneous join
+operations create isolated subnetworks and consequently mitigates the risk of network partitioning.
 
 Another noteworthy implementation detail is the selection of eviction victims.
-Listing~\ref{lst:evicted_members_selection} presents the corresponding procedure.
-For each fully connected direct target, a neighboring node is selected uniformly at random as a potential
-eviction victim.
-An exclusion set is maintained to prevent the joining node, previously selected direct targets, and
-previously selected victims from being chosen again.
-This guarantees that each eviction victim is unique and cannot simultaneously serve as a direct target,
+Listing~\ref{lst:evicted_members_selection} presents the corresponding procedure. For each fully connected direct
+target, a neighboring node is selected uniformly at random as a potential eviction victim. An exclusion set is
+maintained to prevent the joining node, previously selected direct targets, and previously selected victims from being
+chosen again. This guarantees that each eviction victim is unique and cannot simultaneously serve as a direct target,
 thereby avoiding conflicting topology updates.
 
 \begin{lstlisting}[language=Java,
@@ -300,67 +259,58 @@ for (JoinAck directTarget : fullDirectTargetAcks) {
 }
 \end{lstlisting}
 
-Finally, the protocol flow of FINDING NEMO is discussed.
-Due to the substantial amount of implementation-specific boilerplate code, source-code listings are not used
-as the primary visualization aid.
-Instead, the protocol is illustrated using the activity diagram shown in
-Figure~\ref{fig:FINDING_NEMO_protocol}, which more clearly conveys the interaction sequence among participating nodes.
+Finally, the protocol flow of FINDING NEMO is discussed. Due to the substantial amount of implementation-specific
+boilerplate code, source-code listings are not used as the primary visualization aid. Instead, the protocol is
+illustrated using the activity diagram shown in Figure~\ref{fig:FINDING_NEMO_protocol}, which more clearly conveys the
+interaction sequence among participating nodes.
 
-As shown in the diagram, the protocol diverges depending on whether the selected target node has available
-neighbor capacity or a full neighbor list.
-Despite this distinction, the two execution paths share a largely similar sequence of operations, differing
-primarily in the number of neighbors ultimately acquired by the joining node.
-The diagram also highlights that a target node communicates with the selected eviction victim and completes
-the corresponding topology update before transmitting a \texttt{COMMIT\_ACK} message to the joining node.
+As shown in the diagram, the protocol diverges depending on whether the selected target node has available neighbor
+capacity or a full neighbor list. Despite this distinction, the two execution paths share a largely similar sequence of
+operations, differing primarily in the number of neighbors ultimately acquired by the joining node. The diagram also
+highlights that a target node communicates with the selected eviction victim and completes the corresponding topology
+update before transmitting a \texttt{COMMIT\_ACK} message to the joining node.
 
-An earlier version of the protocol employed a more aggressive update strategy.
-Upon receiving a \texttt{COMMIT\_DIRECT} message, the target node simultaneously added the joining node and
-removed the selected victim.
-Subsequently, a \texttt{COMMIT\_VICTIM} message instructed the eviction victim to add the joining node and
-remove the target node.
-Although conceptually straightforward, this approach introduced the possibility of partial commits.
-In particular, message loss or node failure during the update sequence could leave one endpoint retaining a
-neighbor relationship while the corresponding peer had already removed it, resulting in an inconsistent
-overlay topology.
+An earlier version of the protocol employed a more aggressive update strategy. Upon receiving a \texttt{COMMIT\_DIRECT}
+message, the target node simultaneously added the joining node and removed the selected victim. Subsequently, a
+\texttt{COMMIT\_VICTIM} message instructed the eviction victim to add the joining node and remove the target node.
+Although conceptually straightforward, this approach introduced the possibility of partial commits. In particular,
+message loss or node failure during the update sequence could leave one endpoint retaining a neighbor relationship
+while the corresponding peer had already removed it, resulting in an inconsistent overlay topology.
 
-To mitigate this issue, the current protocol adopts a more conservative commit procedure, ensuring that
-topology updates are coordinated before acknowledgements are returned.
-While temporary degree imbalance may still occur, such situations are subsequently corrected by the rewiring
-mechanism described later in this work.
+To mitigate this issue, the current protocol adopts a more conservative commit procedure, ensuring that topology
+updates are coordinated before acknowledgements are returned. While temporary degree imbalance may still occur, such
+situations are subsequently corrected by the rewiring mechanism described later in this work.
 
 \begin{figure*}[!t]
-    \centering
-    \includegraphics[width=0.95\textwidth]{FINDING_NEMO_actiDi.png}
-    \caption{FINDING NEMO protocol flow}
-    \label{fig:FINDING_NEMO_protocol}
+  \centering
+  \includegraphics[width=0.95\textwidth]{FINDING_NEMO_actiDi.png}
+  \caption{FINDING NEMO protocol flow}
+  \label{fig:FINDING_NEMO_protocol}
 \end{figure*}
 
 \subsubsection{CHUALANH}
 \label{subsubsec:node_deletion_code}
 \begin{enumerate}
-    \item{\textbf{Direct Rewiring: }}
+  \item{\textbf{Direct Rewiring: }}
 
-        The code fragment in Listing~\ref{lst:direct_rewiring} presents the core implementation of the direct
-        rewiring procedure for \textbf{Case 1: No Existing Connection}, described in Section~\ref{subsec:node_deletion}.
-        Each direct rewiring session is uniquely identified by a recovery identifier generated using a \texttt{UUID}.
-        The initiating deficient node, denoted as node(A), constructs a \texttt{REWIRE\_REQ\_DIRECT} message
-        and sends it to another deficient node, denoted as node(B).
+        The code fragment in Listing~\ref{lst:direct_rewiring} presents the core implementation of the direct rewiring
+        procedure for \textbf{Case 1: No Existing Connection}, described in Section~\ref{subsec:node_deletion}. Each direct
+        rewiring session is uniquely identified by a recovery identifier generated using a \texttt{UUID}. The initiating
+        deficient node, denoted as node(A), constructs a \texttt{REWIRE\_REQ\_DIRECT} message and sends it to another deficient
+        node, denoted as node(B).
 
-        Upon receiving the request, node (B) evaluates whether it can participate in the rewiring process.
-        If the request is accepted, node (B) returns a response message with the status \texttt{ACCEPTED}.
-        After receiving the acceptance, node (A) performs the actual connection establishment by invoking the
-        \texttt{connectionManager.addIfSpace()} method, which adds node (B) to its neighbor list provided
-        that sufficient capacity is available.
+        Upon receiving the request, node (B) evaluates whether it can participate in the rewiring process. If the request is
+        accepted, node (B) returns a response message with the status \texttt{ACCEPTED}. After receiving the acceptance, node
+        (A) performs the actual connection establishment by invoking the \texttt{connectionManager.addIfSpace()} method, which
+        adds node (B) to its neighbor list provided that sufficient capacity is available.
 
-        Subsequently, node (A) sends a \texttt{REWIRE\_DIRECT\_COMMIT} message to node (B) to finalize the
-        rewiring session.
-        Upon processing this commit message, node (B) similarly invokes
-        \texttt{connectionManager.addIfSpace()} to add node (A) to its neighbor list.
-        Consequently, a bidirectional connection is established between the two deficient nodes, restoring
-        one missing neighbor for each participant while maintaining the degree constraints imposed by the
-        network topology.
+        Subsequently, node (A) sends a \texttt{REWIRE\_DIRECT\_COMMIT} message to node (B) to finalize the rewiring session.
+        Upon processing this commit message, node (B) similarly invokes \texttt{connectionManager.addIfSpace()} to add node (A)
+        to its neighbor list. Consequently, a bidirectional connection is established between the two deficient nodes,
+        restoring one missing neighbor for each participant while maintaining the degree constraints imposed by the network
+        topology.
 
-    \begin{lstlisting}[language=Java,
+        \begin{lstlisting}[language=Java,
     caption={Direct Rewiring},
     label={lst:direct_rewiring}]
     private boolean tryDirectRepair(NodeAddress defA, NodeAddress defB) {
@@ -422,16 +372,15 @@ mechanism described later in this work.
     }
     \end{lstlisting}
 
-    \item{\textbf{Undirect Rewiring: }}
+  \item{\textbf{Undirect Rewiring: }}
 
-        The code in \texttt{runFullRewiring()} method presents the core implementation of the rewiring
-        procedure for \textbf{Case 2: Existing Connection}, in which two deficient nodes are already directly connected.
-        Initially, the current deficient node, denoted as node (A), discovers another deficient node, denoted
-        as node (B), with which it already maintains a direct connection.
-        Node (A) initiates a rewiring session by generating a unique request identifier and transmitting a
-        \texttt{REWIRE\_SESSION\_REQ} message to node (B).
+        The code in \texttt{runFullRewiring()} method presents the core implementation of the rewiring procedure for
+        \textbf{Case 2: Existing Connection}, in which two deficient nodes are already directly connected. Initially, the
+        current deficient node, denoted as node (A), discovers another deficient node, denoted as node (B), with which it
+        already maintains a direct connection. Node (A) initiates a rewiring session by generating a unique request identifier
+        and transmitting a \texttt{REWIRE\_SESSION\_REQ} message to node (B).
 
-    \begin{lstlisting}[language=Java,
+        \begin{lstlisting}[language=Java,
     caption={Generating Session ID},
     label={lst:sessionId}]
     String requestId = UUID.randomUUID().toString();
@@ -449,13 +398,12 @@ mechanism described later in this work.
 
     \end{lstlisting}
 
-        Upon receiving the acknowledgment from node (B), a leader election mechanism is executed to determine
-        which deficient node will coordinate the recovery process.
-        Without loss of generality, assume that node (A) is elected as the leader.
-        Node (A) subsequently generates a recovery identifier and sends a \texttt{REWIRE\_SESSION\_COMMIT}
-        message to node (B), informing node (B) that it will participate in the recovery process as a fellow.
+        Upon receiving the acknowledgment from node (B), a leader election mechanism is executed to determine which deficient
+        node will coordinate the recovery process. Without loss of generality, assume that node (A) is elected as the leader.
+        Node (A) subsequently generates a recovery identifier and sends a \texttt{REWIRE\_SESSION\_COMMIT} message to node (B),
+        informing node (B) that it will participate in the recovery process as a fellow.
 
-    \begin{lstlisting}[language=Java,
+        \begin{lstlisting}[language=Java,
     label={lst:fellow}]
     if (!localAddress.nodeId().equals( electLeader(defA, defB).nodeId())) {
         return false;
@@ -472,15 +420,13 @@ mechanism described later in this work.
 
     \end{lstlisting}
 
-        The leader then computes a set of candidate nodes, denoted by (C), where each node (C) is a neighbor
-        of node (A) but is not directly connected to node (B). This candidate set is obtained by examining
-        the entire neighbor list of node (A) and filtering out all nodes that also appear in the neighbor
-        list of node (B).
-        For each candidate (C), the leader sends a query message containing neighbor lists of node A and B,
-        along with the recovery status. Upon receiving the query, node (C) searches for a node (D) that is a
-        neighbor of (C) but not a neighbor of node (A). Once such a pair ((C,D)) is identified, the CHUALANH
-        algorithm is executed to restructure the topology while preserving node degrees.
-    \begin{lstlisting}[language=Java,
+        The leader then computes a set of candidate nodes, denoted by (C), where each node (C) is a neighbor of node (A) but is
+        not directly connected to node (B). This candidate set is obtained by examining the entire neighbor list of node (A)
+        and filtering out all nodes that also appear in the neighbor list of node (B). For each candidate (C), the leader sends
+        a query message containing neighbor lists of node A and B, along with the recovery status. Upon receiving the query,
+        node (C) searches for a node (D) that is a neighbor of (C) but not a neighbor of node (A). Once such a pair ((C,D)) is
+        identified, the CHUALANH algorithm is executed to restructure the topology while preserving node degrees.
+        \begin{lstlisting}[language=Java,
     caption={Finding Node C and D},
     label={lst:findcd}]
     List<NodeAddress> candidateCs = selectCandidateCs( defANeighbors, defBNeighbors);
@@ -495,13 +441,12 @@ mechanism described later in this work.
     }
     \end{lstlisting}
 
-        If such a node (D) exists, node (A) invokes the \texttt{executeScheme()} method, which applies the
-        \textbf{Connectivity Healing through Under-connected and Adaptive Link Adjustment for Network Health
-        (CHUALANH)} for \textbf{Case 2: Existing Connection}, as described in Section~\ref{subsec:node_deletion}.
-        The algorithm restructures the network by replacing selected edges while preserving the degree
-        constraints of the participating nodes.
-        Consequently, the deficient nodes recover their missing connections and the topology is repaired
-        without altering the predefined node degree (k)
+        If such a node (D) exists, node (A) invokes the \texttt{executeScheme()} method, which applies the \textbf{Connectivity
+          Healing through Under-connected and Adaptive Link Adjustment for Network Health (CHUALANH)} for \textbf{Case 2:
+          Existing Connection}, as described in Section~\ref{subsec:node_deletion}. The algorithm restructures the network by
+        replacing selected edges while preserving the degree constraints of the participating nodes. Consequently, the
+        deficient nodes recover their missing connections and the topology is repaired without altering the predefined node
+        degree (k)
 \end{enumerate}
 
 \subsection{Server Application}
@@ -515,12 +460,12 @@ collecting, storing, and visualizing network information
 Each node contains a \mbox{\texttt{DashboardReporter}} component that periodically reports its current state
 to the dashboard. Communication between nodes and the dashboard is implemented using HTTP and JSON messages.
 
-When a node is operational, the \mbox{\texttt{reportSelfAlive()}} method constructs a JSON object containing
-the node's id (\mbox{\texttt{id}}), IP address(\texttt{ipAddress}), peer-to-peer communication
-port(\texttt{p2pPort}), password-cracking service port(\texttt{crackingPort}), current neighbor list
-(\texttt{neighbors}), and a status field set to \texttt{"UP"}. The message is then transmitted asynchronously
-to the dashboard's \texttt{/hearbeat} endpoint using and HTTP POST request.
-    \begin{lstlisting}[language=Java,
+When a node is operational, the \mbox{\texttt{reportSelfAlive()}} method constructs a JSON object containing the node's
+id (\mbox{\texttt{id}}), IP address(\texttt{ipAddress}), peer-to-peer communication port(\texttt{p2pPort}),
+password-cracking service port(\texttt{crackingPort}), current neighbor list (\texttt{neighbors}), and a status field
+set to \texttt{"UP"}. The message is then transmitted asynchronously to the dashboard's \texttt{/hearbeat} endpoint
+using and HTTP POST request.
+\begin{lstlisting}[language=Java,
     label={lst:evicted_members_selection}]
 
     String json = """
@@ -543,15 +488,14 @@ to the dashboard's \texttt{/hearbeat} endpoint using and HTTP POST request.
 
     \end{lstlisting}
 
-In the event of a node failure, a neighboring node that detects the communication loss reports the failure
-through the \texttt{reportFailure()} method. This method generates a JSON message containing the reporting
-node identifier (\texttt{reporterNodeId}), the suspected failed node identifier (\texttt{failedNodeId}), the
-computed phi value (\texttt{phi}), the failure detection threshold (\texttt{threshold}), a timestamp
-(\texttt{timestamp}), and a status field set to "\texttt{UNREACHABLE}". The message is subsequently sent to
-the dashboard's \texttt{/failure-report} endpoint using an HTTP POST request. The use of asynchronous HTTP
-requests through \texttt{CompletableFuture} ensures that dashboard communication does not block the execution
-of the distributed system.
-    \begin{lstlisting}[language=Java,
+In the event of a node failure, a neighboring node that detects the communication loss reports the failure through the
+\texttt{reportFailure()} method. This method generates a JSON message containing the reporting node identifier
+(\texttt{reporterNodeId}), the suspected failed node identifier (\texttt{failedNodeId}), the computed phi value
+(\texttt{phi}), the failure detection threshold (\texttt{threshold}), a timestamp (\texttt{timestamp}), and a status
+field set to "\texttt{UNREACHABLE}". The message is subsequently sent to the dashboard's \texttt{/failure-report}
+endpoint using an HTTP POST request. The use of asynchronous HTTP requests through \texttt{CompletableFuture} ensures
+that dashboard communication does not block the execution of the distributed system.
+\begin{lstlisting}[language=Java,
     label={lst:evicted_members_selection}]
     String json = String.format(Locale.US, """
             {"reporterNodeId": "%s",
