@@ -393,31 +393,19 @@ Rather than relying on an external coordination service, membership management, 
 \subsection{Contributions}
 \label{subsec:contribution}
 
-This project presents a decentralized node health-checking system in which nodes monitor one another through neighbor-based relationships.
 The main contributions are as follows:
 
 \begin{itemize}
 
-\item \textbf{Neighbor-based decentralized structure:}
-The system distributes health-checking responsibility across nodes by assigning each node a limited set of neighbors to monitor.
+\item A novel neighbor discovery protocol that orchestrates node integration while preserving the structural properties of a k-regular graph overlay: FINDING NEMO.
 
-\item \textbf{Fixed-\(k\) relationship maintenance:}
-Each node attempts to maintain a fixed number of neighbor relationships, allowing the monitoring structure to remain organized as the network changes.
+\item A hybrid version of SWIM and \texorpdfstring{$\phi$}{phi} accrual failure detector: hybrid SWIMPHI.
 
-\item \textbf{Node joining mechanism:}
-The system supports new nodes entering the network and becoming part of the decentralized monitoring topology.
+\item A new self-healing topology maintainance technique that automatically restores the overlay toward a k-regular graph state following node failures or topology disruptions: CHUALANH.
 
-\item \textbf{Failure detection mechanism:}
-Nodes use health-check communication to identify healthy, suspicious, and failed neighbors based on their observed responses.
+\item Implementation of the framework including core components above in Java.
 
-\item \textbf{Repair and rewiring mechanism:}
-When nodes or connections become unavailable, the system attempts to replace missing relationships and restore the required monitoring structure.
-
-\item \textbf{Optional observation layer:}
-A dashboard, server, and database are included to display node status and failure events, but they are separate from the core decentralized health-checking mechanism.
-
-\item \textbf{Experimental evaluation:}
-The system is tested under normal operation, node joining, node crash, temporary disconnection, unstable connection, recovery, and observation-layer unavailability scenarios.
+\item Direct evaluation of FINDING NEMO, CHUALANH, and the overall system performance via a dashboard that enables the observation of node behavior and the collection of experimental metrics for evaluation.
 
 \end{itemize}
 
@@ -783,7 +771,7 @@ Explain how the proposed approach is implemented in the project. Mention the pro
 \label{subsec:node_agent}
 Describe the responsibilities of the node agent, including sending or responding to health checks, reporting status, and interacting with the membership control service.
 
-\subsubsection{Failure Detection: Hybrid SWIMPHI}
+\subsubsection{Hybrid SWIMPHI}
 \label{subsubsec:swimphi_code}    
  
 
@@ -928,7 +916,7 @@ statistical failure estimation, gossip dissemination, and
 automated recovery, SWIMPHI provides scalable and resilient
 failure detection for dynamic distributed environments.
 
-\subsubsection{Neighbor Discovery: FINDING NEMO}
+\subsubsection{FINDING NEMO}
 \label{subsubsec:node_discovery_code}
 
 This section highlights several key implementation aspects of FINDING NEMO. 
@@ -1082,7 +1070,7 @@ While temporary degree imbalance may still occur, such situations are subsequent
 \label{fig:FINDING_NEMO_protocol}
 \end{figure*}
 
-\subsubsection{Node Rewiring: Degree-Preserving Topology Repair (DPTR) algorithm }
+\subsubsection{CHUALANH}
 \label{subsubsec:node_deletion_code}
 \begin{enumerate}
     \item{\textbf{Direct Rewiring: }}
