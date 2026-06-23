@@ -362,22 +362,17 @@ Experimental results from the original work show that the $\phi$ accrual failure
 
 \subsubsection{SWIM protocol}
 
-Traditional heartbeating protocols may also suffer from scalability problems and false-positive failure detection. 
+Traditional heartbeating protocols may also suffer from scalability problems and false-positive failure detection\cite{guptaScalableEfficientDistributed2001}.
 If every node monitors every other node, the number of heartbeat messages increases rapidly as the system grows.
 In addition, if a node misses a heartbeat only because of temporary network problems, it may incorrectly mark another node as failed. 
 Das et al.~\cite{dasSWIMScalableWeaklyconsistent2002} proposed SWIM to address these issues by separating failure detection from membership dissemination and using efficient peer-to-peer probing. 
 In each protocol period, a node selects one target node from its membership and sends a direct ping. 
-If the target replies with an acknowledgement, it is considered reachable. 
-If no acknowledgement is received within the timeout, the probing node does not immediately declare the target as failed. 
-Instead, it asks several helper nodes to perform indirect probes to the same target. 
-If any helper node receives an acknowledgement from the target, it forwards this information back to the original probing node, showing that the target is still alive.
+If the target responds, it is considered alive. If not, helper nodes perform indirect probes; a response through any helper confirms that the target is still reachable.
 
-This indirect checking mechanism reduces false-positive failure detection because the decision is not based on only one communication path. 
 A node is considered failed only when both the direct probe and the indirect probes fail. 
 SWIM also disseminates membership changes using an infection-style, or gossip-style, approach, allowing updates about joins, leaves, suspicions, and failures to spread through the system with low per-node message overhead.
 
 \subsection{System Design}
-
 System architecture is another important design consideration. 
 A common approach for coordinating distributed applications is to introduce a dedicated coordination service, such as ZooKeeper \cite{huntZooKeeperWaitfreeCoordination}. 
 ZooKeeper is a replicated coordination service consisting of multiple servers, one of which acts as the leader. 
@@ -409,28 +404,23 @@ The main contributions are as follows:
 
 \end{itemize}
 
-Overall, this project contributes a working prototype of a decentralized node health-checking system that combines local monitoring, relationship maintenance, failure detection, and topology repair.
-The system demonstrates how node cooperation can be used to maintain health-checking functionality in a changing distributed environment.
-
-
 \section{Proposed Approach} % present algorithm
 \label{sec:proposed_approach}
 
 \subsection{Complete Architectural Diagram}
 \label{subsec:architecture}
 
-Inside each node, the health-checking process follows an event-driven structure.
+Inside each node, the health-checking process follows an event-driven structure (1) \& (2.b).
 A node regularly checks its neighbors and reacts when abnormal behavior is detected, such as missing responses, delayed replies, or unreachable nodes.
 When such an event occurs, the node may request indirect checks from other neighbors, calculate the suspicion level of the target node, and categorize it.
 After the status is determined, the result will be broadcasted to the system so that the cluster can maintain a consistent view of node conditions.
 
-The lower part of the diagram~\ref{fig:architecture} represents the supporting observation subsystem.
+The lower part of the diagram (3) represents the supporting observation subsystem.
 This subsystem receives node status information from the decentralized cluster and passes it through several logical layers.
-The first layer receives reported node status, the next layer processes and organizes the information, and the storage layer keeps historical records of node states and failure events.
-The visualization layer then retrieves this information and presents it in a readable form for users to inspect the current and past condition of the cluster.
+The first layer (3.a) receives reported node status, the next layer (3.c) processes and organizes the information, and the storage layer (3.c) \& (3.d) keeps historical records of node states and failure events.
+The visualization layer (3.b) then retrieves this information and presents it in a readable form for users to inspect the current and past condition of the cluster.
 
-The main point of this architecture is the separation between the core health-checking mechanism and the observation subsystem.
-The decentralized cluster is responsible for detection, classification, and reaction, while the supporting layers are used only for reporting, storage, and visualization.
+The decentralized cluster (1) is responsible for detection, classification, and reaction, while the supporting layers (3) are used only for reporting, storage, and visualization.
 Therefore, the system can continue checking node health and maintaining neighbor status even if the observation subsystem, storage component, or visual interface becomes unavailable.
 
 Fig.~\ref{fig:architecture} shows the complete architecture of the proposed system.
@@ -532,18 +522,13 @@ The indirect heartbeat mechanism reduces false-positive failure detection by all
 \label{subsubsec:indirect_heartbeat_verification}
 
 Each node maintains a neighbor list containing the nodes with which it has a direct bidirectional connection.
-When a node wants to check the availability of one of its neighbors, it sends a ping message and waits for an acknowledgement.
-For example, if node $B$ wants to check node $A$, node $B$ sends a direct ping request to node $A$.
-If node $A$ replies within the expected time range, node $B$ records the response time and classifies node $A$ as reachable.
-This successful response also becomes part of the historical response-time data used later by the $\phi$ accrual detector.
 
-However, if node $B$ does not receive an acknowledgement, it does not immediately mark node $A$ as failed.
-Instead, the system uses indirect heartbeat verification. Specifically, node $B$ requests other nodes in its neighbor list to verify node $A$, such as nodes $C$ and $E$, to ping node $A$ on its behalf.
-If any helper node receives an acknowledgement from node $A$, it notifies node $B$, and node $A$ is treated as alive.
-In this case, the problem is considered a possible connection issue between nodes $A$ and $B$ rather than a complete node failure.
+When a node wants to check the availability of one of its neighbors, it sends a ping message and waits for an acknowledgement. For example, if node $x_2$ wants to check node $x_1$, node $x_2$ sends a direct ping request to node $x_1$. If node $x_1$ replies within the expected time range, node $x_2$ records the response time and classifies node $x_1$ as reachable. This successful response also becomes part of the historical response-time data used later by the $\phi$-accrual detector.
 
-If neither the direct ping nor the indirect pings receive a response from node $A$, the system has stronger evidence that node $A$ may be unreachable. 
-At this stage, the system does not rely only on the missing acknowledgements. Instead, it applies the $\phi$ accrual failure detector to calculate a suspicion value based on recent response-time history.
+However, if node $x_2$ does not receive an acknowledgement, it does not immediately mark node $x_1$ as failed. Instead, the system uses indirect heartbeat verification. Specifically, node $x_2$ requests other nodes in its neighbor list to verify node $x_1$, such as nodes $x_3$ and $x_5$, to ping node $x_1$ on its behalf. If any helper node receives an acknowledgement from node $x_1$, it notifies node $x_2$, and node $x_1$ is treated as alive. In this case, the problem is considered a possible connection issue between nodes $x_1$ and $x_2$ rather than a complete node failure.
+
+If neither the direct ping nor the indirect pings receive a response from node $x_1$, the system has stronger evidence that node $x_1$ may be unreachable. At this stage, the system does not rely only on the missing acknowledgements. Instead, it applies the $\phi$-accrual failure detector to calculate a suspicion value based on recent response-time history.
+
 
 \subsubsection{\texorpdfstring{$\phi$}{phi} Accrual Calculation}
 \label{subsubsec:phi_accrual_calculation}
@@ -642,7 +627,7 @@ If the network contains at most $k+1$ nodes, the joining node establishes connec
 This allows the node to reach the desired neighbor count without requiring any restructuring of the network topology. 
 
 Figure~\ref{fig:small_network} illustrates this scenario. Consider a network consisting of four nodes and a target neighbor count of $k=4$. 
-When node E joins the network, it establishes connections with all existing nodes, thereby satisfying its neighbor requirement.
+When node $x_5$ joins the network, it establishes connections with all existing nodes, thereby satisfying its neighbor requirement.
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.3\textwidth]{FINDING_NEMO_small_pretty.png}
@@ -660,11 +645,11 @@ The evicted nodes then establish connections with the joining node.
 Consequently, the joining node acquires $k/2$ neighbors from the selected nodes and an additional $k/2$ neighbors from the evicted nodes, resulting in a total of $k$ neighbors.
 
 Figure~\ref{fig:scaled_network} presents an example of this process. 
-Building upon the network shown in Figure~\ref{fig:small_network}, assume that node F requests to join a network of five nodes with $k=4$. 
-One possible outcome of the random selection process is that nodes E and C are selected. 
-Node E subsequently evicts node B, while node C evicts node D. 
-Node F therefore establishes direct connections with E and C, as well as with the evicted nodes B and D. 
-As a result, node F obtains four neighbors while preserving the desired network density.
+Building upon the network shown in Figure~\ref{fig:small_network}, assume that node $x_6$ requests to join a network of five nodes with $k=4$. 
+One possible outcome of the random selection process is that nodes $x_5$ and $x_3$ are selected. 
+Node $x_5$ subsequently evicts node $x_2$, while node $x_3$ evicts node $x_4$. 
+Node $x_6$ therefore establishes direct connections with $x_5$ and $x_3$, as well as with the evicted nodes $x_2$ and $x_4$. 
+As a result, node $x_6$ obtains four neighbors while preserving the desired network density.
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.3\textwidth]{FINDING_NEMO_scaled_pretty.png}
