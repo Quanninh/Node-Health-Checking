@@ -146,7 +146,10 @@ discussed in Section~\ref{sec:conclusion}.
 
 \subsubsection{Overview}
 
-Table~\ref{tab:valid_runs_by_phase} shows the number of recorded runs following the 5-phase evaluation plan proposed
+Table~\ref{tab:valid_runs_by_phase} shows the number of recorded runs following the Five-Phase Evaluation Plan. Due to
+multiple reasons such as the user terminating the evaluation prematurely, or a phase failure which can lead to
+termination of the current run, the number of executions of a later phase can be less than the previous phases.
+Overall, more than 200 runs were executed
 
 \begin{table}[H]
   \centering
@@ -166,16 +169,31 @@ Table~\ref{tab:valid_runs_by_phase} shows the number of recorded runs following 
   \end{tabular}
 \end{table}
 
-Figure~\ref{fig:success_failure_by_phase} illustrates the percentages of successes and failures categorized by each
-phase. The thing that stands out the most is in phase 2, the success rate is 100\%. This is due to phase 2 being the
-easiest phase, it only aims to measure the time for any node to detect a single node failure.
+Figure~\ref{fig:final_success_rate_by_phase} illustrates the percentages of successes and failures categorized by each
+phase. The success rates fluctuate across phases 1 through 4, and they remain consistent at around 95\%. This shows
+that the protocol performs reliably in network formation, node addition and single node failure detection and recovery.
 
-Phase 3 and 5 both have a success rate of more than 80\%. This shows that the system excels at recovery from failed
-nodes, even though it is only one node failed or multiple node failed.
+In constrast, phase 5 recorded a noticably lower success rate of only 55.9\%, with 37.7\% of the runs failed. This
+suggests that the implementation of the protocol failed to detect and recovery when multiple nodes failed at the same
+time. When several node terminate at the same time, many nodes become deficient simultaneously and a burst of recovery
+messages is sent out during a sort period of time. The increased communication load and the presence of multiple
+concurrent recovery sessions may lead to conflicting operations, delayed convergence, or recovery timeouts.
 
-% \begin{figure}[H]
-%     \centering
-%     \includegraphics[width=0.45\textwidth]{evaluation/success-failure-by-phase.png}
-%     \caption{Success and Failure Rates by Phase}
-%     \label{fig:success_failure_by_phase}
-% \end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.45\textwidth]{final-success-rate-chart-1.pdf}
+  \caption{Success Rate by Main Evaluation Phase}
+  \label{fig:final_success_rate_by_phase}
+\end{figure}
+
+A closer look at the statistics in figure~\ref{fig:detailed-outcome-chart} reveals that during phase 1 and 4, a large
+proportion of the success runs were successful thanks to the recovery phase R. When one or some nodes first join the
+system, they use the FINDING NEMO algorithm to look for neighbors. Each node creates its own join plan and execute it
+independently. This can cause conflicts amongst join plans.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.45\textwidth]{detailed-outcome-chart-1.pdf}
+  \caption{Success Rate by Main Evaluation Phase}
+  \label{fig:detailed-outcome-chart}
+\end{figure}

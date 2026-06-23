@@ -17,8 +17,8 @@ knitr::opts_chunk$set(
   warning = FALSE,
   message = FALSE,
   fig.align = "center",
-  fig.width = 7.4,
-  fig.height = 4.8,
+  #fig.width = 7.4,
+  #fig.height = 4.8,
   fig.pos = "H",
   dev = "pdf",
   fig.path = "figures/"
@@ -454,40 +454,140 @@ theme_set(
 
 # Success Rates
 
+```{r}
+runs_by_phase <- results %>%
+  count(phase, name = "number_of_runs") %>%
+  mutate(
+    phase = factor(
+      phase,
+      levels = c(
+        "Phase 1",
+        "S1",
+        "R1",
+        "Phase 2.1",
+        "Phase 2.2",
+        "Phase 3",
+        "S3",
+        "R3",
+        "Phase 4",
+        "S4",
+        "R4",
+        "Phase 5",
+        "S5",
+        "R5",
+        "SR"
+      )
+    )
+  ) %>%
+  arrange(phase)
+
+kable(
+  runs_by_phase,
+  caption = "Number of Valid Runs Recorded for Each Evaluation Phase",
+  col.names = c(
+    "Phase",
+    "Number of runs"
+  ),
+  align = c("l", "r")
+)
+```
+
 ## Final Outcome by Main Phase
 
 ```{r final-success-rate-chart}
-final_success_chart_data <- phase_outcomes %>%
+baseline_runs <- phase_outcomes %>%
+  filter(phase_group == "Phase 1") %>%
+  summarise(runs = n_distinct(run_id)) %>%
+  pull(runs)
+
+final_outcome_levels <- c(
+  "Success",
+  "Failure",
+  "Not run"
+)
+
+observed_final_outcomes <- phase_outcomes %>%
+  mutate(
+    phase_group = as.character(phase_group),
+    final_outcome = as.character(final_outcome)
+  ) %>%
   count(
     phase_group,
     final_outcome,
     name = "runs"
+  )
+
+not_run_counts <- tibble(
+  phase_group = c(
+    "Phase 1",
+    "Phase 2",
+    "Phase 3",
+    "Phase 4",
+    "Phase 5"
+  )
+) %>%
+  left_join(
+    observed_final_outcomes %>%
+      group_by(phase_group) %>%
+      summarise(
+        observed_runs = sum(runs),
+        .groups = "drop"
+      ),
+    by = "phase_group"
   ) %>%
-  complete(
+  mutate(
+    observed_runs = replace_na(observed_runs, 0L),
+    final_outcome = "Not run",
+    runs = baseline_runs - observed_runs
+  ) %>%
+  select(
     phase_group,
-    final_outcome = factor(
-      c("Success", "Failure"),
-      levels = c("Success", "Failure")
+    final_outcome,
+    runs
+  )
+
+final_success_chart_data <- bind_rows(
+  observed_final_outcomes,
+  not_run_counts
+) %>%
+  complete(
+    phase_group = c(
+      "Phase 1",
+      "Phase 2",
+      "Phase 3",
+      "Phase 4",
+      "Phase 5"
     ),
+    final_outcome = final_outcome_levels,
     fill = list(runs = 0)
   ) %>%
-  group_by(phase_group) %>%
   mutate(
-    total_runs = sum(runs),
-    share = if_else(
-      total_runs > 0,
-      runs / total_runs,
-      0
+    phase_group = factor(
+      phase_group,
+      levels = c(
+        "Phase 1",
+        "Phase 2",
+        "Phase 3",
+        "Phase 4",
+        "Phase 5"
+      )
     ),
+    final_outcome = factor(
+      final_outcome,
+      levels = final_outcome_levels
+    ),
+    share = runs / baseline_runs,
     label = if_else(
       runs > 0 & share >= 0.04,
-      paste0(
-        percent(share, accuracy = 0.1)
-      ),
+      percent(share, accuracy = 0.1),
       ""
     )
-  ) %>%
-  ungroup()
+  )
+
+FINAL_OUTCOME_COLORS_WITH_NOT_RUN <- c(
+  FINAL_OUTCOME_COLORS,
+  "Not run" = "gray70"
+)
 
 ggplot(
   final_success_chart_data,
@@ -500,20 +600,25 @@ ggplot(
   geom_col(
     width = 0.7,
     color = "grey25",
-    linewidth = 0.1
+    linewidth = 0.1,
+    position = position_stack(reverse = TRUE)
   ) +
   geom_text(
     aes(label = label),
-    position = position_stack(vjust = 0.5),
+    position = position_stack(
+      vjust = 0.5,
+      reverse = TRUE
+    ),
     family = "serif",
     size = 3.1
   ) +
   scale_fill_manual(
-    values = FINAL_OUTCOME_COLORS,
-    limits = c("Success", "Failure"),
+    values = FINAL_OUTCOME_COLORS_WITH_NOT_RUN,
+    limits = final_outcome_levels,
     labels = c(
       "Success" = "Successful",
-      "Failure" = "Unsuccessful"
+      "Failure" = "Unsuccessful",
+      "Not run" = "Not executed"
     ),
     drop = FALSE
   ) +
@@ -530,48 +635,97 @@ ggplot(
   )
 ```
 
-## Direct, Recovered, and Failed Outcomes
+## Direct, Recovered, Failed, and Not-Run Outcomes
 
-```{r detailed-outcome-chart}
-detailed_outcome_chart_data <- phase_outcomes %>%
+```{r detailed-outcome-chart, fig.width = 7.4}
+phase_levels <- c(
+  "Phase 1",
+  "Phase 2",
+  "Phase 3",
+  "Phase 4",
+  "Phase 5"
+)
+
+outcome_levels <- c(
+  "Success (no recovery)",
+  "Success (with recovery)",
+  "Failure (no recovery)",
+  "Failure (with recovery)",
+  "Not run"
+)
+
+# Phase 1 is the baseline number of experimental runs.
+baseline_runs <- phase_outcomes %>%
+  filter(phase_group == "Phase 1") %>%
+  summarise(runs = n_distinct(run_id)) %>%
+  pull(runs)
+
+observed_outcome_counts <- phase_outcomes %>%
+  mutate(
+    phase_group = as.character(phase_group),
+    outcome = as.character(outcome)
+  ) %>%
   count(
     phase_group,
     outcome,
     name = "runs"
-  ) %>%
-  complete(
-    phase_group,
-    outcome = factor(
-      c(
-        "Success (no recovery)",
-        "Success (with recovery)",
-        "Failure (no recovery)",
-        "Failure (with recovery)"
+  )
+
+not_run_counts <- tibble(
+  phase_group = phase_levels
+) %>%
+  left_join(
+    observed_outcome_counts %>%
+      group_by(phase_group) %>%
+      summarise(
+        observed_runs = sum(runs),
+        .groups = "drop"
       ),
-      levels = c(
-        "Success (no recovery)",
-        "Success (with recovery)",
-        "Failure (no recovery)",
-        "Failure (with recovery)"
-      )
-    ),
+    by = "phase_group"
+  ) %>%
+  mutate(
+    observed_runs = replace_na(observed_runs, 0L),
+    runs = baseline_runs - observed_runs,
+    outcome = "Not run"
+  ) %>%
+  select(
+    phase_group,
+    outcome,
+    runs
+  )
+
+detailed_outcome_chart_data <- bind_rows(
+  observed_outcome_counts,
+  not_run_counts
+) %>%
+  complete(
+    phase_group = phase_levels,
+    outcome = outcome_levels,
     fill = list(runs = 0)
   ) %>%
-  group_by(phase_group) %>%
   mutate(
-    total_runs = sum(runs),
-    share = if_else(
-      total_runs > 0,
-      runs / total_runs,
-      0
+    phase_group = factor(
+      phase_group,
+      levels = phase_levels
     ),
+    outcome = factor(
+      outcome,
+      levels = outcome_levels
+    ),
+    share = runs / baseline_runs,
     label = if_else(
       runs > 0 & share >= 0.04,
-      percent(share, accuracy = 0.1),
+      paste0(
+        percent(share, accuracy = 0.1)
+      ),
       ""
     )
-  ) %>%
-  ungroup()
+  )
+
+DETAILED_OUTCOME_COLORS_WITH_NOT_RUN <- c(
+  DETAILED_OUTCOME_COLORS,
+  "Not run" = "#4A4A4A"
+)
 
 ggplot(
   detailed_outcome_chart_data,
@@ -584,31 +738,32 @@ ggplot(
   geom_col(
     width = 0.7,
     color = "grey25",
-    linewidth = 0.25
+    linewidth = 0.25,
+    position = position_stack(reverse = TRUE)
   ) +
   geom_text(
     aes(label = label),
-    position = position_stack(vjust = 0.5),
+    position = position_stack(
+      vjust = 0.5,
+      reverse = TRUE
+    ),
     family = "serif",
     size = 3
   ) +
   scale_fill_manual(
-    values = DETAILED_OUTCOME_COLORS,
-    limits = c(
-      "Success (no recovery)",
-      "Success (with recovery)",
-      "Failure (no recovery)",
-      "Failure (with recovery)"
-    ),
+    values = DETAILED_OUTCOME_COLORS_WITH_NOT_RUN,
+    limits = outcome_levels,
     labels = c(
       "Success (no recovery)" =
         "Success",
       "Success (with recovery)" =
         "Success after recovery",
       "Failure (no recovery)" =
-        "Failure (no recovery)",
+        "Failure without recovery",
       "Failure (with recovery)" =
-        "Recovery failed"
+        "Recovery failed",
+      "Not run" =
+        "Not executed"
     ),
     drop = FALSE
   ) +
@@ -618,10 +773,13 @@ ggplot(
     expand = expansion(mult = c(0, 0))
   ) +
   labs(
-    title = "Detailed Success and Failure Rate by Evaluation Phase",
+    title = paste(
+      "Detailed Success, Failure, and Non-Execution Rate",
+      "by Evaluation Phase"
+    ),
     x = "Evaluation phase",
     y = "Share of runs",
-    fill = "Outcome category"
+    fill = "Outcome"
   )
 ```
 
