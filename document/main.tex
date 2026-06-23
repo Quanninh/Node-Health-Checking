@@ -410,18 +410,17 @@ The main contributions are as follows:
 \subsection{Complete Architectural Diagram}
 \label{subsec:architecture}
 
-Inside each node, the health-checking process follows an event-driven structure.
+Inside each node, the health-checking process follows an event-driven structure (1) \& (2.b).
 A node regularly checks its neighbors and reacts when abnormal behavior is detected, such as missing responses, delayed replies, or unreachable nodes.
 When such an event occurs, the node may request indirect checks from other neighbors, calculate the suspicion level of the target node, and categorize it.
 After the status is determined, the result will be broadcasted to the system so that the cluster can maintain a consistent view of node conditions.
 
-The lower part of the diagram~\ref{fig:architecture} represents the supporting observation subsystem.
+The lower part of the diagram (3) represents the supporting observation subsystem.
 This subsystem receives node status information from the decentralized cluster and passes it through several logical layers.
-The first layer receives reported node status, the next layer processes and organizes the information, and the storage layer keeps historical records of node states and failure events.
-The visualization layer then retrieves this information and presents it in a readable form for users to inspect the current and past condition of the cluster.
+The first layer (3.a) receives reported node status, the next layer (3.c) processes and organizes the information, and the storage layer (3.c) \& (3.d) keeps historical records of node states and failure events.
+The visualization layer (3.b) then retrieves this information and presents it in a readable form for users to inspect the current and past condition of the cluster.
 
-The main point of this architecture is the separation between the core health-checking mechanism and the observation subsystem.
-The decentralized cluster is responsible for detection, classification, and reaction, while the supporting layers are used only for reporting, storage, and visualization.
+The decentralized cluster (1) is responsible for detection, classification, and reaction, while the supporting layers (3) are used only for reporting, storage, and visualization.
 Therefore, the system can continue checking node health and maintaining neighbor status even if the observation subsystem, storage component, or visual interface becomes unavailable.
 
 Fig.~\ref{fig:architecture} shows the complete architecture of the proposed system.
