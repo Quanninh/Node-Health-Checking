@@ -16,6 +16,7 @@ called the Five-Phase Evaluation Plan. Table~\ref{tab:experimental_phases} intro
 executed during each phase, and what is being measured. The timeout of each phase is set to ensure that during cases
 where it is impossible for the network to reach the end condition without external forces, such as nodes joining or
 failing, then the test can terminate and move on to the recovery phase R or the next phase.
+Table~\ref{tab:phase_transitions} shows the phase transitions based on the outcome.
 
 \begin{table*}[htbp]
   \centering
@@ -24,35 +25,78 @@ failing, then the test can terminate and move on to the recovery phase R or the 
   \renewcommand{\arraystretch}{1.3}
   \begin{tabularx}{\textwidth}{
       C{1.5cm}
-      Y
-      Y
-      Y
+      Z
+      Z
+      Z
       C{1.8cm}
     }
     \toprule
-    \textbf{Phase}                  &
-    \textbf{Description}            &
-    \textbf{Start}                  &
-    \textbf{End}                    &
-    \textbf{Timeout}                                                                                                                                                  \\
+    \textbf{Phase} & \textbf{Description}                                    & \textbf{Start}               & \textbf{End}                    & \textbf{Timeout} \\
     \midrule
-    Phase 1                         & Start initial nodes                                     & The final node is started    & The network reached convergence & 120s \\
-    Phase S1                        & Network stabilization check                             & After phase 1                & Phase timeout                   & 10s  \\
-    Phase 2.1                       & One node is terminated                                  & After node termination       & One failure report is sent      & 120s \\
-    Phase 2.2                       & One node is terminated                                  & After node termination       & All failure reports are sent    & 120s \\
-    Phase 3                         & One node is terminated                                  & After node termination       & The network reached convergence & 180s \\
-    Phase S3                        & Network stabilization check                             & After phase 3                & Phase timeout                   & 10s  \\
-    Phase 4                         & Multiple nodes join                                     & The final node is started    & The network reached convergence & 120s \\
-    Phase S4                        & Network stabilization check                             & After phase 4                & Phase timeout                   & 10s  \\
-    Phase 5                         & Multiple nodes are terminated                           & The final node is terminated & The network reached
-    convergence                     & 180s                                                                                                                            \\
-    Phase S5                        & Network stabilization check                             & After phase 5                & Phase timeout                   & 10s  \\
-    Phase R                         & Optional, when a main phase failed to reach convergence & After previous phase timeout &
-    The network reached convergence & 120s                                                                                                                            \\
-    Phase SR                        & Network stabilization check                             & After phase R                & Phase timeout                   & 10s  \\
+    Phase 1        & Start initial nodes                                     & The final node is started    & The network reached convergence & 120s             \\
+    Phase S1       & Network stabilization check                             & After phase 1                & Phase timeout                   & 10s              \\
+    Phase 2.1      & One node is terminated                                  & After node termination       & One failure report is sent      & 120s             \\
+    Phase 2.2      & One node is terminated                                  & After node termination       & All failure reports are sent    & 120s             \\
+    Phase 3        & One node is terminated                                  & After node termination       & The network reached convergence & 180s             \\
+    Phase S3       & Network stabilization check                             & After phase 3                & Phase timeout                   & 10s              \\
+    Phase 4        & Multiple nodes join                                     & The final node is started    & The network reached convergence & 120s             \\
+    Phase S4       & Network stabilization check                             & After phase 4                & Phase timeout                   & 10s              \\
+    Phase 5        & Multiple nodes are terminated                           & The final node is terminated & The network reached convergence & 180s             \\
+    Phase S5       & Network stabilization check                             & After phase 5                & Phase timeout                   & 10s              \\
+    Phase R        & Optional, when a main phase failed to reach convergence & After previous phase timeout & The network reached convergence & 120s             \\
+    Phase SR       & Network stabilization check                             & After phase R                & Phase timeout                   & 10s              \\
     \bottomrule
   \end{tabularx}
 \end{table*}
+
+\begin{table}[htbp]
+  \centering
+  \caption{Phase Transitions Based on Evaluation Outcomes}
+  \label{tab:phase_transitions}
+  \renewcommand{\arraystretch}{1.3}
+
+  \begin{tabularx}{\columnwidth}{
+      C{1.3cm}
+      Z
+      Z
+      Z
+    }
+    \toprule
+    \multirow{2}{*}{\textbf{Phase}} & \multirow{2}{*}{\textbf{Success}}                       & \multicolumn{2}{c}{\textbf{Non-success outcome}}                      \\
+    \cmidrule(lr){3-4}
+                                    &                                                         & \textbf{\(P \leq 4\)}                            & \textbf{\(P > 4\)} \\
+    \midrule
+    Phase 1                         & Phase S1                                                & Phase R1                                         & Terminates run     \\
+    Phase S1                        & Phase 2.1/2.2/3                                         & Phase R1                                         & Terminates run     \\
+    Phase R1                        & Phase SR                                                & Phase 2/3                                        & Terminates run     \\
+    Phase 2                         & \multicolumn{3}{c}{ Continues until Phase 3 completes }                                                                         \\
+    Phase 3                         & Phase S3                                                & Phase R3                                         & Terminates run     \\
+    Phase S3                        & Phase 4                                                 & Phase R3                                         & Terminates run     \\
+    Phase R3                        & Phase SR                                                & Phase 4                                          & Terminates run     \\
+    Phase 4                         & Phase S4                                                & Phase R4                                         & Terminates run     \\
+    Phase S4                        & Phase 5                                                 & Phase R4                                         & Terminates run     \\
+    Phase R4                        & Phase SR                                                & Phase 5                                          & Terminates run     \\
+    Phase 5                         & Phase S5                                                & Phase R5                                         & Terminates run     \\
+    Phase S5                        & Ends run                                                & Phase R5                                         & Terminates run     \\
+    Phase R5                        & Phase SR                                                & Ends run                                         & Terminates run     \\
+    Phase SR                        & \multicolumn{3}{c}{ Continues to the next main phase }                                                                          \\
+    \bottomrule
+  \end{tabularx}
+
+  \vspace{0.5em}
+  \begin{minipage}{0.96\linewidth}
+    \footnotesize
+    \(P\) denotes the number of problematic nodes detected when a phase terminates. For a main or stabilization phase,
+    Phase R is executed only when between one and four replaceable problematic nodes remain. If no replaceable node
+    exists, or if more than four problematic nodes are detected, the run is terminated.
+
+    Phase 2.1, Phase 2.2, and Phase 3 execute concurrently. Phase 2.1 and Phase 2.2 do not independently determine the next
+    phase; the transition is determined by the outcome of Phase 3.
+
+    If Phase R fails with at most four remaining problematic nodes, the evaluator continues to the next main phase. Phase
+    SR does not trigger another recovery phase. Therefore, execution also continues when Phase SR fails.
+  \end{minipage}
+\end{table}
 
 \subsubsection{Phase 1: Initial Topology Formation}
 
@@ -88,61 +132,98 @@ anomalies and report them.
 \subsubsection{Phase R: Recovery Phase}
 
 Phase R is an optional recovery phase that is triggered only when a preceding phase fails to satisfy its completion
-criteria within the configured timeout period. During phase R, all nodes with incorrect neighbors or has less than the
-required maximum neighbor count are terminated, and the same number of new nodes is created. This is to simulate the
-node self restarting when they are unable to rewire after a certain amount of time. The reasoning for this will be
-discussed in Section~\ref{sec:conclusion}.
+criteria within the configured timeout period while the network containing 4 or less problematic nodes. Problematic
+nodes includes deficient nodes (nodes that have less than the required maximum number of neighbors), nodes with stale
+edges which reference inactive, killed or unknown nodes, or nodes with a non-mutual neighbor relationship. During phase
+R, all these nodes are terminated, and the same amount of new nodes is created. This is to simulate the node self
+restarting when they are unable to rewire after a certain amount of time. The reasoning for this will be discussed in
+Section~\ref{sec:conclusion}.
 
-% \subsubsection{Phase 1: Initial Topology Formation}
+\subsection{Experimental Environment and Configuration}
+\label{subsec:experimental_environment}
 
-% Phase 1 evaluates the network initialization process.
-% The number of nodes are started sequentially, and each node is introduced into the system with a fixed
-% delay of 5 seconds before the next node is launched to prevent simultaneous join bursts that could
-% temporarily overload the network.
-% Nodes are then allowed to execute the FINDING NEMO joining protocol.
-% The measurement begins when the final node is started and ends when all active nodes have reached
-% \texttt{MAX\_NEIGHBORS}.
-% This phase captures the system’s ability to form the desired monitoring topology.
+The majority of the automated evaluation runs were conducted on a Lenovo 20TJS1HN0V laptop running Microsoft Windows~11
+Pro, build~26200. The machine was equipped with an Intel Core i7-10850H processor operating at a base frequency of
+approximately \(2.70\,\mathrm{GHz}\), with six physical cores and twelve logical processors. It contained
+\(32\,\mathrm{GB}\) of DDR4-3200 main memory and two \(512\,\mathrm{GB}\) NVMe solid-state drives, providing
+approximately \(1\,\mathrm{TB}\) of total marketed storage capacity. The active wireless interface was an Intel Wi-Fi~6
+AX201 adapter with a reported link speed of \(866.7\,\mathrm{Mbps}\).
 
-% \subsubsection{Phase 2: Failure Detection Latency}
+The software environment consisted of Oracle Java~25.0.1 LTS, and Apache Maven~3.9.11. During each evaluation run, the
+dashboard server, evaluation controller, and all distributed node agents were executed concurrently. Each node agent
+ran as an independent Java process and exposed a separate peer-to-peer communication port. Communication between node
+processes was performed through HTTP using the local network interface.
 
-% After the topology has remained stable for 10 seconds, a node is intentionally terminated.
-% The measurement begins at the moment of termination and ends when the first failure report is generated by
-% a surviving node.
-% This metric reflects the latency required for the system to detect and disseminate a node failure.
+The dashboard server was responsible only for collecting heartbeat reports, storing failure information, visualizing
+the network state, and providing observations to the evaluation controller. The decentralized failure-detection and
+topology-repair mechanisms operated within the node agents and did not depend on the dashboard for their coordination.
 
-% \subsubsection{Phase 3: Topology Repair After Single Node Failure}
+Although the majority of runs were performed using the primary machine described above, additional runs were conducted
+on other laptops to increase the number of recorded experiments. These machines used the same source code, Java runtime
+requirements, phase definitions, timeout values, and evaluation procedure, but differed in their hardware
+configurations. Because the resulting observations were aggregated and were not grouped according to the machine on
+which they were executed, the stated hardware configuration should be interpreted as representative of the majority of
+the evaluation rather than as the exclusive experimental environment.
 
-% Immediately after Phase 2, the evaluation measures the recovery process following the detected node failure.
-% The measurement ends when the failed node has been removed from all surviving neighbor lists and every
-% remaining node has restored its neighbor count to \texttt{MAX\_NEIGHBORS}.
-% This phase reflects the efficiency of membership dissemination, neighbor removal, and rewiring operations
-% required to restore the desired topology after a failure.
+The experiments evaluated multiple combinations of initial node count, maximum neighbor limit, number of newly joining
+nodes, and number of simultaneously terminated nodes. The configured maximum neighbor limit, denoted by \(k\), was
+shared by all nodes within one run and was restricted to even values because FINDING NEMO and CHUALANH rely on pairing
+and rewiring operations that preserve the target node degree.
 
-% \subsubsection{Phase 4: Dynamic Node Joining}
-
-% After the repaired topology remains stable for 10 seconds, additional nodes are introduced into the cluster.
-% The measurement begins when the first additional node starts and ends when all active nodes once again
-% reach \texttt{MAX\_NEIGHBORS}.
-% This phase evaluates how efficiently the topology adapts to membership expansion.
-
-% \subsubsection{Phase 5: Multiple Simultaneous Node Failures}
-
-% After the expanded topology remains stable for 10 seconds, multiple nodes are randomly selected and
-% terminated simultaneously.
-% The measurement begins at the moment of failure injection and ends when all failures have been detected,
-% all failed nodes have been removed from neighbor lists, and all surviving nodes have restored their
-% neighbor count to \texttt{MAX\_NEIGHBORS}.
-% Unlike the single-failure experiment in Phases 2 and 3, this phase examines the behavior of the framework
-% under substantial topology disruption caused by multiple concurrent failures.
-
-% \subsubsection{Phase R (Optional): Recovery from Incomplete Topology Formation}
-
-% Phase R is executed only when a preceding phase fails to satisfy its completion criteria within the
-% configured timeout period.
-% In such cases, deficient nodes are restarted and allowed to rejoin the network using the standard joining protocol.
 \subsection{Evaluation Results}
 \label{subsec:evaluation_results}
+
+\subsubsection{Definitions}
+\label{subsubsec:evaluation_definitions}
+
+The evaluation uses the following definitions to determine the state and outcome of each experimental phase.
+
+\textbf{Stale edge.}
+A stale edge exists when an active node reports a neighbor that is no
+longer part of the expected active-node set. This includes references to
+terminated, inactive, or unknown nodes that should already have been
+removed from the local membership view.
+
+\textbf{Non-mutual edge.}
+A neighbor relationship between nodes \(u\) and \(v\) is non-mutual when
+one node reports the other as a neighbor but the reverse relationship is
+absent. In other words,
+\[
+  v \in N_u
+  \quad\text{but}\quad
+  u \notin N_v,
+\]
+or vice versa. Since neighbor relationships in the proposed overlay are required to be bidirectional, a non-mutual edge
+represents an invalid topology state.
+
+\textbf{Problematic node.}
+A problematic node is an active node that is involved in at
+least one topology violation. A node is therefore classified as
+problematic when it satisfies one or more of the following conditions:
+
+\begin{itemize}
+  \item its number of distinct neighbors is not equal to \(k\);
+  \item it contains duplicate entries in its reported neighbor list;
+  \item it contains itself as a neighbor;
+  \item it contains a stale edge to a terminated, inactive, or unknown node; or
+  \item it is involved in a non-mutual neighbor relationship.
+\end{itemize}
+
+A node that violates several conditions is counted only once.
+
+\textbf{Network convergence.}
+The network is considered converged when every active node is
+correctly reported as active and non-problematic.
+Network convergence therefore requires both the correct neighbor count and a structurally valid topology. Having \(k\)
+reported neighbor entries alone is not sufficient when those entries include stale, duplicate, self-referential, or
+non-mutual edges.
+
+\textbf{Timeout.}
+A timeout occurs when a phase does not satisfy its completion condition
+within its configured time limit. A timeout does not necessarily imply
+that convergence is permanently impossible; it indicates that the
+required state was not reached within the time considered acceptable by
+the evaluation procedure.
 
 \subsubsection{Overview}
 
@@ -155,7 +236,7 @@ Overall, more than 200 runs were executed
   \centering
   \caption{Number of Valid Runs Recorded}
   \label{tab:valid_runs_by_phase}
-  \begin{tabular}{lr}
+  \begin{tabular}{cc}
     \toprule
     \textbf{Phase} & \textbf{Number of Runs} \\
     \midrule
@@ -204,6 +285,18 @@ Section~\ref{sec:conclusion}.
   \includegraphics[width=0.9\linewidth]{detailed-outcome-chart-1.pdf}
   \caption{Detailed Success Rate by Main Evaluation Phase}
   \label{fig:detailed-outcome-chart}
+  \vspace{0.3em}
+  \begin{minipage}{0.96\linewidth}
+    \footnotesize
+    \raggedright
+    \textit{Success} means that the phase succeeds directly without requiring Phase R.
+
+    \textit{Success after recovery} means that the phase initially times out, but Phase R successfully recovers the network.
+
+    \textit{Failure without recovery} means that the phase times out without triggering Phase R.
+
+    \textit{Recovery failed} means that Phase R is executed but cannot recover the network.
+  \end{minipage}
 \end{figure}
 
 The high proportion of runs recovered successfully through Phase~R is further supported by
@@ -226,8 +319,8 @@ The success rate chart in Figure~\ref{fig:phase1-input-chart} shows the percenta
 initial network size and the neighbor limit, and the size of each bubble represents the total number of runs with that
 specific configuration. Overall, the success rates are quite high, with most of them reach 90\% or higher, and only one
 case with 86\% when there are 14 initial nodes and the number of maximum neighbors required is 4. The results showed no
-correlation between the initial conditions and the success rates, rather the lower success rate is likely caused by the
-machine on which these tests were conducted.
+clear relationship between the initial conditions and the success rates, rather the lower success rate is likely caused
+by the machine on which these tests were conducted.
 
 Figure~\ref{fig:phase1-time-impact-chart} illustrates the execution time of each run, not including the recovery phase
 R. As previously shown in Figure~\ref{fig:detailed-outcome-chart}, almost half of the runs timed out and required the
@@ -236,12 +329,10 @@ timeout, averaging at about 18 seconds. Higher initial node counts tends to requ
 sometimes up to 60 seconds. Nevertheless, this trend appears relatively weak and does not significantly affect the
 overall performance of the protocol.
 
-Further insight is provided by Figure~\ref{fig:phase1-results}(c), which summarizes the number of problematic nodes
-remaining in failed runs. Most failures involved 4 nodes or less, with most of them have only 1 or 2 problematic nodes.
-Problematic nodes here includes deficient nodes (nodes that have less than the required maximum number of neighbors),
-nodes with stale edges which reference inactive, killed or unknown nodes, or nodes with a non-mutual neighbor
-relationship. Having a few problematic nodes after several nodes joining is actually not a problem for the system, and
-can be detected and fixed easily. This will be discussed in detail in Section~\ref{sec:conclusion}.
+Further insight is provided by Figure~\ref{fig:phase1-problem-count-chart}, which summarizes the number of problematic
+nodes remaining in failed runs. Most failures involved 4 nodes or less, with most of them have only 1 or 2 problematic
+nodes. Having a few problematic nodes after several nodes joining is actually not a problem for the system, and can be
+detected and fixed easily. This will be discussed in detail in Section~\ref{sec:conclusion}.
 
 From all of these illustrations, we concluded that the network performed extremely well during network establishment. A
 small percentage of runs failed, but further testing have confirmed that if the network is allowed to keep running,
@@ -260,7 +351,7 @@ overtime as nodes join and exit the network, the state of convergence will be ac
     \label{fig:phase1-time-impact-chart}
   }
   \hfill
-  \subfloat[Execution time]{
+  \subfloat[Problematic nodes]{
     \includegraphics[width=0.9\linewidth]{phase1-problem-count-chart-1.pdf}
     \label{fig:phase1-problem-count-chart}
   }
@@ -272,7 +363,8 @@ overtime as nodes join and exit the network, the state of convergence will be ac
 \subsubsection{Phase 2}
 \label{sec:phase-2-evaluation}
 
-In phase 2, one node is killed and the times taken to receive one report and all expected reports are measured.
+In phase 2, one node is killed and the times taken to receive one report and all expected reports from the dead node's
+neighbors are measured.
 
 We can observe from Figure~\ref{fig:phase2-time-chart} that the first report is received quite fast, only take just
 more than 10 seconds. The time taken to receive all reports is quite uniformly distributed from 15 to 50 seconds. There
@@ -298,8 +390,8 @@ protocol can prevent false positives as mentioned in part~\ref{subsec:five_phase
 Phase 3 measures the time until the network has recovered from a single node failure. The results in
 Figure~\ref{fig:phase3-results} are presented in the same way as Phase~1 in Section~\ref{sec:phase-1-evaluation}.
 
-In Figure~\ref{fig:phase3-input-chart}, we can observe that the success rates are extremely high, almost all cases
-were successful. Only a few tests failed to recover within the allowed time.
+In Figure~\ref{fig:phase3-input-chart}, we can observe that the success rates are extremely high, almost all cases were
+successful. Only a few tests failed to recover within the allowed time.
 
 Interestingly, Figure~\ref{fig:phase3-time-impact-chart} shows that as the maximum number of neighbor increases, more
 time is needed to recover from the node deletion. However, most timeouts are caused during tests with low initial node
@@ -318,7 +410,7 @@ counts and low neighbor limit.
     \label{fig:phase3-time-impact-chart}
   }
   \hfill
-  \subfloat[Execution time]{
+  \subfloat[Problematic nodes]{
     \includegraphics[width=0.9\linewidth]{phase3-problem-count-chart-1.pdf}
     \label{fig:phase3-problem-count-chart}
   }
@@ -350,7 +442,7 @@ Figure~\ref{fig:recovery-success-chart}.
     \label{fig:phase4-time-impact-chart}
   }
   \hfill
-  \subfloat[Execution time]{
+  \subfloat[Problematic nodes]{
     \includegraphics[width=0.9\linewidth]{phase4-problem-count-chart-1.pdf}
     \label{fig:phase4-problem-count-chart}
   }
@@ -400,7 +492,7 @@ can not conclude without enough resources for further, large-scale testing.
     \label{fig:phase5-time-impact-chart}
   }
   \hfill
-  \subfloat[Execution time]{
+  \subfloat[Problematic nodes]{
     \includegraphics[width=0.9\linewidth]{phase5-problem-count-chart-1.pdf}
     \label{fig:phase5-problem-count-chart}
   }

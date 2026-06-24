@@ -36,21 +36,14 @@ responses.
 \begin{lstlisting}[language=Java,
 caption={Heartbeat probing and ACK processing},
 label={lst:heartbeat}]
-Optional<NodeAddress> selectedTarget =
-    neighborDirectory.nextTargetNode();
+Optional<NodeAddress> selectedTarget = neighborDirectory.nextTargetNode();
 
-nodeClient.ping(targetNode)
-    .thenAccept(ackReceived -> {
-        if (ackReceived) {
-            handleAckReceived(
-                targetNode,
-                "direct ping",
-                pingSendTime);
-        } else {
-            handleDirectPingFailure(
-                targetNode);
-        }
-    });
+nodeClient.ping(targetNode).thenAccept(ackReceived -> {
+    if (ackReceived)
+        handleAckReceived(
+          targetNode, "direct ping", pingSendTime);
+    else handleDirectPingFailure(targetNode);
+});
 \end{lstlisting}
 
 When an acknowledgment (ACK) is received, the monitored node is marked as \textit{ALIVE}. The detector records the
@@ -64,9 +57,7 @@ procedure. As shown in the implementation, a set of helper nodes is selected fro
 \begin{lstlisting}[language=Java,
 caption={Selection of helper nodes for indirect verification},
 label={lst:helper}]
-List<NodeAddress> helperNodes =
-    neighborDirectory.selectHelperNodes(
-        targetNode);
+List<NodeAddress> helperNodes = neighborDirectory.selectHelperNodes(targetNode);
 \end{lstlisting}
 
 The selected helper nodes are intended to perform \texttt{PING\_REQ} operations on behalf of tfhe original sender. Each
@@ -86,8 +77,7 @@ double phi = phiDetector.calculatePhi(
     state.getLastAckTimeMs(),
     System.currentTimeMillis());
 
-NodeStatus phiStatus =
-    phiDetector.determineStatus(phi);
+NodeStatus phiStatus = phiDetector.determineStatus(phi);
 \end{lstlisting}
 
 During the initial monitoring period, the detector may not have accumulated sufficient heartbeat observations to
@@ -107,11 +97,9 @@ consistent membership view.
 \begin{lstlisting}[language=Java,
 caption={Propagation of failure information},
 label={lst:gossip}]
-gossipService.gossipSuspect(
-    targetNode);
+gossipService.gossipSuspect(targetNode);
 
-gossipService.gossipUnreachable(
-    targetNode);
+gossipService.gossipUnreachable(targetNode);
 \end{lstlisting}
 
 If a node is ultimately classified as \textit{UNREACHABLE}, additional recovery procedures are triggered. The failed
@@ -144,62 +132,29 @@ int fullTargetCount;
 int missingCount = missingNeighborAcks.size();
 int fullCount = fullNeighborAcks.size();
 
-if (missingCount + (2 * fullCount) <= maxNeighbors) {
-
+if (missingCount + 2 * fullCount <= maxNeighbors) {
     missingTargetCount = missingCount;
     fullTargetCount = fullCount;
-
 } else {
-
-    int evenMissingCount =
-            (missingCount % 2 == 0)
-                    ? missingCount
-                    : missingCount - 1;
-
+    int evenMissingCount = missingCount % 2 == 0 ? missingCount : missingCount - 1;
     evenMissingCount = Math.max(evenMissingCount, 0);
 
-    missingTargetCount =
-            Math.min(evenMissingCount, maxNeighbors);
+    missingTargetCount = Math.min(evenMissingCount, maxNeighbors);
+    fullTargetCount = Math.min((maxNeighbors - missingTargetCount) / 2, fullCount);
 
-    fullTargetCount =
-            Math.min(
-                    (maxNeighbors - missingTargetCount) / 2,
-                    fullCount);
+    int minimumFullTargets = Math.min(Constant.MINIMUM_FULL_TARGET_COUNT, fullCount);
 
-    int minimumFullTargets =
-            Math.min(
-                    Constant.MINIMUM_FULL_TARGET_COUNT,
-                    fullCount);
-
-    if (fullTargetCount < minimumFullTargets
-            && maxNeighbors >= 2 * minimumFullTargets) {
-
+    if (fullTargetCount < minimumFullTargets && maxNeighbors >= 2 * minimumFullTargets) {
         fullTargetCount = minimumFullTargets;
-
-        missingTargetCount =
-                maxNeighbors - (2 * fullTargetCount);
-
-        // Redundant when k is guaranteed to be even.
-        if ((missingTargetCount & 1) != 0) {
-            missingTargetCount--;
-        }
-
-        missingTargetCount =
-                Math.max(0, missingTargetCount);
+        missingTargetCount = maxNeighbors - 2 * fullTargetCount;
+        missingTargetCount = Math.max(0, missingTargetCount);
     }
 }
 
 List<JoinAck> directTargetAcks = new ArrayList<>();
-
-directTargetAcks.addAll(
-        missingNeighborAcks.subList(
-                0,
-                missingTargetCount));
-
-directTargetAcks.addAll(
-        fullNeighborAcks.subList(
-                0,
-                fullTargetCount));
+directTargetAcks.addAll(missingNeighborAcks.subList(0, missingTargetCount));
+directTargetAcks.addAll(fullNeighborAcks.subList(0, fullTargetCount));
+List<JoinAck> chosenSufficientTargetAcks = sufficientNodeAcks.subList(0, sufficientTargetCount);
 \end{lstlisting}
 
 Listing~\ref{lst:quantity_target_list} illustrates the target-selection stage of FINDING NEMO. The algorithm
@@ -225,33 +180,17 @@ thereby avoiding conflicting topology updates.
 caption={Evicted members planning},
 label={lst:evicted_members_selection}]
 Set<String> excludedNodeIds = new HashSet<>();
-
-// Prevent the joining node and all direct targets
-// from being selected as eviction victims.
 excludedNodeIds.add(localAddress.nodeId());
 excludedNodeIds.addAll(directTargetIds);
 
 for (JoinAck directTarget : fullDirectTargetAcks) {
-
-    List<NodeAddress> candidateVictims =
-            new ArrayList<>(directTarget.responderNeighbors());
-
+    List<NodeAddress> candidateVictims = new ArrayList<>(directTarget.responderNeighbors());
     Collections.shuffle(candidateVictims);
-
     for (NodeAddress victim : candidateVictims) {
+        if (victim == null) continue;
+        if (excludedNodeIds.contains(victim.nodeId())) continue;
 
-        if (victim == null) {
-            continue;
-        }
-
-        if (excludedNodeIds.contains(victim.nodeId())) {
-            continue;
-        }
-
-        evictionByDirectTarget.put(
-                directTarget.responder(),
-                victim);
-
+        evictionByDirectTarget.put(directTarget.responder(), victim);
         excludedNodeIds.add(victim.nodeId());
 
         break;
@@ -313,64 +252,58 @@ situations are subsequently corrected by the rewiring mechanism described later 
         \begin{lstlisting}[language=Java,
     caption={Direct Rewiring},
     label={lst:direct_rewiring}]
-    private boolean tryDirectRepair(NodeAddress defA, NodeAddress defB) {
-        String recoveryId = UUID.randomUUID().toString();
+private boolean tryDirectRepair(
+    NodeAddress defA, NodeAddress defB) {
+    String recoveryId =
+        UUID.randomUUID().toString();
 
-        RewireMessage request = RewireMessage.of(
-                RecoveryMessageType.REWIRE_REQ_DIRECT,
-                recoveryId,
-                localAddress,
-                defA,
-                defB,
-                null,
-                null,
-                null,
-                null,
-                connectionManager.neighborAddresses(),
-                List.of(),
-                null);
+    RewireMessage request = RewireMessage.of(
+        RecoveryMessageType.REWIRE_REQ_DIRECT,
+        recoveryId, localAddress,
+        defA, defB, null, null, null, null,
+        connectionManager.neighborAddresses(),
+        List.of(), null);
 
-        RewireMessage response = null;
-        try {
-            response = sendAsync(defB, request).get(REQUEST_TIMEOUT.toMillis(), TimeUnit.MILLISECONDS);
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            // TODO Auto-generated catch block
-            // e.printStackTrace();
-        }
-
-        if (response == null || response.status() != RewireStatus.ACCEPTED) {
-            Console.log(
-                    "[REWIRE] response is null or not ACCEPTED != " + (response == null ? "null" : response.status()));
-            return false;
-        }
-
-        boolean localApplied = connectionManager.addIfSpace(defB, "direct rewiring recovery commit");
-
-        if (!localApplied) {
-            Console.log("[REWIRE] Local applied failed");
-            return false;
-        }
-
-        RewireMessage commit = RewireMessage.of(
-                RecoveryMessageType.REWIRE_DIRECT_COMMIT,
-                recoveryId,
-                localAddress,
-                defA,
-                defB,
-                null,
-                null,
-                defB,
-                null,
-                connectionManager.neighborAddresses(),
-                List.of(),
-                RewireStatus.ACCEPTED);
-
-        sendOnly(defB, commit);
-        refreshHealthState();
-        Console.log("Direct Repait completed successfully", Constant.GREEN);
-        return true;
+    RewireMessage response = null;
+    try {
+        response = sendAsync(defB, request)
+            .get(REQUEST_TIMEOUT.toMillis(),
+                TimeUnit.MILLISECONDS);
+    } catch (InterruptedException
+        | ExecutionException
+        | TimeoutException e) {
+        Console.logError("[REWIRE] An unexpected error has occured " + e.getMessage());    
+        return false;
     }
-    \end{lstlisting}
+
+    if (response == null || response.status()
+            != RewireStatus.ACCEPTED) {
+        Console.log("[REWIRE] response is null or not ACCEPTED");
+        return false;
+    }
+
+    boolean localApplied = connectionManager
+        .addIfSpace(defB,
+            "direct rewiring recovery commit");
+
+    if (!localApplied) {
+        Console.log("[REWIRE] Local applied failed");
+        return false;
+    }
+
+    RewireMessage commit = RewireMessage.of(
+        RecoveryMessageType.REWIRE_DIRECT_COMMIT,
+        recoveryId, localAddress,
+        defA, defB, null, null, defB, null,
+        connectionManager.neighborAddresses(),
+        List.of(), RewireStatus.ACCEPTED);
+
+    sendOnly(defB, commit);
+    refreshHealthState();
+    Console.logSuccess("Direct Repait completed successfully");
+    return true;
+}
+\end{lstlisting}
 
   \item{\textbf{Undirect Rewiring: }}
 
@@ -383,18 +316,16 @@ situations are subsequently corrected by the rewiring mechanism described later 
         \begin{lstlisting}[language=Java,
     caption={Generating Session ID},
     label={lst:sessionId}]
-    String requestId = UUID.randomUUID().toString();
+String requestId = UUID.randomUUID().toString();
 
-    RewireMessage req = RewireMessage.of(
-        REWIRE_SESSION_REQ,
-        requestId,
-        localAddress,
-        defA, defB, ...);
+RewireMessage req = RewireMessage.of(
+    REWIRE_SESSION_REQ,
+    requestId, localAddress,
+    defA, defB, ...);
 
-    RewireMessage ack =
-            sendAsync(defB, req)
-            .get(REQUEST_TIMEOUT.toMillis(),
-            TimeUnit.MILLISECONDS);
+RewireMessage ack = sendAsync(defB, req)
+    .get(REQUEST_TIMEOUT.toMillis(),
+    TimeUnit.MILLISECONDS);
 
     \end{lstlisting}
 
@@ -405,18 +336,18 @@ situations are subsequently corrected by the rewiring mechanism described later 
 
         \begin{lstlisting}[language=Java,
     label={lst:fellow}]
-    if (!localAddress.nodeId().equals( electLeader(defA, defB).nodeId())) {
-        return false;
-    }
+if (!localAddress.nodeId().equals(
+    electLeader(defA, defB).nodeId())) {
+    return false;
+}
 
-    String recoveryId = UUID.randomUUID().toString();
+String recoveryId = UUID.randomUUID().toString();
 
-    sendOnly(defB,
-        RewireMessage.of(
-            REWIRE_SESSION_COMMIT,
-            recoveryId,
-            localAddress,
-            defA, defB, ...));
+sendOnly(defB, RewireMessage.of(
+    REWIRE_SESSION_COMMIT,
+    recoveryId,
+    localAddress,
+    defA, defB, ...));
 
     \end{lstlisting}
 
@@ -429,16 +360,16 @@ situations are subsequently corrected by the rewiring mechanism described later 
         \begin{lstlisting}[language=Java,
     caption={Finding Node C and D},
     label={lst:findcd}]
-    List<NodeAddress> candidateCs = selectCandidateCs( defANeighbors, defBNeighbors);
-    for (NodeAddress c : candidateCs) {
-        RewireMessage response = sendAsync(c, query).get(...);
-        if (response != null && response.nodeD() != null) {
-            NodeAddress d = response.nodeD();
-            if (executeScheme( recoveryId, defA, defB, c, d)) {
-                return true;
-            }
+List<NodeAddress> candidateCs = selectCandidateCs( defANeighbors, defBNeighbors);
+for (NodeAddress c : candidateCs) {
+    RewireMessage response = sendAsync(c, query).get(...);
+    if (response != null && response.nodeD() != null) {
+        NodeAddress d = response.nodeD();
+        if (executeScheme( recoveryId, defA, defB, c, d)) {
+            return true;
         }
     }
+}
     \end{lstlisting}
 
         If such a node (D) exists, node (A) invokes the \texttt{executeScheme()} method, which applies the \textbf{Connectivity
@@ -467,24 +398,23 @@ set to \texttt{"UP"}. The message is then transmitted asynchronously to the dash
 using and HTTP POST request.
 \begin{lstlisting}[language=Java,
     label={lst:evicted_members_selection}]
+String json = """
+    {
+        "id": "%s",
+        "ipAddress": "%s",
+        "p2pPort": %d,
+        "crackingPort": %d,
+        "status": "UP",
+        "neighbors": [%s]
+    }
+    """.formatted(localNodeId, advertiseHost, p2pPort, crackingPort, neighborsJson);
 
-    String json = """
-        {
-            "id": "%s",
-            "ipAddress": "%s",
-            "p2pPort": %d,
-            "crackingPort": %d,
-            "status": "UP",
-            "neighbors": [%s]
-        }
-        """.formatted(localNodeId, advertiseHost, p2pPort, crackingPort, neighborsJson);
-
-    HttpRequest request = HttpRequest.newBuilder()
-        .uri(URI.create(dashboardUrl + "/heartbeat"))
-        .timeout(Duration.ofSeconds(5))
-        .header("Content-Type", "application/json")
-        .POST(HttpRequest.BodyPublishers.ofString(json))
-        .build();
+HttpRequest request = HttpRequest.newBuilder()
+    .uri(URI.create(dashboardUrl + "/heartbeat"))
+    .timeout(Duration.ofSeconds(5))
+    .header("Content-Type", "application/json")
+    .POST(HttpRequest.BodyPublishers.ofString(json))
+    .build();
 
     \end{lstlisting}
 
@@ -497,27 +427,26 @@ endpoint using an HTTP POST request. The use of asynchronous HTTP requests throu
 that dashboard communication does not block the execution of the distributed system.
 \begin{lstlisting}[language=Java,
     label={lst:evicted_members_selection}]
-    String json = String.format(Locale.US, """
-            {"reporterNodeId": "%s",
-            "failedNodeId": "%s",
-            "message": "%s",
-            "phi": %.6f,
-            "threshold": %.6f,
-            "status": "UNREACHABLE",
-            "timestamp": "%s"
-            }""",
-        localNodeId,
-        failedNode.nodeId(),
-        message,
-        phi,
-        threshold,
-        LocalDateTime.now());
+String json = String.format(Locale.US, """
+        {"reporterNodeId": "%s",
+        "failedNodeId": "%s",
+        "message": "%s",
+        "phi": %.6f,
+        "threshold": %.6f,
+        "status": "UNREACHABLE",
+        "timestamp": "%s"
+        }""",
+    localNodeId,
+    failedNode.nodeId(),
+    message,
+    phi,
+    threshold,
+    LocalDateTime.now());
 
-    HttpRequest request = HttpRequest.newBuilder().uri(URI.create(dashboardUrl + "/failure-report")).timeout(Duration.ofSeconds(5))
-    .header("Content-Type", "application/json")
-    .POST(HttpRequest.BodyPublishers.ofString(json)).build();
-
-    \end{lstlisting}
+HttpRequest request = HttpRequest.newBuilder().uri(URI.create(dashboardUrl + "/failure-report")).timeout(Duration.ofSeconds(5))
+.header("Content-Type", "application/json")
+.POST(HttpRequest.BodyPublishers.ofString(json)).build();
+\end{lstlisting}
 \subsubsection{\textbf{Server-Side Request Processing}}
 \label{subsubsec: server}
 On the server side, the \texttt{NodeController} class exposes REST endpoints that receive and process
@@ -536,9 +465,7 @@ label={lst:evicted_members_selection}]
 @PostMapping("/heartbeat")
 public ResponseEntity<String> receiveHeartbeat(
         @RequestBody Node node) {
-
     nodeService.processHeartbeat(node);
-
     return ResponseEntity.ok(
             "Heartbeat received from " + node.getId());
 }
@@ -546,10 +473,8 @@ public ResponseEntity<String> receiveHeartbeat(
 @PostMapping("/failure-report")
 public ResponseEntity<String> receiveFailureReport(
         @RequestBody FailureReport report) {
-
     nodeService.processFailureReport(report);
     passwordCrackingService.handleNodeFailure(report.getFailedNodeId());
-
     return ResponseEntity.ok(
             "Failure report received");
 }

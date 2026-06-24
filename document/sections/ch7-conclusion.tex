@@ -1,8 +1,84 @@
 \section{Conclusion and Future Work}
 \label{sec:conclusion}
 
-\subsection{Challenges}
+\subsection{Challenges and Limitations}
+
+\subsubsection{Evaluation Environment Limitations}
+
+Within an individual evaluation run, the node processes were generally executed on the same physical machine.
+Therefore, the experiments represent a multi-process simulation of a distributed deployment rather than a controlled
+deployment in which each node runs on a separate computer. This design enables repeatable automated testing but may
+introduce resource contention among the Java processes, including CPU scheduling delays, memory pressure,
+garbage-collection pauses, and delayed network-message processing.
+
+\subsubsection{Failure-Detection Limitations}
+
+No artificial packet loss, transmission delay, bandwidth limitation, or network partition was introduced during the
+automated evaluation. Thus, the effectiveness of the SWIMPHI hybrid protocol was not tested unlike the other protocols.
+
+\subsubsection{Concurrent Node Joining}
+
+During FINDING NEMO protocol, there is a large proportion of runs that ended up with a few deficient nodes (nodes that
+have less than the required maximum neighbors count), and the network fails to converges during the timeout (but even
+if the network was allowed to continued running, the network will stay like that). However, we have previously stated
+that this behaviour is expected.
+
+When multiple nodes join the network at almost the same time, all of these nodes send a broadcast message each to the
+network. The replied are collected and each new node will create its own join plan individually. These join plans may
+have duplicate target nodes, for simplicity we will denoted as node $A$. This node $A$ will then receive requests from
+multiple new joining nodes. Let's assume that node $A$ is deficient before this, but can only accept 1 extra new
+neighbor. When node $A$ receives several requests, only the first one will be accepted, the rest will be denied.
+
+This scenario can happen many times during a large joining session like this. One case that can happen is for a new
+node to have several denied request, while all other requests from other joining nodes are accepted. Thus, after all
+requests were completed, only one node remains deficient. This node does not have any other deficient nodes to start
+the CHUALANH protocol with and will remain deficient until a new node joins or a node becomes deficient. This problem
+can be easily detected internally by each nodes. The proposed solution will be discussed in
+Section~\ref{subsubsec:node-self-recovery}. Another case that can lead to this problem is for the two deficient nodes
+to have the same neighbor list. The CHUALANH protocol does not prevent this case to recovery, but the exact
+implementation will be costly for finding an edge without each node to know the full topology of the network.
+Therefore, our implementation only allows the selected edge to be from the neighbor list of the deficient nodes. The
+proposed solution is to either implement the exact procedure - which will be very costly - or implement the solution in
+Section~\ref{subsubsec:node-self-recovery}.
+
+\subsubsection{Multiple Concurrent Node Termination}
+
+Another major problem that was revealed during testing was when too many nodes terminated at roughly the same time.
+This causes the majority of nodes to become deficient with multiple missing neighbors. This proves to be a substantial
+challenge for the network to converge. A large burst of recovery messages sending at the same time congests the
+network, causing delay with unprocessed requests, invalid requests... To address this problem, we suggest evaluating on
+a larger scale system, with multiple machines communicating in a LAN, as stated in
+Section~\ref{subsubsec:large-scale-evaluation}.
+
+\subsubsection{Presented Code}
+
+The presented code in this document is simplified and taken from a certain snapshot. The current implementation might
+be changed slightly, but the core idea remains the same.
+
+\subsection{Future Work}
+
+\subsubsection{Node Self-Recovery}
+\label{subsubsec:node-self-recovery}
+To address the problem of the network being impossible to converges, we proposed this solution. Each node will have an
+internal timeout. The timeout will start or restart right after the neighbor list of that node changes and will be
+active while the node is still deficient. When the timeout ends, the node will remove itself from the network and
+restart after a short time. The recovery phase R in the Five-Phase Evaluation Plan is intended to simulate this
+behaviour. Future improvement for this project would be to implement this behaviour for each node.
+
+\subsubsection{Multi-Machine and Large-Scale Evaluation}
+\label{subsubsec:large-scale-evaluation}
+
+Due to hardware limitations, most experiments were conducted by running all node processes on a single laptop. This may
+introduce resource contention and delay message processing, especially when many nodes recover simultaneously. Future
+work should repeat the evaluation on multiple machines connected through a LAN. Comparing the results would help
+determine whether the observed failures are mainly caused by single-machine resource limitations or by weaknesses in
+the protocol and its implementation.
 
 \subsection{Conclusion}
 
-\subsection{Future Work}
+This work presented a decentralized node health-monitoring framework that integrates FINDING NEMO for neighbor
+discovery, hybrid SWIMPHI for failure detection, and CHUALANH for topology recovery. The evaluation shows that the
+framework performs reliably during initial network formation, node addition, and recovery from isolated node failures.
+However, its performance decreases under multiple simultaneous failures due to concurrent recovery operations and
+limited local topology knowledge. Overall, the results demonstrate the feasibility of the proposed approach while
+highlighting the need for improved recovery coordination and larger-scale multi-machine evaluation.
