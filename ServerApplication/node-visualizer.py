@@ -65,7 +65,7 @@ while True:
             plt.clf()
             pos = nx.circular_layout(nodes)
             # nx.draw(G, pos, with_labels=True, arrows=True, node_size=3000, font_size=12, node_color="#98FF98", edgecolors="#B2B2B2", linewidths=2, width=2.5, arrowsize=25)
-            NODE_SIZE = 4000
+            NODE_SIZE = 3000
 
             # Draw nodes
             nx.draw_networkx_nodes(
@@ -85,8 +85,8 @@ while True:
                 arrows=True,
                 arrowsize=25,
                 arrowstyle='-|>',
-                min_source_margin=30,
-                min_target_margin=30
+                min_source_margin=25,
+                min_target_margin=25
             )
 
             # Draw labels with dynamic font sizes
@@ -108,7 +108,7 @@ while True:
                 )
             plt.draw()
             plt.axis("off")
-            plt.margins(0.2)
+            plt.margins(0.1)
             plt.tight_layout()
             plt.pause(0.1)
             print("Graph updated")

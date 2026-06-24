@@ -2294,6 +2294,11 @@ recovery_labels <- c(
   "R5" = "R5"
 )
 
+recovery_outcome_levels <- c(
+  "Success",
+  "Failure"
+)
+
 recovery_success_data <- results %>%
   filter(phase %in% RECOVERY_PHASES) %>%
   mutate(
@@ -2301,14 +2306,19 @@ recovery_success_data <- results %>%
       phase,
       levels = RECOVERY_PHASES
     ),
-    status = factor(
-      status,
-      levels = STATUS_LEVELS
+    recovery_outcome = if_else(
+      status == "PASS",
+      "Success",
+      "Failure"
+    ),
+    recovery_outcome = factor(
+      recovery_outcome,
+      levels = recovery_outcome_levels
     )
   ) %>%
   count(
     phase,
-    status,
+    recovery_outcome,
     name = "runs"
   ) %>%
   complete(
@@ -2316,9 +2326,9 @@ recovery_success_data <- results %>%
       RECOVERY_PHASES,
       levels = RECOVERY_PHASES
     ),
-    status = factor(
-      STATUS_LEVELS,
-      levels = STATUS_LEVELS
+    recovery_outcome = factor(
+      recovery_outcome_levels,
+      levels = recovery_outcome_levels
     ),
     fill = list(runs = 0)
   ) %>%
@@ -2346,7 +2356,7 @@ ggplot(
   aes(
     x = phase,
     y = share,
-    fill = status
+    fill = recovery_outcome
   )
 ) +
   geom_col(
@@ -2366,9 +2376,11 @@ ggplot(
     limits = rev(RECOVERY_PHASES)
   ) +
   scale_fill_manual(
-    values = STATUS_COLORS,
-    limits = STATUS_LEVELS,
-    labels = STATUS_LABELS,
+    values = c(
+      "Success" = COLOR_PASS,
+      "Failure" = COLOR_FAIL
+    ),
+    limits = recovery_outcome_levels,
     drop = FALSE
   ) +
   scale_y_continuous(
@@ -2380,9 +2392,10 @@ ggplot(
     title = "Success Rate of Recovery Attempts by Triggering Phase",
     x = "Triggering Phase",
     y = "Share of valid recovery attempts",
-    fill = "Recorded status"
+    fill = "Outcome"
   )
 ```
+
 
 ```{r recovery-success-table}
 recovery_success_summary <- results %>%

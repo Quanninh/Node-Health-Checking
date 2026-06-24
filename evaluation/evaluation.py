@@ -26,7 +26,7 @@ JAR_PATH = SCRIPT_DIR / "node-agent-1.0.jar"
 # =============================================================================
 # CHANGE THIS TO results_yourname.csv
 # =============================================================================
-RESULTS_CSV = SCRIPT_DIR / "results_phuc2.csv"
+RESULTS_CSV = SCRIPT_DIR / "results_phuc.csv"
 
 # =============================================================================
 # CHANGE THIS TO your.ip.add.ress
@@ -38,13 +38,13 @@ ADVERTISE_HOST = "192.168.1.6"
 MULTICAST_INTERFACE = "wireless_32768"
 
 # =============================================================================
-# CONFIGURE THIS
+# CONFIGURATION
 # =============================================================================
 
 MAX_NEIGHBORS = 4
-INITIAL_NODE_COUNT = 20
-ADDED_NODE_COUNT = 6
-REMOVED_NODE_COUNT = 12
+INITIAL_NODE_COUNT = 7
+ADDED_NODE_COUNT = 4
+REMOVED_NODE_COUNT = 3
 
 # =============================================================================
 # =============================================================================
