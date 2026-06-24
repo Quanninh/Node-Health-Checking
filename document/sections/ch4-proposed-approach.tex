@@ -330,7 +330,7 @@ while remaining consistent with the network's connectivity constraints.
 \label{subsubsec:repair_mechanism}
 In a decentralized architecture, node failures may disrupt the desired network structure. Specifically, when
 a node unexpectedly fails, all of its incident edges are deleted. Consequently, some neighboring nodes lose
-one connection and their degree decreases from $k$ to $k - 1$. These nodes are referred to as \textbf{deficient nodes}
+connections and their degree is decremented. These nodes are referred to as \textbf{deficient nodes}
 
 Since the system is designed to maintain $k$ neighbors for every node, a topology repair process is required to restore
 the desired degree constraint. To address this problem, we propose a \textbf{Connectivity Healing through
