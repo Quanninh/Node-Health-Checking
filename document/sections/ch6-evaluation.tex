@@ -218,13 +218,6 @@ Network convergence therefore requires both the correct neighbor count and a str
 reported neighbor entries alone is not sufficient when those entries include stale, duplicate, self-referential, or
 non-mutual edges.
 
-\textbf{Timeout.}
-A timeout occurs when a phase does not satisfy its completion condition
-within its configured time limit. A timeout does not necessarily imply
-that convergence is permanently impossible; it indicates that the
-required state was not reached within the time considered acceptable by
-the evaluation procedure.
-
 \subsubsection{Overview}
 
 Table~\ref{tab:valid_runs_by_phase} shows the number of recorded runs following the Five-Phase Evaluation Plan. Due to
@@ -253,12 +246,9 @@ Overall, more than 200 runs were executed
 Figure~\ref{fig:final_success_rate_by_phase} illustrates the percentages of successes and failures categorized by each
 phase. The success rates fluctuate across phases 1 through 4, and they remain consistent at around 95\%. This shows
 that the protocol performs reliably in network formation, node addition and single node failure detection and recovery.
-
 In constrast, phase 5 recorded a noticably lower success rate of only 55.9\%, with 37.7\% of the runs failed. This
 suggests that the implementation of the protocol failed to detect and recovery when multiple nodes failed at the same
-time. When several node terminate at the same time, many nodes become deficient simultaneously and a burst of recovery
-messages is sent out during a short period of time. The increased communication load and the presence of multiple
-concurrent recovery sessions may lead to conflicting operations, delayed convergence, or recovery timeouts.
+time.
 
 \begin{figure}[h]
   \centering
