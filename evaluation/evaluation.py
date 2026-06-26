@@ -26,12 +26,12 @@ JAR_PATH = SCRIPT_DIR / "node-agent-1.0.jar"
 # =============================================================================
 # CHANGE THIS TO results_yourname.csv
 # =============================================================================
-RESULTS_CSV = SCRIPT_DIR / "results_phuc.csv"
+RESULTS_CSV = SCRIPT_DIR / "results_phuc_new_r.csv"
 
 # =============================================================================
 # CHANGE THIS TO your.ip.add.ress
 # =============================================================================
-ADVERTISE_HOST = "192.168.1.6"
+ADVERTISE_HOST = "172.16.129.167"
 # =============================================================================
 # CHANGE THIS TO wireless_32768 ON WINDOWS AND en0 ON MACOS
 # =============================================================================
@@ -41,10 +41,72 @@ MULTICAST_INTERFACE = "wireless_32768"
 # CONFIGURATION
 # =============================================================================
 
-MAX_NEIGHBORS = 4
-INITIAL_NODE_COUNT = 7
-ADDED_NODE_COUNT = 4
-REMOVED_NODE_COUNT = 3
+# MAX_NEIGHBORS = 4
+# INITIAL_NODE_COUNT = 7
+# ADDED_NODE_COUNT = 4
+# REMOVED_NODE_COUNT = 3
+
+# =============================================================================
+# RANDOM CONFIGURATION
+# =============================================================================
+
+def generate_random_configuration() -> tuple[int, int, int, int]:
+    while True:
+        # Even values only: 4, 6, 8, or 10
+        max_neighbors = random.choice(range(8, 11, 2))
+
+        initial_node_count = random.randint(
+            max_neighbors + 1,
+            20,
+        )
+
+        added_node_count = random.randint(4, 8)
+
+        # 70% chance: remove 4–6 nodes
+        # 30% chance: remove 7–12 nodes
+        # if random.random() < 0.70:
+        removed_node_count = random.randint(4, 6)
+        # else:
+        #     removed_node_count = random.randint(7, 12)
+
+        # Phase 2/3 removes one node before Phase 4 and Phase 5.
+        phase_5_node_count = (
+            initial_node_count
+            - 1
+            + added_node_count
+            - removed_node_count
+        )
+
+        # A node cannot have MAX_NEIGHBORS neighbors unless there are
+        # at least MAX_NEIGHBORS + 1 active nodes.
+        if phase_5_node_count > max_neighbors:
+            return (
+                max_neighbors,
+                initial_node_count,
+                added_node_count,
+                removed_node_count,
+            )
+
+
+(
+    MAX_NEIGHBORS,
+    INITIAL_NODE_COUNT,
+    ADDED_NODE_COUNT,
+    REMOVED_NODE_COUNT,
+) = generate_random_configuration()
+
+MAX_NEIGHBORS = 10
+INITIAL_NODE_COUNT = 15
+ADDED_NODE_COUNT = 7
+REMOVED_NODE_COUNT = 4
+
+print(
+    "Random configuration: "
+    f"MAX_NEIGHBORS={MAX_NEIGHBORS}, "
+    f"INITIAL_NODE_COUNT={INITIAL_NODE_COUNT}, "
+    f"ADDED_NODE_COUNT={ADDED_NODE_COUNT}, "
+    f"REMOVED_NODE_COUNT={REMOVED_NODE_COUNT}"
+)
 
 # =============================================================================
 # =============================================================================
@@ -52,9 +114,9 @@ REMOVED_NODE_COUNT = 3
 PHASE_1_TIMEOUT_SECONDS = 120
 PHASE_2_1_TIMEOUT_SECONDS = 120
 PHASE_2_2_TIMEOUT_SECONDS = 120
-PHASE_3_TIMEOUT_SECONDS = 180
+PHASE_3_TIMEOUT_SECONDS = 300
 PHASE_4_TIMEOUT_SECONDS = 120
-PHASE_5_TIMEOUT_SECONDS = 180
+PHASE_5_TIMEOUT_SECONDS = 600
 PHASE_R_TIMEOUT_SECONDS = 120
 
 STABILIZATION_SECONDS = 10
@@ -941,7 +1003,7 @@ class EvaluationRunner:
     def run_repair_phase(self, repair_phase: str, old_node_ids: List[str], trigger_details: str) -> None:
         self.current_phase = repair_phase
         log(f"\n{repair_phase}: replacing {len(old_node_ids)} wrong node(s)")
-        start = time.monotonic()
+        
 
         for index, node_id in enumerate(old_node_ids):
             self.manager.stop(node_id)
@@ -951,6 +1013,10 @@ class EvaluationRunner:
         if NODE_RESTART_INTERVAL_SECONDS > 0:
             sleep_interval(NODE_RESTART_INTERVAL_SECONDS, self.shutdown)
 
+        sleep_interval(30, self.shutdown)
+        
+        start = time.monotonic()
+        
         new_node_ids = self.add_nodes("R", len(old_node_ids))
         mapping = dict(zip(old_node_ids, new_node_ids))
         mapping_text = ",".join(f"{old}->{new}" for old, new in mapping.items())
