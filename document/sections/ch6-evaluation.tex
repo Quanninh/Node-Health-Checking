@@ -386,14 +386,14 @@ protocol can prevent false positives as mentioned in Section~\ref{subsec:five_ph
 \label{sec:phase-3-evaluation}
 
 Phase 3 measures the time until the network has recovered from a single node failure. The results in
-Figure~\ref{fig:phase3-results} are presented in the same way and follow similar trends as Phase~1 in
+Figure~\ref{fig:phase3-results} are presented in the same way as Phase~1 in
 Section~\ref{sec:phase-1-evaluation}.
 
 In Figure~\ref{fig:phase3-input-chart}, we can observe that the success rates are extremely high, almost all cases were
 successful. Only a few tests failed to recover within the allowed time.
 
 Interestingly, Figure~\ref{fig:phase3-time-impact-chart} shows that as the maximum number of neighbor increases, more
-time is needed to recover from the node deletion. The time taken to recovery from the single node deletion, however,
+time is needed to recover from the node deletion. The time taken to recover from the single node deletion, however,
 does not depend on the number of nodes in the system. This suggests that this algorithm is not impacted by the scale of
 the network, and proves that the algorithm supports high scalability.
 
@@ -422,12 +422,13 @@ the network, and proves that the algorithm supports high scalability.
 \subsubsection{Phase 4}
 \label{sec:phase-4-evaluation}
 
-Similar to phase 1, when multiple nodes join the network, the success rate is quite high as illustrated in
+The results of phase 4 follows similar trends as to phase 1.
+When multiple nodes join the network, the success rate is quite high as illustrated in
 Figure~\ref{fig:phase4-input-chart}, but almost half of the runs required the execution of phase~R
 (Figure~\ref{fig:detailed-outcome-chart}). Figure~\ref{fig:phase4-time-impact-chart} further proves this point, as most
 of the runs timed out. The average run converges after around 17 seconds on average and are generally not dependent on
 any variables like the maximum neighbors, or the number of added nodes, which is interesting. This is likely because of
-the way the evaluation program measures the time, which is starting from after the last node is added, which means that
+the way the evaluation program measures the time: starting from after the last node is added, which means that
 when adding more nodes, the system already has more time before the timer has started. Most runs start the recovery
 phase with 1 or 2 problematic nodes, which is ideal and expected for the system and generates high success rates as
 seen in Figure~\ref{fig:recovery-success-chart}.
