@@ -21,7 +21,7 @@ knitr::opts_chunk$set(
   #fig.height = 4.8,
   fig.pos = "H",
   dev = "pdf",
-  fig.path = "new_figures/"
+  fig.path = "figures/"
 )
 
 library(tidyverse)
@@ -990,7 +990,7 @@ kable(
 
 ## Phase 1: Initial Network Formation
 
-```{r phase1-input-chart}
+```{r phase1-input-chart, fig.width = 8}
 phase1_input_data <- results %>%
   filter(phase == "Phase 1") %>%
   select(
@@ -1050,14 +1050,14 @@ phase1_input_plot <- ggplot(
     labels = percent_format()
   ) +
   scale_size_continuous(
-    range = c(8, 18),
-    breaks = breaks_pretty(n = 3)
+    range = c(9, 17),
+    breaks = c(1, 20, 40)
   ) +
   scale_x_continuous(
-    breaks = breaks_pretty(), expand = expansion(add = c(0.6, 0.6))
+    breaks = breaks_pretty(10), expand = expansion(add = c(0.6, 0.8))
   ) +
   scale_y_continuous(
-    breaks = breaks_pretty(), expand = expansion(add = c(0.6, 0.6))
+    breaks = breaks_pretty(), expand = expansion(add = c(0.8, 0.6))
   ) +
   labs(
     title = paste(
@@ -1066,7 +1066,7 @@ phase1_input_plot <- ggplot(
     x = "Initial node count",
     y = "Maximum neighbors",
     fill = "Final success rate",
-    size = "Number of runs"
+    size = "Runs count"
   )
 
 phase1_input_plot
@@ -1074,7 +1074,7 @@ phase1_input_plot
 
 ## Phase 3: Single-Node Failure Repair
 
-```{r phase3-input-chart}
+```{r phase3-input-chart, fig.width = 8}
 phase3_input_data <- results %>%
   filter(phase == "Phase 3") %>%
   select(
@@ -1134,14 +1134,14 @@ phase3_input_plot <- ggplot(
     labels = percent_format()
   ) +
   scale_size_continuous(
-    range = c(8, 18),
-    breaks = breaks_pretty(n = 3)
+    range = c(9, 17),
+    breaks = c(1, 20, 40)
   ) +
   scale_x_continuous(
-    breaks = breaks_pretty(), expand = expansion(add = c(0.8, 0.8))
+    breaks = breaks_pretty(10), expand = expansion(add = c(0.6, 0.8))
   ) +
   scale_y_continuous(
-    breaks = breaks_pretty(), expand = expansion(add = c(0.8, 0.8))
+    breaks = breaks_pretty(), expand = expansion(add = c(0.8, 0.6))
   ) +
   labs(
     title = paste(
@@ -1150,7 +1150,7 @@ phase3_input_plot <- ggplot(
     x = "Initial node count",
     y = "Maximum neighbors",
     fill = "Final success rate",
-    size = "Number of runs"
+    size = "Runs count"
   )
 
 phase3_input_plot
@@ -1218,8 +1218,8 @@ phase4_input_plot <- ggplot(
     labels = percent_format()
   ) +
   scale_size_continuous(
-    range = c(8, 18),
-    breaks = breaks_pretty(n = 3)
+    range = c(9, 17),
+    breaks = c(1, 30, 60)
   ) +
   scale_x_continuous(
     breaks = breaks_pretty(), expand = expansion(add = c(0.6, 0.6))
@@ -1231,10 +1231,10 @@ phase4_input_plot <- ggplot(
     title = paste(
       "Phase 4: Final Success Rate by Added Nodes and Neighbor Limit"
     ),
-    x = "Number of added nodes",
+    x = "Added nodes",
     y = "Maximum neighbors",
     fill = "Final success rate",
-    size = "Number of runs"
+    size = "Runs count"
   )
 
 phase4_input_plot
@@ -1242,7 +1242,7 @@ phase4_input_plot
 
 ## Phase 5: Removing Multiple Nodes
 
-```{r phase5-input-chart, fig.width = 8}
+```{r phase5-input-chart, fig.width = 7}
 phase5_input_data <- results %>%
   filter(phase == "Phase 5") %>%
   select(
@@ -1302,23 +1302,23 @@ phase5_input_plot <- ggplot(
     labels = percent_format()
   ) +
   scale_size_continuous(
-    range = c(8, 18),
-    breaks = breaks_pretty(n = 3)
+    range = c(9, 17),
+    breaks = c(1, 30, 60)
   ) +
   scale_x_continuous(
     breaks = breaks_pretty(), expand = expansion(add = c(0.6, 0.6))
   ) +
   scale_y_continuous(
-    breaks = breaks_pretty(), expand = expansion(add = c(0.8, 0.8))
+    breaks = breaks_pretty(), expand = expansion(add = c(0.8, 0.6))
   ) +
   labs(
     title = paste(
       "Phase 5: Final Success Rate by Removed Nodes and Neighbor Limit"
     ),
-    x = "Number of removed nodes",
+    x = "Removed nodes",
     y = "Maximum neighbors",
     fill = "Final success rate",
-    size = "Number of runs"
+    size = "Runs count"
   )
 
 phase5_input_plot
@@ -1982,7 +1982,7 @@ ggplot(
 
 ## Phase 1: Initial Network Formation
 
-```{r phase1-problem-count-chart}
+```{r phase1-problem-count-chart, fig.width = 3.5}
 phase1_problem_data <- results %>%
   filter(
     phase == "Phase 1",
@@ -2058,7 +2058,7 @@ if (nrow(phase1_problem_data) == 0) {
 
 ## Phase 3: Repair After One Node Failure
 
-```{r phase3-problem-count-chart}
+```{r phase3-problem-count-chart, fig.width = 4}
 phase3_problem_data <- results %>%
   filter(
     phase == "Phase 3",
@@ -2134,7 +2134,7 @@ if (nrow(phase3_problem_data) == 0) {
 
 ## Phase 4: Adding Nodes
 
-```{r phase4-problem-count-chart}
+```{r phase4-problem-count-chart, fig.width = 3}
 phase4_problem_data <- results %>%
   filter(
     phase == "Phase 4",

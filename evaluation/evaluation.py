@@ -31,7 +31,7 @@ RESULTS_CSV = SCRIPT_DIR / "results_phuc_new_r.csv"
 # =============================================================================
 # CHANGE THIS TO your.ip.add.ress
 # =============================================================================
-ADVERTISE_HOST = "172.16.129.167"
+ADVERTISE_HOST = "192.168.1.6"
 # =============================================================================
 # CHANGE THIS TO wireless_32768 ON WINDOWS AND en0 ON MACOS
 # =============================================================================
@@ -96,8 +96,8 @@ def generate_random_configuration() -> tuple[int, int, int, int]:
 ) = generate_random_configuration()
 
 MAX_NEIGHBORS = 10
-INITIAL_NODE_COUNT = 15
-ADDED_NODE_COUNT = 7
+INITIAL_NODE_COUNT = 14
+ADDED_NODE_COUNT = 4
 REMOVED_NODE_COUNT = 4
 
 print(
@@ -114,9 +114,9 @@ print(
 PHASE_1_TIMEOUT_SECONDS = 120
 PHASE_2_1_TIMEOUT_SECONDS = 120
 PHASE_2_2_TIMEOUT_SECONDS = 120
-PHASE_3_TIMEOUT_SECONDS = 300
+PHASE_3_TIMEOUT_SECONDS = 180
 PHASE_4_TIMEOUT_SECONDS = 120
-PHASE_5_TIMEOUT_SECONDS = 600
+PHASE_5_TIMEOUT_SECONDS = 180
 PHASE_R_TIMEOUT_SECONDS = 120
 
 STABILIZATION_SECONDS = 10

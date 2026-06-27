@@ -17,6 +17,7 @@ No artificial packet loss, transmission delay, bandwidth limitation, or network 
 automated evaluation. Thus, the effectiveness of the SWIMPHI hybrid protocol was not tested unlike the other protocols.
 
 \subsubsection{Concurrent Node Joining}
+\label{subsubsec:concurrent-node-joining}
 
 During FINDING NEMO protocol, there is a large proportion of runs that ended up with a few deficient nodes (nodes that
 have less than the required maximum neighbors count), and the network fails to converges during the timeout (but even
@@ -42,6 +43,7 @@ proposed solution is to either implement the exact procedure - which will be ver
 Section~\ref{subsubsec:node-self-recovery}.
 
 \subsubsection{Multiple Concurrent Node Termination}
+\label{subsubsec:multiple-node-termination}
 
 Another major problem that was revealed during testing was when too many nodes terminated at roughly the same time.
 This causes the majority of nodes to become deficient with multiple missing neighbors. This proves to be a substantial

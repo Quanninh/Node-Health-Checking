@@ -222,8 +222,11 @@ non-mutual edges.
 
 Table~\ref{tab:valid_runs_by_phase} shows the number of recorded runs following the Five-Phase Evaluation Plan. Due to
 multiple reasons such as the user terminating the evaluation prematurely, or a phase failure which can lead to
-termination of the current run, the number of executions of a later phase can be less than the previous phases.
-Overall, more than 200 runs were executed
+termination of the current evaluation process, the number of executions of a later phase is less than the previous
+phases. Overall, more than 250 runs were executed. The majority of the runs are run with a few predetermined
+configurations. The rest of the runs have randomized configurations so that we can have an estimate for the correlation
+between the success rates and the configurations. Configurations here include: the initial nodes count, the maximum
+neighbors of each node, the number of nodes added and removed in phase 4 and 5 respectively.
 
 \begin{table}[H]
   \centering
@@ -233,20 +236,24 @@ Overall, more than 200 runs were executed
     \toprule
     \textbf{Phase} & \textbf{Number of Runs} \\
     \midrule
-    Phase 1        & 236                     \\
-    Phase 2.1      & 235                     \\
-    Phase 2.2      & 234                     \\
-    Phase 3        & 233                     \\
-    Phase 4        & 228                     \\
-    Phase 5        & 221                     \\
+    Phase 1        & 286                     \\
+    R1             & 161                     \\
+    Phase 2.1      & 284                     \\
+    Phase 2.2      & 283                     \\
+    Phase 3        & 281                     \\
+    R3             & 11                      \\
+    Phase 4        & 269                     \\
+    R4             & 107                     \\
+    Phase 5        & 262                     \\
+    R5             & 30                      \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 Figure~\ref{fig:final_success_rate_by_phase} illustrates the percentages of successes and failures categorized by each
-phase. The success rates fluctuate across phases 1 through 4, and they remain consistent at around 95\%. This shows
+phase. The success rates fluctuate across phases~1 through~4, and they remain consistent at around 93\%. This shows
 that the protocol performs reliably in network formation, node addition and single node failure detection and recovery.
-In constrast, phase 5 recorded a noticably lower success rate of only 55.9\%, with 37.7\% of the runs failed. This
+In constrast, phase 5 recorded a noticably lower success rate of only 54.2\%, with 37.4\% of the runs failed. This
 suggests that the implementation of the protocol failed to detect and recovery when multiple nodes failed at the same
 time.
 
@@ -278,14 +285,13 @@ Section~\ref{sec:conclusion}.
   \vspace{0.3em}
   \begin{minipage}{0.96\linewidth}
     \footnotesize
-    \raggedright
-    \textit{Success} means that the phase succeeds directly without requiring Phase R.
+    \textit{Success} means that the phase succeeds directly without requiring Phase~R.
 
-    \textit{Success after recovery} means that the phase initially times out, but Phase R successfully recovers the network.
+    \textit{Success after recovery} means that the phase initially times out, but Phase~R successfully recovers the network.
 
-    \textit{Failure without recovery} means that the phase times out without triggering Phase R.
+    \textit{Failure without recovery} means that the phase times out without triggering Phase~R.
 
-    \textit{Recovery failed} means that Phase R is executed but cannot recover the network.
+    \textit{Recovery failed} means that Phase~R is executed but cannot recover the network.
   \end{minipage}
 \end{figure}
 
@@ -308,16 +314,18 @@ execution time and the number of problematic nodes in failed runs.
 The success rate chart in Figure~\ref{fig:phase1-input-chart} shows the percentage of successful runs based on the
 initial network size and the neighbor limit, and the size of each bubble represents the total number of runs with that
 specific configuration. Overall, the success rates are quite high, with most of them reach 90\% or higher, and only one
-case with 86\% when there are 14 initial nodes and the number of maximum neighbors required is 4. The results showed no
+case with 87\% when there are 14 initial nodes and the number of maximum neighbors required is 4. The results showed no
 clear relationship between the initial conditions and the success rates, rather the lower success rate is likely caused
-by the machine on which these tests were conducted.
+by the machine on which these tests were conducted. There are a few other runs with the maximum neighbors of 10 that
+also failed. These are just a few tests with randomized configurations, thus are not representative of the success rate
+of the algorithm and reliable enough to draw any conclusions.
 
 Figure~\ref{fig:phase1-time-impact-chart} illustrates the execution time of each run, not including the recovery phase
 R. As previously shown in Figure~\ref{fig:detailed-outcome-chart}, almost half of the runs timed out and required the
 recovery phase to reach convergence. But for the successful runs, the convergence time is far below the configured
-timeout, averaging at about 18 seconds. Higher initial node counts tends to require a slightly more time to converges,
-sometimes up to 60 seconds. Nevertheless, this trend appears relatively weak and does not significantly affect the
-overall performance of the protocol.
+timeout, averaging at about 20 seconds. Higher initial node counts tends to require a slightly more time to converges,
+sometimes up to 60 seconds. Nevertheless, this trend appears relatively weak as proven by the cluster of runs with 20
+initial nodes and high maximum neighbors count but converges at roughly 18 seconds.
 
 Further insight is provided by Figure~\ref{fig:phase1-problem-count-chart}, which summarizes the number of problematic
 nodes remaining in failed runs. Most failures involved 4 nodes or less, with most of them have only 1 or 2 problematic
@@ -328,7 +336,7 @@ From all of these illustrations, we concluded that the network performed extreme
 small percentage of runs failed, but further testing have confirmed that if the network is allowed to keep running,
 overtime as nodes join and exit the network, the state of convergence will be achieved.
 
-\begin{figure}[t]
+\begin{figure}[hbpt]
   \centering
 
   \subfloat[Success rate]{
@@ -342,7 +350,7 @@ overtime as nodes join and exit the network, the state of convergence will be ac
   }
   \hfill
   \subfloat[Problematic nodes]{
-    \includegraphics[width=0.9\linewidth]{phase1-problem-count-chart-1.pdf}
+    \includegraphics[width=0.5\linewidth]{phase1-problem-count-chart-1.pdf}
     \label{fig:phase1-problem-count-chart}
   }
 
@@ -353,7 +361,7 @@ overtime as nodes join and exit the network, the state of convergence will be ac
 \subsubsection{Phase 2}
 \label{sec:phase-2-evaluation}
 
-In phase 2, one node is killed and the times taken to receive one report and all expected reports from the dead node's
+In phase~2, one node is killed and the times taken to receive one report and all expected reports from the dead node's
 neighbors are measured.
 
 We can observe from Figure~\ref{fig:phase2-time-chart} that the first report is received quite fast, only take just
@@ -361,11 +369,11 @@ more than 10 seconds. The time taken to receive all reports is quite uniformly d
 is a small number of timeouts, however the recorded logs revealed the reason for these timeouts. For all of these
 timeouts, phase~3 has been completed much earlier. This means that all nodes has registered locally the information
 about the killed node, either from pinging the node itself or from a gossip. If a gossip is received, the node will not
-send a failure report to the dashboard. Therefore, phase 2.2 condition is not met and thus timeout.
+send a failure report to the dashboard. Therefore, phase~2.2 condition is not met and thus timeout.
 
 These results showed that with a single node failure, the system correctly detects it 100\% of the time in all the
 conducted tests. This proves the reliability of the failure detection system, however does not prove that the SWIMPHI
-protocol can prevent false positives as mentioned in part~\ref{subsec:five_phase_plan}.
+protocol can prevent false positives as mentioned in Section~\ref{subsec:five_phase_plan}.
 
 \begin{figure}
   \centering
@@ -378,14 +386,16 @@ protocol can prevent false positives as mentioned in part~\ref{subsec:five_phase
 \label{sec:phase-3-evaluation}
 
 Phase 3 measures the time until the network has recovered from a single node failure. The results in
-Figure~\ref{fig:phase3-results} are presented in the same way as Phase~1 in Section~\ref{sec:phase-1-evaluation}.
+Figure~\ref{fig:phase3-results} are presented in the same way and follow similar trends as Phase~1 in
+Section~\ref{sec:phase-1-evaluation}.
 
 In Figure~\ref{fig:phase3-input-chart}, we can observe that the success rates are extremely high, almost all cases were
 successful. Only a few tests failed to recover within the allowed time.
 
 Interestingly, Figure~\ref{fig:phase3-time-impact-chart} shows that as the maximum number of neighbor increases, more
-time is needed to recover from the node deletion. However, most timeouts are caused during tests with low initial node
-counts and low neighbor limit.
+time is needed to recover from the node deletion. The time taken to recovery from the single node deletion, however,
+does not depend on the number of nodes in the system. This suggests that this algorithm is not impacted by the scale of
+the network, and proves that the algorithm supports high scalability.
 
 \begin{figure}[t]
   \centering
@@ -401,7 +411,7 @@ counts and low neighbor limit.
   }
   \hfill
   \subfloat[Problematic nodes]{
-    \includegraphics[width=0.9\linewidth]{phase3-problem-count-chart-1.pdf}
+    \includegraphics[width=0.6\linewidth]{phase3-problem-count-chart-1.pdf}
     \label{fig:phase3-problem-count-chart}
   }
 
@@ -413,11 +423,14 @@ counts and low neighbor limit.
 \label{sec:phase-4-evaluation}
 
 Similar to phase 1, when multiple nodes join the network, the success rate is quite high as illustrated in
-Figure~\ref{fig:phase4-input-chart}, but almost half of the runs required the execution of phase R
+Figure~\ref{fig:phase4-input-chart}, but almost half of the runs required the execution of phase~R
 (Figure~\ref{fig:detailed-outcome-chart}). Figure~\ref{fig:phase4-time-impact-chart} further proves this point, as most
-of the runs timed out. The average run converges after around 17 seconds on average. Most runs start the recovery phase
-with 1 or 2 problematic nodes, which is ideal for the system and generates high success rates as seen in
-Figure~\ref{fig:recovery-success-chart}.
+of the runs timed out. The average run converges after around 17 seconds on average and are generally not dependent on
+any variables like the maximum neighbors, or the number of added nodes, which is interesting. This is likely because of
+the way the evaluation program measures the time, which is starting from after the last node is added, which means that
+when adding more nodes, the system already has more time before the timer has started. Most runs start the recovery
+phase with 1 or 2 problematic nodes, which is ideal and expected for the system and generates high success rates as
+seen in Figure~\ref{fig:recovery-success-chart}.
 
 \begin{figure}[t]
   \centering
@@ -433,7 +446,7 @@ Figure~\ref{fig:recovery-success-chart}.
   }
   \hfill
   \subfloat[Problematic nodes]{
-    \includegraphics[width=0.9\linewidth]{phase4-problem-count-chart-1.pdf}
+    \includegraphics[width=0.4\linewidth]{phase4-problem-count-chart-1.pdf}
     \label{fig:phase4-problem-count-chart}
   }
 
@@ -446,28 +459,32 @@ Figure~\ref{fig:recovery-success-chart}.
 
 Phase 5 proves to be the most difficult phase for the system.
 
-From Figure~\ref{fig:phase5-input-chart}, we can see that for the three configurations: remove 4, 5, 6 nodes when the
-maximum neighbors is 6, 4 and 4 nodes respectively, the success rate is very high. However, for the rest of the
-configurations, the tests were not very promising. It seems that the higher the number of failures and the maximum
-neighbors are, the lower the success rates are. This is consistent with the protocol design. Each failure creates
-deficient nodes. The more failures, the more deficient nodes. When too many nodes fail at the same time, most of the
-nodes are deficient. This causes all nodes to send out recovery messages during a short period of time. Then all
-recovery sessions overlapping, and competition for available neighbors increase the delays and prevent recovery
-algorithms from completing successfully.
+From Figure~\ref{fig:phase5-input-chart}, we can see that for the tests with fewer number of removed nodes and maximum
+neighbors, the success rate is relatively high. However, for the rest of the configurations, the tests were not very
+promising. It seems that the higher the number of failures and the maximum neighbors are, the lower the success rates
+are. One explanation for this is due to the testing environment. Higher maximum neighbors are only intended for very
+large number of nodes. We can only test the system on one laptop, which does not have the capability to run more than
+20 or 30 nodes at the same time as separate Java processes. Having 8 or 10~neighbors for each node with only around
+20~nodes in the system is not ideal and led to unintended consequences. Therefore, these results does not reflect the
+true reliability of the system. We do, nonetheless, acknowledge that there are issues with the protocol, and further
+works to improve it is detailed in Section~\ref{subsubsec:multiple-node-termination}.
 
 The execution times shown in Figure~\ref{fig:phase5-time-impact-chart} provide further insight into this behavior.
-Successful runs generally completed before the configured timeout, whereas unsuccessful runs frequently reached the
-timeout threshold. This suggests that the main problem was not merely slower recovery, but that some configurations
-were unable to reach convergence within the evaluation period.
+While most runs are completed before the timeout, a lot of the completed runs requires more than 100~seconds, some up
+to 170~seconds. This suggests that if given more time instead of being limited by a 180-second timeout, the system may
+have a higher chance of converging.
 
 Figure~\ref{fig:phase5-problem-count-chart} is further proof for this. A lot of runs ended up with more than 4
 problematic nodes, which according to the five-phase evaluation plan, will not trigger the recovery phase and end the
-test immediately. % remember to talk about this in the plan description.
+test immediately. This greatly contradicts the findings from previous phases, where the phases timeout with mostly 1 or
+2 problematic nodes. We predict that if given more time, the number of problematic nodes may lower, however this needs
+further testing to confirm.
 
 To sum up, the current implementation of the protocol does not work well when multiple nodes fail at the same time.
 This can be due to the massive amount of messages being sent during the recovery phase, and thus a protocol or
-implementation issue. This can also be a product of running a massive amount of Java processes on a single laptop. We
-can not conclude without enough resources for further, large-scale testing.
+implementation issue. This can also be a product of running a massive amount of Java processes on a single laptop or
+the incorrectness of the configuration, having too few nodes for the configured maximum neighbors. We can not conclude
+without enough resources for further, large-scale testing.
 
 \begin{figure}[t]
   \centering
