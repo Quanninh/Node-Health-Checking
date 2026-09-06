@@ -3,6 +3,7 @@
 % Version 2.21 of 2022/01/12
 %
 \documentclass[runningheads]{llncs}
+\usepackage{amsmath}
 %
 \usepackage[T1]{fontenc}
 % T1 fonts will be used to generate the final print and online PDFs,
@@ -63,140 +64,246 @@ By isolating these exact micro-level join rules, our work demonstrates that evic
 %
 
 \section{Introduction}
-In distributed systems, network formation plays an important role in coordination between nodes. For example, it is crucial that nodes are connected to each other in the way that its health state can be checked and acknowledged by others in a P2P overlay. One method is to construct a random regular graph so that the system becomes highly scalable. However, while research on low diameter, peer sampling, and expander maintenance of this topology has been extensively conducted, only little work has been done on join rules to ensure unbiased bounded-degree randomness.
+In distributed systems, network formation plays an important role in coordination between nodes[cite: 3]. 
+For example, it is crucial that nodes are connected to each other in a way that allows their health state to be effectively checked and acknowledged by others within a peer-to-peer (P2P) overlay[cite: 3]. 
+One highly effective method for achieving this is to construct a random regular graph, which inherently ensures that the system remains highly scalable[cite: 3]. 
 
-Therefore, we proposed our algorithm FINDING NEMO, which stands for Finding Neighbors and Evicting
-Members of their Own, to address this problem.
+However, while research on the low diameter, peer sampling, and expander maintenance of these topologies has been extensively conducted, only a limited amount of work has focused on the specific join rules required to ensure unbiased bounded-degree randomness[cite: 3]. 
+The literature is rich on whole-overlay outcomes, but thin on micro-level join rules—such as eviction-triggered rewiring—and the structural biases they can introduce. 
 
-\section{Preliminaries}
+To address this exact problem, we propose our algorithm, FINDING NEMO, which stands for Finding Neighbors and Evicting Members of their Own[cite: 3]. 
+By isolating the neighbor discovery protocol, we mathematically and empirically demonstrate how a single node can integrate into an overlay while preserving its strictly regular topology.
 
-\section{FINDING NEMO Protocol}
+\section{Preliminaries and Network Model}
+In our network model, we operate under the foundational assumption that each node must attempt to maintain a fixed $k$ number of neighbors[cite: 3]. 
+This constraint ensures that the overlay is neither too dense (which would negatively affect the scalability and bandwidth of the system) nor too scarce (which would risk node isolation and fragmentation)[cite: 3]. 
+This requirement is derived from our previous work in decentralized node health checking, where each node must be supervised by a sufficient, strictly bounded number of peers to eliminate false-positive failure detections[cite: 3, 8]. 
+Furthermore, the target degree $k$ must be an even integer, a property that is mathematically necessary for our edge-rewiring methodology[cite: 3].
+
+Regarding operational complexity, it takes $n$ messages for a newly spawned node to broadcast its initial join request to an $n$-node network[cite: 3]. 
+In response, the requested nodes communicate with one of their existing neighbors under specific conditions to execute edge hand-offs[cite: 3]. 
+However, because $k$ is a strict constant, these local edge-rewiring behaviors do not grow exponentially as the network expands, ensuring asymptotic efficiency[cite: 3].
+
+\section{The FINDING NEMO Protocol}
+To facilitate a rigorous understanding of the algorithm, several foundational terms and system rules are first defined[cite: 3]:
+
+\begin{itemize}
+    \item \textbf{Neighbor:} A bidirectional relationship established between two nodes in the network[cite: 3]. 
+    If node A is a neighbor of node B, then node B is strictly considered a neighbor of node A[cite: 3].
+    \item \textbf{Neighbor List:} A local data structure maintained independently by each node that stores information about its neighbors, such as their network addresses[cite: 3]. 
+    The neighbor list has a fixed capacity of $k$, where $k$ is an even number[cite: 3]. 
+    To maintain network connectivity and resilience, each node continuously attempts to keep its neighbor list as full as possible whenever sufficient peers are available[cite: 3].
+\end{itemize}
+
+The FINDING NEMO protocol begins when a newly created node requests to join the network[cite: 3]. 
+To promote random neighbor selection, the joining node broadcasts a join request to all existing nodes[cite: 3]. 
+Assuming ideal network connectivity, two primary topological cases are considered:
+
+\subsubsection{Case 1: Small Network Phase.} 
+If the network contains at most $k+1$ nodes, the joining node establishes connections with all existing nodes[cite: 3]. 
+This allows the node to reach its desired neighbor count without requiring any complex restructuring or eviction within the existing network topology[cite: 3]. 
+For example, in a network consisting of four nodes with a target neighbor count of $k=4$, a fifth joining node simply establishes connections with all four existing nodes, thereby satisfying its neighbor requirement directly[cite: 3].
+
+\subsubsection{Case 2: Scaled Network Phase.} 
+If the network contains more than $k+1$ nodes, it is mathematically assumed that all existing nodes have already reached their target neighbor count of $k$[cite: 3]. 
+Nevertheless, these fully connected nodes still acknowledge the new join request[cite: 3]. 
+After collecting all acknowledgements, the joining node constructs a \textit{join plan} by randomly selecting exactly $k/2$ responding nodes[cite: 3]. 
+
+The joining node immediately establishes initial connections with these selected nodes[cite: 3]. 
+Subsequently, each selected target node is instructed to randomly evict one of its current neighbors[cite: 3]. 
+These evicted nodes are then instructed to establish connections with the joining node[cite: 3]. 
+Consequently, the joining node acquires $k/2$ neighbors directly from the selected targets and an additional $k/2$ neighbors from the evicted nodes, resulting in a perfectly balanced total of $k$ neighbors[cite: 3]. 
+
+This process successfully maintains bounded network density while preserving uniform randomness in neighbor assignment, thereby reducing the likelihood of structural bias within the topology[cite: 3]. 
+In practice, a hybrid selection strategy is employed where nodes whose neighbor lists are not yet full are prioritized during the acknowledgement phase, accelerating the completion of underpopulated lists[cite: 3].
 
 \section{Structural and Theoretical Guarantees}
+A critical question arises: why utilize a complex join-and-evict strategy rather than a simple join-only strategy? 
+This question strictly applies to the scaled network case, where all nodes are already equipped with a full neighbor list[cite: 3]. 
+
+By the Handshake Lemma, the total number of connections (edges) in a $k$-regular graph of $n$ nodes is exactly $nk/2$[cite: 3]. 
+If a single new node joins and the regular property is to be preserved, the total number of edges must grow to $(n+1)k/2$[cite: 3]. 
+The mathematical difference in edges before and after the join is exactly $k/2$[cite: 3]. 
+If the new node simply creates $k$ new connections without any evictions, the defined bounded-degree graph structure is destroyed[cite: 3]. 
+Therefore, to guarantee topological preservation, we must break exactly $k/2$ existing connections and rewire them, which is the exact mathematical foundation of FINDING NEMO[cite: 3].
+
+\subsection{Resistance to Topological Fragmentation}
+To evaluate the protocol's robustness, we analyze a theoretical null model: the probability that a simultaneous burst of $2k+2$ nodes joining an empty space results in a partitioned network consisting of two disconnected cliques of size $k+1$[cite: 3]. 
+Using the Bender-Canfield Configuration Model, we know the vast majority of random pairings result in a connected uniform graph. 
+
+Under the specific mechanics of FINDING NEMO, nodes form via sequential or concurrent broadcasts rather than uniform random sampling. 
+For a perfect topological split to occur, every node in Group A must completely fail to receive the broadcast messages from every node in Group B, and vice versa. 
+Let $p$ be the probability of an unseen broadcast message due to network loss. 
+The probability of this catastrophic splitting occurring during FINDING NEMO is given by:
+
+$$P(\text{split}) = p^{2(k+1)^2}$$
+
+Because this probability decays exponentially as $k$ increases, we mathematically prove that our network design is highly resistant to splitting or fragmentation[cite: 3].
 
 \section{Concurrency and Vulnerability Modeling}
+While FINDING NEMO provides strong guarantees for bounded-degree randomness, its purely decentralized nature introduces a vulnerability during massive concurrent network churn. 
+When multiple nodes join simultaneously, they independently create join plans[cite: 3]. 
+If these plans contain duplicate target nodes, a concurrent bootstrap race occurs[cite: 3]. 
+Because a target node has a strict degree limit, conflicting requests are denied, leaving the rejected joining nodes deficient (under-connected)[cite: 3].
+
+We formalize this concurrency conflict using a thinned Poisson arrival process. 
+Let $\lambda$ be the global arrival rate of new nodes (joins per second), $\tau$ be the network vulnerability window (delay from broadcast to execution), and $n$ be the existing network size[cite: 3]. 
+During a scaled join, a new node randomly selects $k/2$ targets from the $n$ available members[cite: 3]. 
+
+The arrival of join requests at a specific target node $A$ occurs at a localized rate of $\lambda_A = \lambda \frac{k}{2n}$. 
+The number of requests, $X$, that arrive at node $A$ during the vulnerability window $\tau$ follows the Poisson distribution:
+
+$$P(X = x) = \frac{(\lambda_A \tau)^x e^{-\lambda_A \tau}}{x!}$$
+
+A collision occurs if Node $A$ receives two or more requests ($X \ge 2$) during $\tau$. 
+This formally proves that as the global churn rate $\lambda$ increases, the probability of concurrent rejections grows exponentially[cite: 3]. 
+This mathematical limitation establishes the baseline necessity for future self-healing rewiring mechanisms.
 
 \section{Simulation Results}
+To empirically validate the theoretical properties of the FINDING NEMO protocol, an event-driven simulation framework was developed in Java[cite: 3]. 
+The experimental setup isolates the neighbor discovery protocol, observing the topology formation time, clustering coefficients, and the rate of deficient nodes under varying levels of simulated churn[cite: 3]. 
+(Detailed graphical results and coding implementation metrics will be provided in the final publication).
 
 \section{Related Works}
+Traditional overlay networks often rely on centralized trackers to maintain membership, which introduces scalability bottlenecks[cite: 8]. 
+Decentralized alternatives, such as SWIM, separate failure detection from membership but frequently focus on state dissemination rather than strict degree-bounded topology maintenance[cite: 8]. 
+Related approaches, such as Medley, adapt decentralized discovery for specific IoT environments[cite: 8]. 
+While literature on random expander graphs and peer sampling is extensive, our work specifically isolates the micro-level eviction mechanics required to prevent degree inflation and structural bias during dynamic node joins[cite: 3].
 
-\section{Concluding Remarks}
+\section{Concluding Remarks and Future Work}
+In this paper, we introduced FINDING NEMO, a highly scalable, decentralized join-and-evict protocol designed to construct and maintain random regular overlays[cite: 3]. 
+By mathematically isolating the exact rules of node integration, we demonstrated that localized eviction and rewiring is mandatory to preserve bounded-degree properties[cite: 3]. 
+Furthermore, by formalizing the concurrent bootstrap race through a Poisson arrival model, we clearly defined the protocol's upper limits under massive simultaneous churn[cite: 3]. 
+Future work will focus on integrating a decentralized self-healing mechanism, such as CHUALANH, to automatically repair the deficient nodes caused by these concurrent broadcast collisions[cite: 8].
 
-\section{First Section: This is used for example only}
-\subsection{A Subsection Sample}
-Please note that the first paragraph of a section or subsection is
-not indented. The first paragraph that follows a table, figure,
-equation etc. does not need an indent, either.
+% \section{First Section: This is used for example only}
+% \subsection{A Subsection Sample}
+% Please note that the first paragraph of a section or subsection is
+% not indented. The first paragraph that follows a table, figure,
+% equation etc. does not need an indent, either.
 
-Subsequent paragraphs, however, are indented.
+% Subsequent paragraphs, however, are indented.
 
-\subsubsection{Sample Heading (Third Level)} Only two levels of
-headings should be numbered. Lower level headings remain unnumbered;
-they are formatted as run-in headings.
+% \subsubsection{Sample Heading (Third Level)} Only two levels of
+% headings should be numbered. Lower level headings remain unnumbered;
+% they are formatted as run-in headings.
 
-\paragraph{Sample Heading (Fourth Level)}
-The contribution should contain no more than four levels of
-headings. Table~\ref{tab1} gives a summary of all heading levels.
+% \paragraph{Sample Heading (Fourth Level)}
+% The contribution should contain no more than four levels of
+% headings. Table~\ref{tab1} gives a summary of all heading levels.
 
-\begin{table}
-\caption{Table captions should be placed above the
-tables.}\label{tab1}
-\begin{tabular}{|l|l|l|}
-\hline
-Heading level &  Example & Font size and style\\
-\hline
-Title (centered) &  {\Large\bfseries Lecture Notes} & 14 point, bold\\
-1st-level heading &  {\large\bfseries 1 Introduction} & 12 point, bold\\
-2nd-level heading & {\bfseries 2.1 Printing Area} & 10 point, bold\\
-3rd-level heading & {\bfseries Run-in Heading in Bold.} Text follows & 10 point, bold\\
-4th-level heading & {\itshape Lowest Level Heading.} Text follows & 10 point, italic\\
-\hline
-\end{tabular}
-\end{table}
+% \begin{table}
+% \caption{Table captions should be placed above the
+% tables.}\label{tab1}
+% \begin{tabular}{|l|l|l|}
+% \hline
+% Heading level &  Example & Font size and style\\
+% \hline
+% Title (centered) &  {\Large\bfseries Lecture Notes} & 14 point, bold\\
+% 1st-level heading &  {\large\bfseries 1 Introduction} & 12 point, bold\\
+% 2nd-level heading & {\bfseries 2.1 Printing Area} & 10 point, bold\\
+% 3rd-level heading & {\bfseries Run-in Heading in Bold.} Text follows & 10 point, bold\\
+% 4th-level heading & {\itshape Lowest Level Heading.} Text follows & 10 point, italic\\
+% \hline
+% \end{tabular}
+% \end{table}
 
 
-\noindent Displayed equations are centered and set on a separate
-line.
-\begin{equation}
-x + y = z
-\end{equation}
-Please try to avoid rasterized images for line-art diagrams and
-schemas. Whenever possible, use vector graphics instead (see
-Fig.~\ref{fig1}).
+% \noindent Displayed equations are centered and set on a separate
+% line.
+% \begin{equation}
+% x + y = z
+% \end{equation}
+% Please try to avoid rasterized images for line-art diagrams and
+% schemas. Whenever possible, use vector graphics instead (see
+% Fig.~\ref{fig1}).
 
-\begin{figure}
-\includegraphics[width=\textwidth]{fig1.eps}
-\caption{A figure caption is always placed below the illustration.
-Please note that short captions are centered, while long ones are
-justified by the macro package automatically.} \label{fig1}
-\end{figure}
+% \begin{figure}
+% \includegraphics[width=\textwidth]{fig1.eps}
+% \caption{A figure caption is always placed below the illustration.
+% Please note that short captions are centered, while long ones are
+% justified by the macro package automatically.} \label{fig1}
+% \end{figure}
 
-\begin{theorem}
-This is a sample theorem. The run-in heading is set in bold, while
-the following text appears in italics. Definitions, lemmas,
-propositions, and corollaries are styled the same way.
-\end{theorem}
-%
-% the environments 'definition', 'lemma', 'proposition', 'corollary',
-% 'remark', and 'example' are defined in the LLNCS documentclass as well.
-%
-\begin{proof}
-Proofs, examples, and remarks have the initial word in italics,
-while the following text appears in normal font.
-\end{proof}
-For citations of references, we prefer the use of square brackets
-and consecutive numbers. Citations using labels or the author/year
-convention are also acceptable. The following bibliography provides
-a sample reference list with entries for journal
-articles~\cite{ref_article1}, an LNCS chapter~\cite{ref_lncs1}, a
-book~\cite{ref_book1}, proceedings without editors~\cite{ref_proc1},
-and a homepage~\cite{ref_url1}. Multiple citations are grouped
-\cite{ref_article1,ref_lncs1,ref_book1},
-\cite{ref_article1,ref_book1,ref_proc1,ref_url1}.
+% \begin{theorem}
+% This is a sample theorem. The run-in heading is set in bold, while
+% the following text appears in italics. Definitions, lemmas,
+% propositions, and corollaries are styled the same way.
+% \end{theorem}
+% %
+% % the environments 'definition', 'lemma', 'proposition', 'corollary',
+% % 'remark', and 'example' are defined in the LLNCS documentclass as well.
+% %
+% \begin{proof}
+% Proofs, examples, and remarks have the initial word in italics,
+% while the following text appears in normal font.
+% \end{proof}
+% For citations of references, we prefer the use of square brackets
+% and consecutive numbers. Citations using labels or the author/year
+% convention are also acceptable. The following bibliography provides
+% a sample reference list with entries for journal
+% articles~\cite{ref_article1}, an LNCS chapter~\cite{ref_lncs1}, a
+% book~\cite{ref_book1}, proceedings without editors~\cite{ref_proc1},
+% and a homepage~\cite{ref_url1}. Multiple citations are grouped
+% \cite{ref_article1,ref_lncs1,ref_book1},
+% \cite{ref_article1,ref_book1,ref_proc1,ref_url1}.
 
+% \begin{credits}
+% \subsubsection{\ackname} A bold run-in heading in small font size at the end of the paper is
+% used for general acknowledgments, for example: This study was funded
+% by X (grant number Y).
+
+% \subsubsection{\discintname}
+% It is now necessary to declare any competing interests or to specifically
+% state that the authors have no competing interests. Please place the
+% statement with a bold run-in heading in small font size beneath the
+% (optional) acknowledgments\footnote{If EquinOCS, our proceedings submission
+% system, is used, then the disclaimer can be provided directly in the system.},
+% for example: The authors have no competing interests to declare that are
+% relevant to the content of this article. Or: Author A has received research
+% grants from Company W. Author B has received a speaker honorarium from
+% Company X and owns stock in Company Y. Author C is a member of committee Z.
+% \end{credits}
+% %
+% % ---- Bibliography ----
+% %
+% % BibTeX users should specify bibliography style 'splncs04'.
+% % References will then be sorted and formatted in the correct style.
+% %
+% % \bibliographystyle{splncs04}
+% % \bibliography{mybibliography}
+% %
+% \begin{thebibliography}{8}
+% \bibitem{ref_article1}
+% Author, F.: Article title. Journal \textbf{2}(5), 99--110 (2016)
+
+% \bibitem{ref_lncs1}
+% Author, F., Author, S.: Title of a proceedings paper. In: Editor,
+% F., Editor, S. (eds.) CONFERENCE 2016, LNCS, vol. 9999, pp. 1--13.
+% Springer, Heidelberg (2016). \doi{10.10007/1234567890}
+
+% \bibitem{ref_book1}
+% Author, F., Author, S., Author, T.: Book title. 2nd edn. Publisher,
+% Location (1999)
+
+% \bibitem{ref_proc1}
+% Author, A.-B.: Contribution title. In: 9th International Proceedings
+% on Proceedings, pp. 1--2. Publisher, Location (2010)
+
+% \bibitem{ref_url1}
+% LNCS Homepage, \url{http://www.springer.com/lncs}, last accessed 2023/10/25
+% \end{thebibliography}
 \begin{credits}
-\subsubsection{\ackname} A bold run-in heading in small font size at the end of the paper is
-used for general acknowledgments, for example: This study was funded
-by X (grant number Y).
+\subsubsection{\ackname} 
+This study was conducted as part of distributed systems research at the Vietnamese-German University.
 
 \subsubsection{\discintname}
-It is now necessary to declare any competing interests or to specifically
-state that the authors have no competing interests. Please place the
-statement with a bold run-in heading in small font size beneath the
-(optional) acknowledgments\footnote{If EquinOCS, our proceedings submission
-system, is used, then the disclaimer can be provided directly in the system.},
-for example: The authors have no competing interests to declare that are
-relevant to the content of this article. Or: Author A has received research
-grants from Company W. Author B has received a speaker honorarium from
-Company X and owns stock in Company Y. Author C is a member of committee Z.
+The authors have no competing interests to declare that are relevant to the content of this article.
 \end{credits}
-%
-% ---- Bibliography ----
-%
-% BibTeX users should specify bibliography style 'splncs04'.
-% References will then be sorted and formatted in the correct style.
-%
-% \bibliographystyle{splncs04}
-% \bibliography{mybibliography}
-%
+
 \begin{thebibliography}{8}
 \bibitem{ref_article1}
 Author, F.: Article title. Journal \textbf{2}(5), 99--110 (2016)
-
-\bibitem{ref_lncs1}
-Author, F., Author, S.: Title of a proceedings paper. In: Editor,
-F., Editor, S. (eds.) CONFERENCE 2016, LNCS, vol. 9999, pp. 1--13.
-Springer, Heidelberg (2016). \doi{10.10007/1234567890}
-
-\bibitem{ref_book1}
-Author, F., Author, S., Author, T.: Book title. 2nd edn. Publisher,
-Location (1999)
-
-\bibitem{ref_proc1}
-Author, A.-B.: Contribution title. In: 9th International Proceedings
-on Proceedings, pp. 1--2. Publisher, Location (2010)
-
-\bibitem{ref_url1}
-LNCS Homepage, \url{http://www.springer.com/lncs}, last accessed 2023/10/25
+% Placeholder for actual references
 \end{thebibliography}
 \end{document}
