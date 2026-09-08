@@ -51,6 +51,7 @@ class EvaluationConfig:
     # Directories
     results_dir: Path = RESULTS_DIR
     plots_dir: Path = PLOTS_DIR
+    results_csv_path: Path = RESULTS_DIR / "cumulative_results.csv"
 
     def __post_init__(self) -> None:
         self.validate()

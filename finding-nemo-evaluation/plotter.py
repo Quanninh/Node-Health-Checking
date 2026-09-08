@@ -22,37 +22,39 @@ class NemoPlotter:
         self.plots_dir = plots_dir
         self.plots_dir.mkdir(parents=True, exist_ok=True)
         self.results_csv = self.plots_dir.parent / "results" / "cumulative_results.csv"
+        self.results_dir = self.plots_dir.parent / "results"
 
     def _load_and_aggregate(self) -> Tuple[Dict, Dict, Dict]:
         t1_agg = defaultdict(lambda: {"trials": 0, "success_sum": 0.0})
         t2_agg = defaultdict(lambda: {"trials": 0, "success_sum": 0.0})
         t3_agg = defaultdict(lambda: {"trials": 0, "success_sum": 0.0})
 
-        if not self.results_csv.exists():
+        if not self.results_dir.exists():
             return {}, {}, {}
 
-        with self.results_csv.open("r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                try:
-                    k = int(row["k"])
-                    g = int(row["g"])
-                    s = int(row["s"])
-                    trials = int(row["trials"])
-                    success_rate = float(row["success_rate"])
-                    test_name = row["test_name"]
-                except (KeyError, ValueError):
-                    continue
+        for csv_file in self.results_dir.glob("*.csv"):
+            with csv_file.open("r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    try:
+                        k = int(row["k"])
+                        g = int(row["g"])
+                        s = int(row["s"])
+                        trials = int(row["trials"])
+                        success_rate = float(row["success_rate"])
+                        test_name = row["test_name"]
+                    except (KeyError, ValueError):
+                        continue
 
-                if "Test 1" in test_name:
-                    t1_agg[k]["trials"] += trials
-                    t1_agg[k]["success_sum"] += success_rate * trials
-                elif "Test 2" in test_name:
-                    t2_agg[(k, g)]["trials"] += trials
-                    t2_agg[(k, g)]["success_sum"] += success_rate * trials
-                elif "Test 3" in test_name:
-                    t3_agg[(k, s)]["trials"] += trials
-                    t3_agg[(k, s)]["success_sum"] += success_rate * trials
+                    if "Test 1" in test_name:
+                        t1_agg[k]["trials"] += trials
+                        t1_agg[k]["success_sum"] += success_rate * trials
+                    elif "Test 2" in test_name:
+                        t2_agg[(k, g)]["trials"] += trials
+                        t2_agg[(k, g)]["success_sum"] += success_rate * trials
+                    elif "Test 3" in test_name:
+                        t3_agg[(k, s)]["trials"] += trials
+                        t3_agg[(k, s)]["success_sum"] += success_rate * trials
 
         return dict(t1_agg), dict(t2_agg), dict(t3_agg)
 

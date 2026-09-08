@@ -64,6 +64,7 @@ class NemoTestRunner:
 
     def run_batch(self) -> None:
         csv_path = self.config.results_dir / "cumulative_results.csv"
+        csv_path = self.config.results_csv_path
         file_exists = csv_path.exists()
         
         # Open in append mode
