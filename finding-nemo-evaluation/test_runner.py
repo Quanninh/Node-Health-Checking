@@ -1,9 +1,9 @@
 """
 Test Runner module for FINDING NEMO evaluation suite.
 Executes the predefined sequence of tests:
-  - Test 1: Small network, sequentially add k + 1 nodes into an empty space -> plot % success vs k
-  - Test 2: Scaled network with g consecutive nodes joining one after another -> plot % success vs g
-  - Test 3: A burst of g nodes into the system -> plot % success vs burst size s
+  - Test 1: Small network, sequentially add k + 1 nodes into an empty space -> plot % success vs k, log trials?
+  - Test 2: Scaled network with g consecutive nodes joining one after another -> plot % success vs g, % success vs k, and a bubble chart k vs g
+  - Test 3: A burst of g nodes into the system -> plot bubble chart k vs s
 Records CSVs, aggregates metrics, and generates plots.
 """
 
@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from config import EvaluationConfig
-from live_evaluator import LiveEvaluator
 from nemo_simulator import NemoSimulator
 from plotter import NemoPlotter
 
@@ -37,8 +36,7 @@ class NemoTestRunner:
     def __init__(self, config: EvaluationConfig, mode: str = "sim") -> None:
         self.config = config
         self.mode = mode.lower()
-        self.simulator = NemoSimulator(config) if self.mode == "sim" else None
-        self.live_evaluator = LiveEvaluator(config) if self.mode == "live" else None
+        self.simulator = NemoSimulator(config)
         self.plotter = NemoPlotter(config.plots_dir)
 
     def run_all(self) -> Dict[str, Any]:
@@ -48,9 +46,6 @@ class NemoTestRunner:
         print(f"Trials per batch: {self.config.trials_per_batch}")
         print(f"{'='*70}\n")
 
-        if self.live_evaluator:
-            self.live_evaluator.setup()
-
         try:
             self.run_batch()
 
@@ -59,11 +54,9 @@ class NemoTestRunner:
             self.plotter.generate_all_plots()
             return {}
         finally:
-            if self.live_evaluator:
-                self.live_evaluator.teardown()
+            pass
 
     def run_batch(self) -> None:
-        csv_path = self.config.results_dir / "cumulative_results.csv"
         csv_path = self.config.results_csv_path
         file_exists = csv_path.exists()
         
@@ -88,14 +81,9 @@ class NemoTestRunner:
 
                         for trial in range(self.config.trials_per_batch):
                             # Test 1
-                            if self.mode == "sim":
-                                t1_conv, _ = self.simulator.run_test1_trial(k=k)
-                                t2_conv, _ = self.simulator.run_test2_trial(k=k, g=g)
-                                t3_conv, _ = self.simulator.run_test3_trial(k=k, burst_size_s=s)
-                            else:
-                                t1_conv, _ = self.live_evaluator.run_test1_trial(k=k)
-                                t2_conv, _ = self.live_evaluator.run_test2_trial(k=k, g=g)
-                                t3_conv, _ = self.live_evaluator.run_test3_trial(k=k, burst_size_s=s)
+                            t1_conv, _ = self.simulator.run_test1_trial(k=k)
+                            t2_conv, _ = self.simulator.run_test2_trial(k=k, g=g)
+                            t3_conv, _ = self.simulator.run_test3_trial(k=k, burst_size_s=s)
                             
                             if t1_conv: t1_passes += 1
                             if t2_conv: t2_passes += 1

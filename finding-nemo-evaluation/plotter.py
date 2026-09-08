@@ -89,15 +89,20 @@ class NemoPlotter:
         # ---------------------------------------------------------------------
         if t2_agg:
             t2_k_agg = defaultdict(lambda: {"trials": 0, "success_sum": 0.0})
+            t2_g_agg = defaultdict(lambda: {"trials": 0, "success_sum": 0.0})
+            
             for (k, g), data in t2_agg.items():
                 t2_k_agg[k]["trials"] += data["trials"]
                 t2_k_agg[k]["success_sum"] += data["success_sum"]
+                t2_g_agg[g]["trials"] += data["trials"]
+                t2_g_agg[g]["success_sum"] += data["success_sum"]
 
+            # Plot: % success vs k
             k_vals_t2 = sorted(list(t2_k_agg.keys()))
-            success_vals_t2 = [t2_k_agg[k]["success_sum"] / t2_k_agg[k]["trials"] for k in k_vals_t2]
+            success_vals_t2_k = [t2_k_agg[k]["success_sum"] / t2_k_agg[k]["trials"] for k in k_vals_t2]
 
             fig, ax = plt.subplots(figsize=(6, 4), dpi=300)
-            ax.plot(k_vals_t2, success_vals_t2, marker="s", color="#059669", linewidth=2.2)
+            ax.plot(k_vals_t2, success_vals_t2_k, marker="s", color="#059669", linewidth=2.2)
             ax.set_title("Test 2: Scaled Overlay Convergence vs Target Degree $k$", fontsize=12, fontweight="bold")
             ax.set_xlabel("Target Degree ($k$)", fontsize=11)
             ax.set_ylabel("% Success (Convergence)", fontsize=11)
@@ -106,6 +111,22 @@ class NemoPlotter:
             plt.tight_layout()
             plt.savefig(self.plots_dir / "test2_success_vs_k.pdf")
             plt.savefig(self.plots_dir / "test2_success_vs_k.png")
+            plt.close()
+            
+            # Plot: % success vs g
+            g_vals_t2 = sorted(list(t2_g_agg.keys()))
+            success_vals_t2_g = [t2_g_agg[g]["success_sum"] / t2_g_agg[g]["trials"] for g in g_vals_t2]
+
+            fig, ax = plt.subplots(figsize=(6, 4), dpi=300)
+            ax.plot(g_vals_t2, success_vals_t2_g, marker="^", color="#d97706", linewidth=2.2)
+            ax.set_title("Test 2: Scaled Overlay Convergence vs Added Nodes $g$", fontsize=12, fontweight="bold")
+            ax.set_xlabel("Added Nodes ($g$)", fontsize=11)
+            ax.set_ylabel("% Success (Convergence)", fontsize=11)
+            ax.set_ylim(-5, 105)
+            ax.grid(True, linestyle="--", alpha=0.6)
+            plt.tight_layout()
+            plt.savefig(self.plots_dir / "test2_success_vs_g.pdf")
+            plt.savefig(self.plots_dir / "test2_success_vs_g.png")
             plt.close()
 
             # Test 2: k vs g (Bubble chart)
@@ -178,7 +199,13 @@ class NemoPlotter:
             "\\begin{figure}[htbp]",
             "  \\centering",
             "  \\includegraphics[width=0.75\\textwidth]{figures/test2_success_vs_k.pdf}",
-            "  \\caption{Test 2: Scaled network convergence (Line).}",
+            "  \\caption{Test 2: Scaled network convergence vs $k$.}",
+            "\\end{figure}",
+            "",
+            "\\begin{figure}[htbp]",
+            "  \\centering",
+            "  \\includegraphics[width=0.75\\textwidth]{figures/test2_success_vs_g.pdf}",
+            "  \\caption{Test 2: Scaled network convergence vs $g$.}",
             "\\end{figure}",
             "",
             "\\begin{figure}[htbp]",

@@ -40,6 +40,7 @@ class EvaluationConfig:
     convergence_confirmation_polls: int = 3
 
     # Live agent specific settings
+    #! consider out of date since we focus on a simulation FINDING NEMO written in python
     jar_path: Path = DEFAULT_JAR_PATH
     dashboard_url: str = "http://localhost:6789/api"
     dashboard_port: int = 6789
