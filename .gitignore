@@ -35,6 +35,7 @@ target/
 *.toc
 *.xdv
 document/*.pdf
+document/finding_nemo/Latex-Template-for-Springer/*.pdf
 *.bib
 document/tex-fmt.exe
 document/latexindent.exe

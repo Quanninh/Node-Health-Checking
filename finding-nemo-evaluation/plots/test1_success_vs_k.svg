@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="600" height="400">
+  <style>
+    .title { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 16px; font-weight: bold; fill: #1f2937; text-anchor: middle; }
+    .axis-label { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 13px; fill: #4b5563; text-anchor: middle; font-weight: 500; }
+    .tick-label { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 11px; fill: #6b7280; }
+    .grid { stroke: #e5e7eb; stroke-dasharray: 4,4; stroke-width: 1; }
+    .axis-line { stroke: #9ca3af; stroke-width: 1.5; }
+    .data-line { stroke: #2563eb; stroke-width: 2.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .data-point { fill: #1d4ed8; stroke: #ffffff; stroke-width: 2; }
+    .val-label { font-family: "Helvetica Neue", Arial, sans-serif; font-size: 10px; font-weight: bold; fill: #1e40af; text-anchor: middle; }
+  </style>
+  <rect width="100%" height="100%" fill="#ffffff"/>
+  <text x="300.0" y="30" class="title">Test 1: Overlay Convergence vs Target Degree k</text>
+  <line x1="70" y1="340.0" x2="560" y2="340.0" class="grid"/>
+  <text x="60" y="344.0" text-anchor="end" class="tick-label">0%</text>
+  <line x1="70" y1="282.0" x2="560" y2="282.0" class="grid"/>
+  <text x="60" y="286.0" text-anchor="end" class="tick-label">20%</text>
+  <line x1="70" y1="224.0" x2="560" y2="224.0" class="grid"/>
+  <text x="60" y="228.0" text-anchor="end" class="tick-label">40%</text>
+  <line x1="70" y1="166.0" x2="560" y2="166.0" class="grid"/>
+  <text x="60" y="170.0" text-anchor="end" class="tick-label">60%</text>
+  <line x1="70" y1="107.99999999999999" x2="560" y2="107.99999999999999" class="grid"/>
+  <text x="60" y="111.99999999999999" text-anchor="end" class="tick-label">80%</text>
+  <line x1="70" y1="50.0" x2="560" y2="50.0" class="grid"/>
+  <text x="60" y="54.0" text-anchor="end" class="tick-label">100%</text>
+  <line x1="70.0" y1="340" x2="70.0" y2="345" class="axis-line"/>
+  <text x="70.0" y="358" text-anchor="middle" class="tick-label">2</text>
+  <line x1="192.5" y1="340" x2="192.5" y2="345" class="axis-line"/>
+  <text x="192.5" y="358" text-anchor="middle" class="tick-label">4</text>
+  <line x1="315.0" y1="340" x2="315.0" y2="345" class="axis-line"/>
+  <text x="315.0" y="358" text-anchor="middle" class="tick-label">6</text>
+  <line x1="437.5" y1="340" x2="437.5" y2="345" class="axis-line"/>
+  <text x="437.5" y="358" text-anchor="middle" class="tick-label">8</text>
+  <line x1="560.0" y1="340" x2="560.0" y2="345" class="axis-line"/>
+  <text x="560.0" y="358" text-anchor="middle" class="tick-label">10</text>
+  <line x1="70" y1="50" x2="70" y2="340" class="axis-line"/>
+  <line x1="70" y1="340" x2="560" y2="340" class="axis-line"/>
+  <text x="315.0" y="385" class="axis-label">Target Degree (k)</text>
+  <text x="20" y="195.0" transform="rotate(-90 20 195.0)" class="axis-label">% Success (Convergence)</text>
+  <path d="M 70.0 50.0 L 192.5 50.0 L 315.0 50.0 L 437.5 88.7 L 560.0 127.3" class="data-line"/>
+  <circle cx="70.0" cy="50.0" r="4.5" class="data-point"/>
+  <text x="70.0" y="42.0" class="val-label">100.0%</text>
+  <circle cx="192.5" cy="50.0" r="4.5" class="data-point"/>
+  <text x="192.5" y="42.0" class="val-label">100.0%</text>
+  <circle cx="315.0" cy="50.0" r="4.5" class="data-point"/>
+  <text x="315.0" y="42.0" class="val-label">100.0%</text>
+  <circle cx="437.5" cy="88.7" r="4.5" class="data-point"/>
+  <text x="437.5" y="80.7" class="val-label">86.7%</text>
+  <circle cx="560.0" cy="127.3" r="4.5" class="data-point"/>
+  <text x="560.0" y="119.3" class="val-label">73.3%</text>
+</svg>
