@@ -36,6 +36,7 @@ target/
 *.xdv
 document/*.pdf
 document/finding_nemo/Latex-Template-for-Springer/*.pdf
+finding-nemo-evaluation/*.pdf
 *.bib
 document/tex-fmt.exe
 document/latexindent.exe
