@@ -30,7 +30,7 @@
 %
 \author{Ha Khai Nguyen\orcidID{0009-0009-8804-0042} \and
 Huynh Phuc To \and
-Duy Khanh Nguyen \and
+Duy Khanh Nguyen\orcidID{0009-0002-8639-4444} \and
 Hoang Quan Ninh \and
 Minh Duy Vo}
 %
@@ -62,111 +62,112 @@ By isolating these exact micro-level join rules, our work demonstrates that evic
 %
 
 \section{Introduction}
-In distributed systems, network formation plays an important role in coordination between nodes[cite: 3]. 
-For example, it is crucial that nodes are connected to each other in a way that allows their health state to be effectively checked and acknowledged by others within a peer-to-peer (P2P) overlay[cite: 3]. 
-One highly effective method for achieving this is to construct a random regular graph, which inherently ensures that the system remains highly scalable[cite: 3]. 
+In distributed systems, network formation plays an important role in coordination between nodes. 
+For example, it is crucial that nodes are connected to each other in a way that allows their health state to be effectively checked and acknowledged by others within a peer-to-peer (P2P) overlay. Cite: Lifeguard: Local Health Awareness for More Accurate Failure Detection + Medley: A Membership Service for IoT Networks
+One highly effective method for achieving this is to construct a random regular graph, which inherently ensures that the system remains highly scalable. Cite: Distributed construction of random expander networks + A Fully-Distributed Protocol for Constructing
+Byzantine-Resilient Peer-to-Peer Networks
 
-However, while research on the low diameter, peer sampling, and expander maintenance of these topologies has been extensively conducted, only a limited amount of work has focused on the specific join rules required to ensure unbiased bounded-degree randomness[cite: 3]. 
+However, while research on the low diameter, peer sampling, and expander maintenance of these topologies has been extensively conducted, only a limited amount of work has focused on the specific join rules required to ensure unbiased bounded-degree randomness. 
 The literature is rich on whole-overlay outcomes, but thin on micro-level join rules—such as eviction-triggered rewiring—and the structural biases they can introduce. 
 
-To address this exact problem, we propose our algorithm, FINDING NEMO, which stands for Finding Neighbors and Evicting Members of their Own[cite: 3]. 
+To address this exact problem, we propose our algorithm, FINDING NEMO, which stands for Finding Neighbors and Evicting Members of their Own. 
 By isolating the neighbor discovery protocol, we mathematically and empirically demonstrate how a single node can integrate into an overlay while preserving its strictly regular topology.
 
 \section{Preliminaries and Network Model}
-In our network model, we operate under the foundational assumption that each node must attempt to maintain a fixed $k$ number of neighbors[cite: 3]. 
-This constraint ensures that the overlay is neither too dense (which would negatively affect the scalability and bandwidth of the system) nor too scarce (which would risk node isolation and fragmentation)[cite: 3]. 
-This requirement is derived from our previous work in decentralized node health checking, where each node must be supervised by a sufficient, strictly bounded number of peers to eliminate false-positive failure detections[cite: 3, 8]. 
-Furthermore, the target degree $k$ must be an even integer, a property that is mathematically necessary for our edge-rewiring methodology[cite: 3].
+In our network model, we operate under the foundational assumption that each node must attempt to maintain a fixed $k$ number of neighbors. 
+This constraint ensures that the overlay is neither too dense (which would negatively affect the scalability and bandwidth of the system) nor too scarce (which would risk node isolation and fragmentation). 
+This requirement is derived from our previous work in decentralized node health checking, where each node must be supervised by a sufficient, strictly bounded number of peers to eliminate false-positive failure detections. 
+Furthermore, the target degree $k$ must be an even integer, a property that is mathematically necessary for our edge-rewiring methodology.
 
-Regarding operational complexity, it takes $n$ messages for a newly spawned node to broadcast its initial join request to an $n$-node network[cite: 3]. 
-In response, the requested nodes communicate with one of their existing neighbors under specific conditions to execute edge hand-offs[cite: 3]. 
-However, because $k$ is a strict constant, these local edge-rewiring behaviors do not grow exponentially as the network expands, ensuring asymptotic efficiency[cite: 3].
+Regarding operational complexity, it takes $n$ messages for a newly spawned node to broadcast its initial join request to an $n$-node network. 
+In response, the requested nodes communicate with one of their existing neighbors under specific conditions to execute edge hand-offs. 
+However, because $k$ is a strict constant, these local edge-rewiring behaviors do not grow exponentially as the network expands, ensuring asymptotic efficiency.
 
 \section{The FINDING NEMO Protocol}
-To facilitate a rigorous understanding of the algorithm, several foundational terms and system rules are first defined[cite: 3]:
+To facilitate a rigorous understanding of the algorithm, several foundational terms and system rules are first defined:
 
 \begin{itemize}
-    \item \textbf{Neighbor:} A bidirectional relationship established between two nodes in the network[cite: 3]. 
-    If node A is a neighbor of node B, then node B is strictly considered a neighbor of node A[cite: 3].
-    \item \textbf{Neighbor List:} A local data structure maintained independently by each node that stores information about its neighbors, such as their network addresses[cite: 3]. 
-    The neighbor list has a fixed capacity of $k$, where $k$ is an even number[cite: 3]. 
-    To maintain network connectivity and resilience, each node continuously attempts to keep its neighbor list as full as possible whenever sufficient peers are available[cite: 3].
+    \item \textbf{Neighbor:} A bidirectional relationship established between two nodes in the network. 
+    If node A is a neighbor of node B, then node B is strictly considered a neighbor of node A.
+    \item \textbf{Neighbor List:} A local data structure maintained independently by each node that stores information about its neighbors, such as their network addresses. 
+    The neighbor list has a fixed capacity of $k$, where $k$ is an even number. 
+    To maintain network connectivity and resilience, each node continuously attempts to keep its neighbor list as full as possible whenever sufficient peers are available.
 \end{itemize}
 
-The FINDING NEMO protocol begins when a newly created node requests to join the network[cite: 3]. 
-To promote random neighbor selection, the joining node broadcasts a join request to all existing nodes[cite: 3]. 
+The FINDING NEMO protocol begins when a newly created node requests to join the network. 
+To promote random neighbor selection, the joining node broadcasts a join request to all existing nodes. 
 Assuming ideal network connectivity, two primary topological cases are considered:
 
 \subsubsection{Case 1: Small Network Phase.} 
-If the network contains at most $k+1$ nodes, the joining node establishes connections with all existing nodes[cite: 3]. 
-This allows the node to reach its desired neighbor count without requiring any complex restructuring or eviction within the existing network topology[cite: 3]. 
-For example, in a network consisting of four nodes with a target neighbor count of $k=4$, a fifth joining node simply establishes connections with all four existing nodes, thereby satisfying its neighbor requirement directly[cite: 3].
+If the network contains at most $k+1$ nodes, the joining node establishes connections with all existing nodes. 
+This allows the node to reach its desired neighbor count without requiring any complex restructuring or eviction within the existing network topology. 
+For example, in a network consisting of four nodes with a target neighbor count of $k=4$, a fifth joining node simply establishes connections with all four existing nodes, thereby satisfying its neighbor requirement directly.
 
 \subsubsection{Case 2: Scaled Network Phase.} 
-If the network contains more than $k+1$ nodes, it is mathematically assumed that all existing nodes have already reached their target neighbor count of $k$[cite: 3]. 
-Nevertheless, these fully connected nodes still acknowledge the new join request[cite: 3]. 
-After collecting all acknowledgements, the joining node constructs a \textit{join plan} by randomly selecting exactly $k/2$ responding nodes[cite: 3]. 
+If the network contains more than $k+1$ nodes, it is mathematically assumed that all existing nodes have already reached their target neighbor count of $k$. 
+Nevertheless, these fully connected nodes still acknowledge the new join request. 
+After collecting all acknowledgements, the joining node constructs a \textit{join plan} by randomly selecting exactly $k/2$ responding nodes. 
 
-The joining node immediately establishes initial connections with these selected nodes[cite: 3]. 
-Subsequently, each selected target node is instructed to randomly evict one of its current neighbors[cite: 3]. 
-These evicted nodes are then instructed to establish connections with the joining node[cite: 3]. 
-Consequently, the joining node acquires $k/2$ neighbors directly from the selected targets and an additional $k/2$ neighbors from the evicted nodes, resulting in a perfectly balanced total of $k$ neighbors[cite: 3]. 
+The joining node immediately establishes initial connections with these selected nodes. 
+Subsequently, each selected target node is instructed to randomly evict one of its current neighbors. 
+These evicted nodes are then instructed to establish connections with the joining node. 
+Consequently, the joining node acquires $k/2$ neighbors directly from the selected targets and an additional $k/2$ neighbors from the evicted nodes, resulting in a perfectly balanced total of $k$ neighbors. 
 
-This process successfully maintains bounded network density while preserving uniform randomness in neighbor assignment, thereby reducing the likelihood of structural bias within the topology[cite: 3]. 
-In practice, a hybrid selection strategy is employed where nodes whose neighbor lists are not yet full are prioritized during the acknowledgement phase, accelerating the completion of underpopulated lists[cite: 3].
+This process successfully maintains bounded network density while preserving uniform randomness in neighbor assignment, thereby reducing the likelihood of structural bias within the topology. 
+In practice, a hybrid selection strategy is employed where nodes whose neighbor lists are not yet full are prioritized during the acknowledgement phase, accelerating the completion of underpopulated lists.
 
 \section{Structural and Theoretical Guarantees}
 A critical design question arises when scaling the network: why utilize a complex join-and-evict strategy rather than a simple join-only mechanism? 
-This question strictly applies to the scaled network case, where all existing nodes are already equipped with a full neighbor list[cite: 4]. 
+This question strictly applies to the scaled network case, where all existing nodes are already equipped with a full neighbor list. 
 
-By the Handshake Lemma, the total number of connections (edges) in a $k$-regular graph of $n$ nodes is exactly $nk/2$[cite: 3, 4]. 
-If a single new node joins and the regular property is to be preserved, the total number of edges must grow to $(n+1)k/2$[cite: 4]. 
-The mathematical difference in required edges before and after the join is exactly $k/2$[cite: 4]. 
-If the new node simply creates $k$ new connections without triggering any evictions, the defined bounded-degree graph structure is destroyed[cite: 4]. 
-Therefore, to guarantee topological preservation, the protocol must break exactly $k/2$ existing connections and rewire them, which forms the exact mathematical foundation of FINDING NEMO[cite: 4].
+By the Handshake Lemma, the total number of connections (edges) in a $k$-regular graph of $n$ nodes is exactly $nk/2$. 
+If a single new node joins and the regular property is to be preserved, the total number of edges must grow to $(n+1)k/2$. 
+The mathematical difference in required edges before and after the join is exactly $k/2$. 
+If the new node simply creates $k$ new connections without triggering any evictions, the defined bounded-degree graph structure is destroyed. 
+Therefore, to guarantee topological preservation, the protocol must break exactly $k/2$ existing connections and rewire them, which forms the exact mathematical foundation of FINDING NEMO.
 
 \subsection{Guarantee of Graph Simplicity}
-In theoretical random regular graph generation, uniform pairings frequently result in invalid topologies containing self-loops or multi-edges[cite: 3]. 
-Under the Configuration Model, the expected number of self-loops in a random pairing follows a Poisson distribution with a mean of $\lambda_1 = \frac{k-1}{2}$[cite: 3]. 
-Similarly, the expected number of multi-edges follows a mean of $\lambda_2 = \frac{(k-1)^2}{4}$[cite: 3]. 
-Consequently, the probability of naturally forming a simple graph—free of these structural defects—decays asymptotically as $\exp\left(-\frac{k^2 - 1}{4}\right)$[cite: 3]. 
+In theoretical random regular graph generation, uniform pairings frequently result in invalid topologies containing self-loops or multi-edges. 
+Under the Configuration Model, the expected number of self-loops in a random pairing follows a Poisson distribution with a mean of $\lambda_1 = \frac{k-1}{2}$. 
+Similarly, the expected number of multi-edges follows a mean of $\lambda_2 = \frac{(k-1)^2}{4}$. 
+Consequently, the probability of naturally forming a simple graph—free of these structural defects—decays asymptotically as $\exp\left(-\frac{k^2 - 1}{4}\right)$. 
 
-FINDING NEMO theoretically bypasses this probabilistic decay[cite: 4]. 
-By programmatically tracking an exclusion set during the join plan construction to strictly filter out the joining node's own identifier and previously selected targets, the protocol deterministically guarantees a simple graph topology with zero self-loops and zero multi-edges[cite: 4].
+FINDING NEMO theoretically bypasses this probabilistic decay. 
+By programmatically tracking an exclusion set during the join plan construction to strictly filter out the joining node's own identifier and previously selected targets, the protocol deterministically guarantees a simple graph topology with zero self-loops and zero multi-edges.
 
 \subsection{Asymptotic Uniformity and Bias Resistance}
-To preserve structural robustness, the network must avoid topological biases such as preferential attachment, which naturally creates disproportionately dense hubs[cite: 4]. 
-In the theoretical Configuration Model, unbiased random graphs are constructed by uniformly matching $nk$ total half-edges[cite: 3]. 
+To preserve structural robustness, the network must avoid topological biases such as preferential attachment, which naturally creates disproportionately dense hubs. 
+In the theoretical Configuration Model, unbiased random graphs are constructed by uniformly matching $nk$ total half-edges. 
 
-FINDING NEMO effectively simulates this mathematically unbiased process in a decentralized environment[cite: 4]. 
-By enforcing uniform random sampling of existing targets, followed by the uniform random selection of an eviction victim from the target's existing neighbor list, the protocol perfectly mimics the breaking and re-pairing of a random half-edge[cite: 3, 4]. 
-This guarantees that the localized join-and-evict logic actively resists structural bias, strictly preserving the bounded network density and uniform randomness required for high fault tolerance[cite: 4].
+FINDING NEMO effectively simulates this mathematically unbiased process in a decentralized environment. 
+By enforcing uniform random sampling of existing targets, followed by the uniform random selection of an eviction victim from the target's existing neighbor list, the protocol perfectly mimics the breaking and re-pairing of a random half-edge. 
+This guarantees that the localized join-and-evict logic actively resists structural bias, strictly preserving the bounded network density and uniform randomness required for high fault tolerance.
 
 \subsection{Formal Space Complexity Bounds}
-Formalizing the memory footprint of the algorithm provides a hard mathematical guarantee of its horizontal scalability[cite: 4]. 
+Formalizing the memory footprint of the algorithm provides a hard mathematical guarantee of its horizontal scalability. 
 \begin{itemize}
-    \item \textbf{Steady-State Complexity:} Because each node is strictly bounded to a predefined, even integer $k$, the permanent local routing table requires only $O(k)$ space[cite: 3, 4]. Relative to the total network size $n$, this guarantees an $O(1)$ permanent storage footprint per node[cite: 4]. This ensures the protocol remains viable for memory-constrained devices even as the network scales to millions of nodes[cite: 4].
-    \item \textbf{Transient Complexity:} During the initial broadcast phase, the joining node must temporarily buffer acknowledgements from the active network to construct its join plan[cite: 4]. This necessitates an $O(n)$ space allocation[cite: 4]. However, this memory spike is strictly limited to the brief vulnerability window prior to the execution of the final join plan[cite: 4].
+    \item \textbf{Steady-State Complexity:} Because each node is strictly bounded to a predefined, even integer $k$, the permanent local routing table requires only $O(k)$ space. Relative to the total network size $n$, this guarantees an $O(1)$ permanent storage footprint per node. This ensures the protocol remains viable for memory-constrained devices even as the network scales to millions of nodes.
+    \item \textbf{Transient Complexity:} During the initial broadcast phase, the joining node must temporarily buffer acknowledgements from the active network to construct its join plan. This necessitates an $O(n)$ space allocation. However, this memory spike is strictly limited to the brief vulnerability window prior to the execution of the final join plan.
 \end{itemize}
 
 \subsection{Resistance to Topological Fragmentation}
-To evaluate the protocol's structural robustness, we analyze a theoretical null model: the probability that a simultaneous burst of $2k+2$ nodes joining an empty space results in a partitioned network consisting of two disconnected cliques of size $k+1$[cite: 3]. Using the Bender-Canfield Configuration Model, we know the vast majority of random pairings naturally result in a globally connected uniform graph[cite: 3]. 
+To evaluate the protocol's structural robustness, we analyze a theoretical null model: the probability that a simultaneous burst of $2k+2$ nodes joining an empty space results in a partitioned network consisting of two disconnected cliques of size $k+1$. Using the Bender-Canfield Configuration Model, we know the vast majority of random pairings naturally result in a globally connected uniform graph. 
 
-However, under the specific mechanics of FINDING NEMO, nodes form via sequential or concurrent broadcasts rather than uniform static sampling[cite: 3, 4]. For a perfect topological split to occur, every node in Group A must completely fail to receive the initial broadcast messages from every node in Group B, and vice versa[cite: 3]. Let $p$ be the probability of an unseen broadcast message due to network loss[cite: 3]. The probability of this catastrophic splitting occurring during FINDING NEMO is given by:
+However, under the specific mechanics of FINDING NEMO, nodes form via sequential or concurrent broadcasts rather than uniform static sampling. For a perfect topological split to occur, every node in Group A must completely fail to receive the initial broadcast messages from every node in Group B, and vice versa. Let $p$ be the probability of an unseen broadcast message due to network loss. The probability of this catastrophic splitting occurring during FINDING NEMO is given by:
 
 $$P(\text{split}) = p^{2(k+1)^2}$$
 
-Because this probability decays exponentially as the degree $k$ increases, we mathematically prove that our network design is highly resistant to splitting or fragmentation, requiring a near-total collapse of cross-group communication to partition[cite: 3].
+Because this probability decays exponentially as the degree $k$ increases, we mathematically prove that our network design is highly resistant to splitting or fragmentation, requiring a near-total collapse of cross-group communication to partition.
 
 \section{Concurrency and Vulnerability Modeling}
 While FINDING NEMO provides strong guarantees for bounded-degree randomness, its purely decentralized nature introduces a vulnerability during massive concurrent network churn. 
-When multiple nodes join simultaneously, they independently create join plans[cite: 3]. 
-If these plans contain duplicate target nodes, a concurrent bootstrap race occurs[cite: 3]. 
-Because a target node has a strict degree limit, conflicting requests are denied, leaving the rejected joining nodes deficient (under-connected)[cite: 3].
+When multiple nodes join simultaneously, they independently create join plans. 
+If these plans contain duplicate target nodes, a concurrent bootstrap race occurs. 
+Because a target node has a strict degree limit, conflicting requests are denied, leaving the rejected joining nodes deficient (under-connected).
 
 We formalize this concurrency conflict using a thinned Poisson arrival process. 
-Let $\lambda$ be the global arrival rate of new nodes (joins per second), $\tau$ be the network vulnerability window (delay from broadcast to execution), and $n$ be the existing network size[cite: 3]. 
-During a scaled join, a new node randomly selects $k/2$ targets from the $n$ available members[cite: 3]. 
+Let $\lambda$ be the global arrival rate of new nodes (joins per second), $\tau$ be the network vulnerability window (delay from broadcast to execution), and $n$ be the existing network size. 
+During a scaled join, a new node randomly selects $k/2$ targets from the $n$ available members. 
 
 The arrival of join requests at a specific target node $A$ occurs at a localized rate of $\lambda_A = \lambda \frac{k}{2n}$. 
 The number of requests, $X$, that arrive at node $A$ during the vulnerability window $\tau$ follows the Poisson distribution:
@@ -174,25 +175,26 @@ The number of requests, $X$, that arrive at node $A$ during the vulnerability wi
 $$P(X = x) = \frac{(\lambda_A \tau)^x e^{-\lambda_A \tau}}{x!}$$
 
 A collision occurs if Node $A$ receives two or more requests ($X \ge 2$) during $\tau$. 
-This formally proves that as the global churn rate $\lambda$ increases, the probability of concurrent rejections grows exponentially[cite: 3]. 
+This formally proves that as the global churn rate $\lambda$ increases, the probability of concurrent rejections grows exponentially. 
 This mathematical limitation establishes the baseline necessity for future self-healing rewiring mechanisms.
 
 \section{Simulation Results}
-To empirically validate the theoretical properties of the FINDING NEMO protocol, an event-driven simulation framework was developed in Java[cite: 3]. 
-The experimental setup isolates the neighbor discovery protocol, observing the topology formation time, clustering coefficients, and the rate of deficient nodes under varying levels of simulated churn[cite: 3]. 
+To empirically validate the theoretical properties of the FINDING NEMO protocol, an event-driven simulation framework was developed in Java. 
+The experimental setup isolates the neighbor discovery protocol, observing the topology formation time, clustering coefficients, and the rate of deficient nodes under varying levels of simulated churn. 
 (Detailed graphical results and coding implementation metrics will be provided in the final publication).
 
 \section{Related Works}
-Traditional overlay networks often rely on centralized trackers to maintain membership, which introduces scalability bottlenecks[cite: 8]. 
-Decentralized alternatives, such as SWIM, separate failure detection from membership but frequently focus on state dissemination rather than strict degree-bounded topology maintenance[cite: 8]. 
-Related approaches, such as Medley, adapt decentralized discovery for specific IoT environments[cite: 8]. 
-While literature on random expander graphs and peer sampling is extensive, our work specifically isolates the micro-level eviction mechanics required to prevent degree inflation and structural bias during dynamic node joins[cite: 3].
+Traditional overlay networks often rely on centralized trackers to maintain membership, which introduces scalability bottlenecks. 
+Decentralized alternatives, such as SWIM, separate failure detection from membership but frequently focus on state dissemination rather than strict degree-bounded topology maintenance. 
+Related approaches, such as Medley, adapt decentralized discovery for specific IoT environments. 
+While literature on random expander graphs and peer sampling is extensive, our work specifically isolates the micro-level eviction mechanics required to prevent degree inflation and structural bias during dynamic node joins.
 
 \section{Concluding Remarks and Future Work}
-In this paper, we introduced FINDING NEMO, a highly scalable, decentralized join-and-evict protocol designed to construct and maintain random regular overlays[cite: 3]. 
-By mathematically isolating the exact rules of node integration, we demonstrated that localized eviction and rewiring is mandatory to preserve bounded-degree properties[cite: 3]. 
-Furthermore, by formalizing the concurrent bootstrap race through a Poisson arrival model, we clearly defined the protocol's upper limits under massive simultaneous churn[cite: 3]. 
-Future work will focus on integrating a decentralized self-healing mechanism, such as CHUALANH, to automatically repair the deficient nodes caused by these concurrent broadcast collisions[cite: 8].
+In this paper, we introduced FINDING NEMO, a highly scalable, decentralized join-and-evict protocol designed to construct and maintain random regular overlays. 
+By mathematically isolating the exact rules of node integration, we demonstrated that localized eviction and rewiring is mandatory to preserve bounded-degree properties. 
+Furthermore, by formalizing the concurrent bootstrap race through a Poisson arrival model, we clearly defined the protocol's upper limits under massive simultaneous churn. 
+Future work will focus on integrating a decentralized self-healing mechanism to automatically repair the deficient nodes caused by these concurrent broadcast collisions. 
+Moreover, 
 
 % \section{First Section: This is used for example only}
 % \subsection{A Subsection Sample}

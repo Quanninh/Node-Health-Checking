@@ -59,7 +59,7 @@ def plot_test2(member_name):
     
     # 2A: Line chart % success vs g (for a fixed k, or averaged over k)
     fig, ax = plt.subplots(figsize=(6, 4))
-    sns.lineplot(data=df, x='g', y='success_rate', hue='k', marker='s', ax=ax, palette='gray')
+    sns.lineplot(data=df, x='g', y='success_rate', hue='k', marker='s', ax=ax, palette='tab10')
     ax.set_xlabel('Sequential Additions ($g$)')
     ax.set_ylabel('Success Rate (%)')
     ax.set_title('Test 2: Success Rate vs. Sequential Additions')
@@ -86,7 +86,8 @@ def plot_test2(member_name):
     
     fig, ax = plt.subplots(figsize=(6, 4))
     scatter = ax.scatter(grouped['k'], grouped['g'], s=grouped['trials']*10, 
-                         c=grouped['success_rate'], cmap='gray', alpha=0.7, edgecolors='black')
+                         c=grouped['success_rate'], cmap='gray', alpha=0.7, edgecolors='black',
+                         vmin=0, vmax=100)
     
     # Add labels
     for _, row in grouped.iterrows():
@@ -95,6 +96,7 @@ def plot_test2(member_name):
                 
     cbar = plt.colorbar(scatter, ax=ax)
     cbar.set_label('Success Rate (%)')
+    cbar.set_ticks([0, 20, 40, 60, 80, 100])
     
     ax.set_xlabel('Target Degree Limit ($k$)')
     ax.set_ylabel('Sequential Additions ($g$)')
@@ -129,6 +131,18 @@ def plot_test3(member_name):
     plt.savefig('test3_bubble_k_vs_s.pdf')
     plt.close()
     print("Saved test3_bubble_k_vs_s.pdf")
+
+    # 3B: Line chart % success vs s for different values of k
+    fig, ax = plt.subplots(figsize=(6, 4))
+    sns.lineplot(data=df, x='s', y='success_rate', hue='k', marker='o', ax=ax, palette='tab10')
+    ax.set_xlabel('Concurrent Burst Size ($s$)')
+    ax.set_ylabel('Success Rate (%)')
+    ax.set_title('Test 3: Success Rate vs. Concurrent Burst Size ($s$)')
+    ax.set_ylim(-5, 115)
+    ax.grid(True, linestyle='--', alpha=0.7)
+    plt.savefig('test3_success_vs_s.pdf')
+    plt.close()
+    print("Saved test3_success_vs_s.pdf")
 
 if __name__ == "__main__":
     import sys
