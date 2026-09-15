@@ -4,6 +4,7 @@
 %
 \documentclass[runningheads]{llncs}
 \usepackage{amsmath}
+\usepackage{cite}
 %
 \usepackage[T1]{fontenc}
 % T1 fonts will be used to generate the final print and online PDFs,
@@ -63,9 +64,8 @@ By isolating these exact micro-level join rules, our work demonstrates that evic
 
 \section{Introduction}
 In distributed systems, network formation plays an important role in coordination between nodes. 
-For example, it is crucial that nodes are connected to each other in a way that allows their health state to be effectively checked and acknowledged by others within a peer-to-peer (P2P) overlay. Cite: Lifeguard: Local Health Awareness for More Accurate Failure Detection + Medley: A Membership Service for IoT Networks
-One highly effective method for achieving this is to construct a random regular graph, which inherently ensures that the system remains highly scalable. Cite: Distributed construction of random expander networks + A Fully-Distributed Protocol for Constructing
-Byzantine-Resilient Peer-to-Peer Networks
+For example, it is crucial that nodes are connected to each other in a way that allows their health state to be effectively checked and acknowledged by others within a peer-to-peer (P2P) overlay \cite{dadgarLifeguardLocalHealth2017} \cite{yangMedleyMembershipService2022}. 
+One highly effective method for achieving this is to construct a random regular graph, which inherently ensures that the system remains highly scalable \cite{lawDistributedConstructionRandom2003} \cite{guptaFullyDistributedProtocolConstructing2025}.
 
 However, while research on the low diameter, peer sampling, and expander maintenance of these topologies has been extensively conducted, only a limited amount of work has focused on the specific join rules required to ensure unbiased bounded-degree randomness. 
 The literature is rich on whole-overlay outcomes, but thin on micro-level join rules—such as eviction-triggered rewiring—and the structural biases they can introduce. 
@@ -290,8 +290,8 @@ Moreover,
 % % BibTeX users should specify bibliography style 'splncs04'.
 % % References will then be sorted and formatted in the correct style.
 % %
-% % \bibliographystyle{splncs04}
-% % \bibliography{mybibliography}
+\bibliographystyle{splncs04}
+\bibliography{findingnemo}
 % %
 % \begin{thebibliography}{8}
 % \bibitem{ref_article1}
@@ -313,17 +313,17 @@ Moreover,
 % \bibitem{ref_url1}
 % LNCS Homepage, \url{http://www.springer.com/lncs}, last accessed 2023/10/25
 % \end{thebibliography}
-\begin{credits}
-\subsubsection{\ackname} 
-This study was conducted as part of distributed systems research at the Vietnamese-German University.
+% \begin{credits}
+% \subsubsection{\ackname} 
+% This study was conducted as part of distributed systems research at the Vietnamese-German University.
 
-\subsubsection{\discintname}
-The authors have no competing interests to declare that are relevant to the content of this article.
-\end{credits}
+% \subsubsection{\discintname}
+% The authors have no competing interests to declare that are relevant to the content of this article.
+% \end{credits}
 
-\begin{thebibliography}{8}
-\bibitem{ref_article1}
-Author, F.: Article title. Journal \textbf{2}(5), 99--110 (2016)
-% Placeholder for actual references
-\end{thebibliography}
+% \begin{thebibliography}{8}
+% \bibitem{ref_article1}
+% Author, F.: Article title. Journal \textbf{2}(5), 99--110 (2016)
+% % Placeholder for actual references
+% \end{thebibliography}
 \end{document}
