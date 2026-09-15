@@ -116,28 +116,47 @@ This process successfully maintains bounded network density while preserving uni
 In practice, a hybrid selection strategy is employed where nodes whose neighbor lists are not yet full are prioritized during the acknowledgement phase, accelerating the completion of underpopulated lists[cite: 3].
 
 \section{Structural and Theoretical Guarantees}
-NOTE: elaborate for the subsection part
-A critical question arises: why utilize a complex join-and-evict strategy rather than a simple join-only strategy? 
-This question strictly applies to the scaled network case, where all nodes are already equipped with a full neighbor list[cite: 3]. 
+A critical design question arises when scaling the network: why utilize a complex join-and-evict strategy rather than a simple join-only mechanism? 
+This question strictly applies to the scaled network case, where all existing nodes are already equipped with a full neighbor list[cite: 4]. 
 
-By the Handshake Lemma, the total number of connections (edges) in a $k$-regular graph of $n$ nodes is exactly $nk/2$[cite: 3]. 
-If a single new node joins and the regular property is to be preserved, the total number of edges must grow to $(n+1)k/2$[cite: 3]. 
-The mathematical difference in edges before and after the join is exactly $k/2$[cite: 3]. 
-If the new node simply creates $k$ new connections without any evictions, the defined bounded-degree graph structure is destroyed[cite: 3]. 
-Therefore, to guarantee topological preservation, we must break exactly $k/2$ existing connections and rewire them, which is the exact mathematical foundation of FINDING NEMO[cite: 3].
+By the Handshake Lemma, the total number of connections (edges) in a $k$-regular graph of $n$ nodes is exactly $nk/2$[cite: 3, 4]. 
+If a single new node joins and the regular property is to be preserved, the total number of edges must grow to $(n+1)k/2$[cite: 4]. 
+The mathematical difference in required edges before and after the join is exactly $k/2$[cite: 4]. 
+If the new node simply creates $k$ new connections without triggering any evictions, the defined bounded-degree graph structure is destroyed[cite: 4]. 
+Therefore, to guarantee topological preservation, the protocol must break exactly $k/2$ existing connections and rewire them, which forms the exact mathematical foundation of FINDING NEMO[cite: 4].
+
+\subsection{Guarantee of Graph Simplicity}
+In theoretical random regular graph generation, uniform pairings frequently result in invalid topologies containing self-loops or multi-edges[cite: 3]. 
+Under the Configuration Model, the expected number of self-loops in a random pairing follows a Poisson distribution with a mean of $\lambda_1 = \frac{k-1}{2}$[cite: 3]. 
+Similarly, the expected number of multi-edges follows a mean of $\lambda_2 = \frac{(k-1)^2}{4}$[cite: 3]. 
+Consequently, the probability of naturally forming a simple graph—free of these structural defects—decays asymptotically as $\exp\left(-\frac{k^2 - 1}{4}\right)$[cite: 3]. 
+
+FINDING NEMO theoretically bypasses this probabilistic decay[cite: 4]. 
+By programmatically tracking an exclusion set during the join plan construction to strictly filter out the joining node's own identifier and previously selected targets, the protocol deterministically guarantees a simple graph topology with zero self-loops and zero multi-edges[cite: 4].
+
+\subsection{Asymptotic Uniformity and Bias Resistance}
+To preserve structural robustness, the network must avoid topological biases such as preferential attachment, which naturally creates disproportionately dense hubs[cite: 4]. 
+In the theoretical Configuration Model, unbiased random graphs are constructed by uniformly matching $nk$ total half-edges[cite: 3]. 
+
+FINDING NEMO effectively simulates this mathematically unbiased process in a decentralized environment[cite: 4]. 
+By enforcing uniform random sampling of existing targets, followed by the uniform random selection of an eviction victim from the target's existing neighbor list, the protocol perfectly mimics the breaking and re-pairing of a random half-edge[cite: 3, 4]. 
+This guarantees that the localized join-and-evict logic actively resists structural bias, strictly preserving the bounded network density and uniform randomness required for high fault tolerance[cite: 4].
+
+\subsection{Formal Space Complexity Bounds}
+Formalizing the memory footprint of the algorithm provides a hard mathematical guarantee of its horizontal scalability[cite: 4]. 
+\begin{itemize}
+    \item \textbf{Steady-State Complexity:} Because each node is strictly bounded to a predefined, even integer $k$, the permanent local routing table requires only $O(k)$ space[cite: 3, 4]. Relative to the total network size $n$, this guarantees an $O(1)$ permanent storage footprint per node[cite: 4]. This ensures the protocol remains viable for memory-constrained devices even as the network scales to millions of nodes[cite: 4].
+    \item \textbf{Transient Complexity:} During the initial broadcast phase, the joining node must temporarily buffer acknowledgements from the active network to construct its join plan[cite: 4]. This necessitates an $O(n)$ space allocation[cite: 4]. However, this memory spike is strictly limited to the brief vulnerability window prior to the execution of the final join plan[cite: 4].
+\end{itemize}
 
 \subsection{Resistance to Topological Fragmentation}
-To evaluate the protocol's robustness, we analyze a theoretical null model: the probability that a simultaneous burst of $2k+2$ nodes joining an empty space results in a partitioned network consisting of two disconnected cliques of size $k+1$[cite: 3]. 
-Using the Bender-Canfield Configuration Model, we know the vast majority of random pairings result in a connected uniform graph. 
+To evaluate the protocol's structural robustness, we analyze a theoretical null model: the probability that a simultaneous burst of $2k+2$ nodes joining an empty space results in a partitioned network consisting of two disconnected cliques of size $k+1$[cite: 3]. Using the Bender-Canfield Configuration Model, we know the vast majority of random pairings naturally result in a globally connected uniform graph[cite: 3]. 
 
-Under the specific mechanics of FINDING NEMO, nodes form via sequential or concurrent broadcasts rather than uniform random sampling. 
-For a perfect topological split to occur, every node in Group A must completely fail to receive the broadcast messages from every node in Group B, and vice versa. 
-Let $p$ be the probability of an unseen broadcast message due to network loss. 
-The probability of this catastrophic splitting occurring during FINDING NEMO is given by:
+However, under the specific mechanics of FINDING NEMO, nodes form via sequential or concurrent broadcasts rather than uniform static sampling[cite: 3, 4]. For a perfect topological split to occur, every node in Group A must completely fail to receive the initial broadcast messages from every node in Group B, and vice versa[cite: 3]. Let $p$ be the probability of an unseen broadcast message due to network loss[cite: 3]. The probability of this catastrophic splitting occurring during FINDING NEMO is given by:
 
 $$P(\text{split}) = p^{2(k+1)^2}$$
 
-Because this probability decays exponentially as $k$ increases, we mathematically prove that our network design is highly resistant to splitting or fragmentation[cite: 3].
+Because this probability decays exponentially as the degree $k$ increases, we mathematically prove that our network design is highly resistant to splitting or fragmentation, requiring a near-total collapse of cross-group communication to partition[cite: 3].
 
 \section{Concurrency and Vulnerability Modeling}
 While FINDING NEMO provides strong guarantees for bounded-degree randomness, its purely decentralized nature introduces a vulnerability during massive concurrent network churn. 
