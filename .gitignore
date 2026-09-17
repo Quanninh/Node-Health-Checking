@@ -36,6 +36,10 @@ target/
 *.xdv
 document/*.pdf
 document/finding_nemo/Latex-Template-for-Springer/*.pdf
+document/finding_nemo/Latex-Template-for-Springer/*.eps
+document/finding_nemo/Latex-Template-for-Springer/eval_fig/*.pdf
+document/finding_nemo/Latex-Template-for-Springer/eval_fig/*.eps
+
 finding-nemo-evaluation/*.pdf
 *.bib
 document/tex-fmt.exe

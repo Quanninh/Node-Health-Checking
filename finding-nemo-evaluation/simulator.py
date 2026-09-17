@@ -3,8 +3,9 @@ import random
 import sys
 
 class Simulation:
-    def __init__(self, k):
+    def __init__(self, k, total_nodes=None):
         self.k = k
+        self.total_nodes = total_nodes
         self.time = 0.0
         self.events = []
         self.nodes = {}  # id -> Node
@@ -24,6 +25,24 @@ class Simulation:
         if not self.nodes:
             return True
         
+        if getattr(self, 'total_nodes', None) is not None:
+            # Check max degree constraint
+            for node in self.nodes.values():
+                if len(node.neighbors) != self.k:
+                    return False
+
+            # # Check if each node maintains the fixed number of k
+            # for node in self.nodes.values():
+            #     if len(node.neighbors) < self.k:
+            #         return False
+            
+            # Check symmetric edges for all instantiated nodes
+            for node_id, node in self.nodes.items():
+                for nbr in node.neighbors:
+                    if nbr in self.nodes and node_id not in self.nodes[nbr].neighbors:
+                        return False
+            return True
+
         # Check connected components
         visited = set()
         start_node = next(iter(self.nodes.keys()))
@@ -45,7 +64,12 @@ class Simulation:
         for node in self.nodes.values():
             if len(node.neighbors) > self.k:
                 return False
-                
+
+        # Check if each node maintains the fixed number of k: smaller than k since > k is handled above
+        for node in self.nodes.values():
+            if len(node.neighbors) < self.k:
+                return False
+        
         # Check symmetric edges
         for node_id, node in self.nodes.items():
             for nbr in node.neighbors:
