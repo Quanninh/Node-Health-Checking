@@ -172,7 +172,8 @@ This formally proves that as the global churn rate $\lambda$ increases, the prob
 Crucially, the localized arrival rate $\lambda_A = \lambda \frac{k}{2n}$ is inversely proportional to the overlay population $n$. 
 In small networks ($n \approx k$), even minor arrival bursts saturate individual targets; conversely, in macro-scale overlays ($n \ge 10^5$), contention is dispersed across hundreds of thousands of members, driving $\lambda_A \to 0$ and drastically reducing collision probability. 
 This mathematical limitation establishes the baseline necessity for subsequent self-healing rewiring mechanisms in high-contention regimes. 
-Consequently, while we previously developed CHUALANH—a scheme that processes four nodes at a time to restore the degree of two deficient nodes—detailed discussions on this algorithm are omitted for brevity and to maintain focus on the main scope.
+As a result, we previously developed CHUALANH—a scheme that processes four nodes at a time to restore the degree of two involved deficient nodes. 
+However, discussions on this algorithm are omitted for brevity and to maintain focus on the main scope.
 
 \section{Simulation Results}
 \label{sec:simulation_results}
