@@ -21,6 +21,25 @@ class Simulation:
             self.time = t
             func(*args)
 
+    def get_or_create_node(self, nid):
+        if nid in self.nodes:
+            return self.nodes[nid]
+        node = Node(nid, self)
+        node.state = "IN_NETWORK"
+        self.nodes[nid] = node
+        
+        nbr_ids = set()
+        for i in range(self.k):
+            v_id = f"v_{nid}_{i}"
+            nbr_ids.add(v_id)
+            if v_id not in self.nodes:
+                vnode = Node(v_id, self)
+                vnode.state = "IN_NETWORK"
+                vnode.neighbors = set([nid] + [f"ext_{v_id}_{j}" for j in range(self.k - 1)])
+                self.nodes[v_id] = vnode
+        node.neighbors = nbr_ids
+        return node
+
     def is_successful(self):
         if not self.nodes:
             return True
@@ -96,9 +115,17 @@ class Node:
         self.state = "JOINING"
         self.collected_acks = {}
         # Send DISCOVER
-        for other in self.sim.nodes.values():
-            if other.id != self.id and other.state != "OFFLINE":
-                self.sim.schedule(self.get_delay(), other.receive_discover, self.id)
+        if getattr(self.sim, 'total_nodes', None) is not None:
+            # In large overlay, sample a contact set of candidate targets
+            sample_size = min(self.sim.total_nodes, max(20, self.sim.k * 3))
+            sample_ids = [f"init_{tid}" for tid in random.sample(range(self.sim.total_nodes), sample_size)]
+            for tid in sample_ids:
+                target = self.sim.get_or_create_node(tid)
+                self.sim.schedule(self.get_delay(), target.receive_discover, self.id)
+        else:
+            for other in self.sim.nodes.values():
+                if other.id != self.id and other.state != "OFFLINE":
+                    self.sim.schedule(self.get_delay(), other.receive_discover, self.id)
                 
         self.sim.schedule(self.discovery_timeout, self.process_plan)
 

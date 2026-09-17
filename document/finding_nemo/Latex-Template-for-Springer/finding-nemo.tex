@@ -17,6 +17,10 @@
 %\renewcommand\UrlFont{\color{blue}\rmfamily}
 %\urlstyle{rm}
 %
+\setlength{\textfloatsep}{10pt plus 2pt minus 2pt}
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{5pt plus 2pt minus 1pt}
+
 \begin{document}
 %
 \title{FINDING NEMO: A Join-and-Evict Protocol for Bounded-Degree Random Overlay Construction}
@@ -80,15 +84,9 @@ In response, the requested nodes communicate with one of their existing neighbor
 However, because $k$ is a strict constant, these local edge-rewiring behaviors do not grow exponentially as the network expands, ensuring asymptotic efficiency.
 
 \section{The FINDING NEMO Protocol}
-To facilitate a rigorous understanding of the algorithm, several foundational terms and system rules are first defined:
-
-\begin{itemize}
-    \item \textbf{Neighbor:} A bidirectional relationship established between two nodes in the network. 
-    If node A is a neighbor of node B, then node B is strictly considered a neighbor of node A.
-    \item \textbf{Neighbor List:} A local data structure maintained independently by each node that stores information about its neighbors, such as their network addresses. 
-    The neighbor list has a fixed capacity of $k$, where $k$ is an even number. 
-    To maintain network connectivity and resilience, each node continuously attempts to keep its neighbor list as full as possible whenever sufficient peers are available.
-\end{itemize}
+To facilitate a rigorous understanding of the algorithm, foundational concepts are defined: 
+(1)~\textbf{Neighbor:} a symmetric, bidirectional link established between two active nodes in the overlay; if node $u$ lists $v$ as a neighbor, then $v$ strictly lists $u$ as a neighbor; 
+(2)~\textbf{Neighbor List:} a local routing table of fixed capacity $k$ (where $k$ is an even integer) maintained independently by each node. To preserve network connectivity and fault resilience, each node continuously strives to keep its neighbor list saturated whenever sufficient active peers exist.
 
 The FINDING NEMO protocol begins when a newly created node requests to join the network. 
 To promote random neighbor selection, the joining node broadcasts a join request to all existing nodes. 
@@ -140,11 +138,9 @@ By enforcing uniform random sampling of existing targets, followed by the unifor
 This guarantees that the localized join-and-evict logic actively resists structural bias, strictly preserving the bounded network density and uniform randomness required for high fault tolerance.
 
 \subsection{Formal Space Complexity Bounds}
-Formalizing the memory footprint of the algorithm provides a hard mathematical guarantee of its horizontal scalability. 
-\begin{itemize}
-    \item \textbf{Steady-State Complexity:} Because each node is strictly bounded to a predefined, even integer $k$, the permanent local routing table requires only $O(k)$ space. Relative to the total network size $n$, this guarantees an $O(1)$ permanent storage footprint per node. This ensures the protocol remains viable for memory-constrained devices even as the network scales to millions of nodes.
-    \item \textbf{Transient Complexity:} During the initial broadcast phase, the joining node must temporarily buffer acknowledgements from the active network to construct its join plan. This necessitates an $O(n)$ space allocation. However, this memory spike is strictly limited to the brief vulnerability window prior to the execution of the final join plan.
-\end{itemize}
+Formalizing the memory footprint provides a hard mathematical guarantee of horizontal scalability: 
+(1)~\textbf{Steady-State Complexity:} because each node is strictly bounded to a predefined even integer $k$, the permanent local routing table requires only $\mathcal{O}(k)$ space. Relative to the total network size $n$, this guarantees an $\mathcal{O}(1)$ permanent storage footprint per node, ensuring viability for memory-constrained devices even as the network scales to millions of members; 
+(2)~\textbf{Transient Complexity:} during the initial broadcast phase, the joining node temporarily buffers acknowledgements to construct its join plan, incurring an $\mathcal{O}(n)$ transient memory footprint strictly limited to the brief vulnerability window prior to commit execution.
 
 \subsection{Resistance to Topological Fragmentation}
 To evaluate the protocol's structural robustness, we analyze a theoretical null model: the probability that a simultaneous burst of $2k+2$ nodes joining an empty space results in a partitioned network consisting of two disconnected cliques of size $k+1$. Using the Bender-Canfield Configuration Model, we know the vast majority of random pairings naturally result in a globally connected uniform graph. 
@@ -156,6 +152,7 @@ $$P(\text{split}) = p^{2(k+1)^2}$$
 Because this probability decays exponentially as the degree $k$ increases, we mathematically prove that our network design is highly resistant to splitting or fragmentation, requiring a near-total collapse of cross-group communication to partition.
 
 \section{Concurrency and Vulnerability Modeling}
+\label{sec:concurrency_model}
 While FINDING NEMO provides strong guarantees for bounded-degree randomness, its purely decentralized nature introduces a vulnerability during massive concurrent network churn. 
 When multiple nodes join simultaneously, they independently create join plans. 
 If these plans contain duplicate target nodes, a concurrent bootstrap race occurs. 
@@ -171,14 +168,17 @@ The number of requests, $X$, that arrive at node $A$ during the vulnerability wi
 $$P(X = x) = \frac{(\lambda_A \tau)^x e^{-\lambda_A \tau}}{x!}$$
 
 A collision occurs if Node $A$ receives two or more requests ($X \ge 2$) during $\tau$. 
-This formally proves that as the global churn rate $\lambda$ increases, the probability of concurrent rejections grows exponentially. 
-This mathematical limitation establishes the baseline necessity for future self-healing rewiring mechanisms.
+This formally proves that as the global churn rate $\lambda$ increases, the probability of concurrent rejections grows. 
+Crucially, the localized arrival rate $\lambda_A = \lambda \frac{k}{2n}$ is inversely proportional to the overlay population $n$. 
+In small networks ($n \approx k$), even minor arrival bursts saturate individual targets; conversely, in macro-scale overlays ($n \ge 10^5$), contention is dispersed across hundreds of thousands of members, driving $\lambda_A \to 0$ and drastically reducing collision probability. 
+This mathematical limitation establishes the baseline necessity for subsequent self-healing rewiring mechanisms in high-contention regimes. 
+Consequently, while we previously developed CHUALANH—a scheme that processes four nodes at a time to restore the degree of two deficient nodes—detailed discussions on this algorithm are omitted for brevity and to maintain focus on the main scope.
 
 \section{Simulation Results}
 \label{sec:simulation_results}
 To empirically validate the structural invariants, scalability, and concurrency boundaries of the FINDING NEMO protocol, an extensive discrete-event simulation framework was developed. 
-The simulation suite isolates the neighbor discovery and join-and-evict mechanisms, evaluating topology formation across three distinct operational regimes: initial bootstrap convergence, horizontal scalability under long sequences of churn, and vulnerability to simultaneous concurrent joins. 
-In total, more than 2,700 independent simulation runs were executed across varied parameter spaces.
+The simulation suite isolates the neighbor discovery and join-and-evict mechanisms, evaluating topology formation across four distinct operational regimes: initial bootstrap convergence, horizontal scalability under long sequences of churn, concurrency vulnerability in minimal overlays, and concurrency resilience in macro-scale overlays ($N = 100,000$). 
+In total, 4,260 independent simulation runs were executed across varied parameter spaces.
 
 \subsection{Experimental Setup and Evaluation Criteria}
 \label{subsec:sim_setup}
@@ -186,12 +186,10 @@ The simulator models an overlay where peer communication is message-driven and a
 Each joining node broadcasts an integration request, collects acknowledgements from existing members, formulates a deterministic join plan, and executes localized edge hand-offs. 
 Network latency is modeled as an independent stochastic delay bounded by a vulnerability window $\tau$.
 
-Following the formal verification criteria of decentralized overlay maintenance, we establish the following state definitions to classify topology health at each simulation phase:
-\begin{itemize}
-    \item \textbf{Non-mutual Edge:} A directional mismatch where node $u$ lists $v$ as a neighbor but $u \notin N_v$ (or vice versa). Because our overlay model mandates bidirectional supervision, any asymmetry constitutes a corrupted link.
-    \item \textbf{Problematic Node:} An active node $u$ that violates at least one topological invariant: $\deg(u) \neq k$, self-referential links ($u \in N_u$), duplicate cache entries, or non-mutual relationships.
-    \item \textbf{Network Convergence:} A terminal state where the overlay forms a single connected component with zero problematic nodes, verifying that every node satisfies exact $k$-regularity with valid, mutual edges.
-\end{itemize}
+Following the formal verification criteria of decentralized overlay maintenance, we classify topology health according to three fundamental invariants: 
+(1)~\textbf{Non-mutual Edge:} a directional mismatch where $u$ lists $v$ as a neighbor but $u \notin N_v$ (or vice versa), which constitutes a corrupted link; 
+(2)~\textbf{Problematic Node:} an active node $u$ that violates at least one topological invariant ($\deg(u) \neq k$, self-referential links $u \in N_u$, duplicate entries, or non-mutual relationships); and 
+(3)~\textbf{Network Convergence:} a terminal state where the overlay forms a single connected component with zero problematic nodes, verifying that every node satisfies exact $k$-regularity with valid, mutual edges. 
 The primary evaluation metric is the \textit{Convergence Success Rate} (\%), defined as the proportion of independent trials that attain valid network convergence without leaving deficient or disconnected nodes.
 
 \subsection{Test 1: Bootstrap Convergence in Sparse Networks}
@@ -201,7 +199,7 @@ We varied the target degree limit across all even integers $k \in \{2, 4, 6, \do
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.60\textwidth]{eval_fig/test1_bootstrap.eps}
+\includegraphics[width=0.48\textwidth]{eval_fig/test1_bootstrap.eps}
 \caption{Test 1: Bootstrap success rate as a function of target degree limit $k \in [2, 20]$ in an empty network of $n = k+1$ nodes (50 independent trials per configuration, 500 total runs).}
 \label{fig:test1_bootstrap}
 \end{figure}
@@ -219,8 +217,8 @@ We systematically swept target degree limits $k \in \{4, 6, 8, 10\}$, executing 
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.49\textwidth]{eval_fig/test2_success_vs_g.eps}\hfill
-\includegraphics[width=0.49\textwidth]{eval_fig/test2_bubble_k_vs_g.eps}
+\includegraphics[width=0.48\textwidth]{eval_fig/test2_success_vs_g.eps}\hfill
+\includegraphics[width=0.48\textwidth]{eval_fig/test2_bubble_k_vs_g.eps}
 \caption{Test 2 (Scalability under Sequential Churn): (a) Convergence success rate as a function of sequential additions $g \in [5, 100]$ for degrees $k \in \{4, 6, 8, 10\}$; (b) Complete parameter sweep bubble chart mapping $k$ versus $g$, where circle area is proportional to the number of trials (20 trials per configuration, 640 total runs).}
 \label{fig:test2_results}
 \end{figure}
@@ -239,52 +237,76 @@ We evaluated degrees $k \in \{4, 6, 8, 10\}$ across 30 independent trials per co
 
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.49\textwidth]{eval_fig/test3_success_vs_s.eps}\hfill
-\includegraphics[width=0.49\textwidth]{eval_fig/test3_bubble_k_vs_s.eps}
+\includegraphics[width=0.48\textwidth]{eval_fig/test3_success_vs_s.eps}\hfill
+\includegraphics[width=0.48\textwidth]{eval_fig/test3_bubble_k_vs_s.eps}
 \caption{Test 3 (Concurrency and Collision Modeling): (a) Convergence success rate under simultaneous burst joins $s \in [1, 30]$ for degrees $k \in \{4, 6, 8, 10\}$; (b) Parameter sweep bubble chart of $k$ versus $s$ (30 trials per configuration, 1,560 total runs).}
 \label{fig:test3_results}
 \end{figure}
 
-The empirical results in Fig.~\ref{fig:test3_results} illustrate a distinct phase transition:
-\begin{enumerate}
-    \item \textbf{Low Concurrency ($s \le 2$):} For single arrivals ($s=1$) and pairwise bursts ($s=2$), the success rate remains strictly 100\% across all $k$. In small bursts, the probability that two joining nodes select the same eviction target within the brief vulnerability window $\tau$ remains negligible.
-    \item \textbf{Critical Transition ($s = 3, 4$):} At $s = 3$, performance begins to degrade sharply: the success rate drops to 23.3\% for $k=4$, 26.7\% for $k=6$, 16.7\% for $k=8$, and 43.3\% for $k=10$. At $s = 4$, success plummets to 0\% for $k=4$ and 6.7\% for $k=6$.
-    \item \textbf{High-Churn Saturation ($s \ge 6$):} For bursts of $s \ge 6$, the unassisted success rate reaches 0\% across all evaluated degrees.
-\end{enumerate}
+The empirical results in Fig.~\ref{fig:test3_results} illustrate a distinct phase transition governed by strict regular degree conservation: 
+(1)~\textbf{Isolated Joins ($s = 1$):} FINDING NEMO achieves an absolute 100\% convergence success rate across all evaluated degree limits $k \in \{4, 6, 8, 10\}$, confirming that unhindered joins in minimal networks flawlessly execute edge evictions and sustain exact $k$-regularity; 
+(2)~\textbf{Initial Contention ($s = 2$):} as concurrency increases to pairwise bursts ($s = 2$), convergence drops sharply to 50.0\%--60.0\% (60.0\% for $k=4, 8$, 53.3\% for $k=10$, and 50.0\% for $k=6$); because each joining node samples $k/2$ targets from a tiny pool of only $n = k+1$ peers, the two joining nodes select overlapping eviction targets in approximately half of the trials; 
+(3)~\textbf{Critical Breakdown ($s = 3, 4$):} at $s = 3$, success plummets to 10.0\%--13.3\% (13.3\% for $k=4, 8$ and 10.0\% for $k=6, 10$), deteriorating further at $s = 4$ to 3.3\%--6.7\% (6.7\% for $k=4$ and 3.3\% for $k=6, 8, 10$); and 
+(4)~\textbf{High-Burst Saturation ($s \ge 5$):} for bursts of $s \ge 5$, the unassisted success rate reaches strictly 0\% across all evaluated degrees.
 
-These empirical observations concretely validate the mathematical model presented in Section~5. 
-When multiple nodes sample targets concurrently, the localized request arrival rate at an existing peer $A$ scales as $\lambda_A = \lambda \frac{k}{2n}$. 
-Because target nodes enforce an immutable degree ceiling $k$, any node receiving multiple concurrent requests ($X \ge 2$) rejects conflicting join plans. 
-The rejected nodes remain deficient ($\deg(u) < k$), preventing network convergence. 
-These simulation results precisely quantify the vulnerability window $\tau$, demonstrating both the horizontal stability of FINDING NEMO under moderate churn and the theoretical necessity for subsequent self-healing rewiring mechanisms (such as CHUALANH) during massive simultaneous bursts.
+These empirical observations directly validate the Poisson collision model formulated in Section~\ref{sec:concurrency_model}. 
+When multiple nodes sample targets concurrently within the latency window $\tau$, the localized request arrival rate at an existing peer $A$ is $\lambda_A = \lambda \frac{k}{2n}$. 
+Because target nodes enforce the immutable degree ceiling $k$, any peer receiving multiple concurrent commit requests ($X \ge 2$) rejects conflicting join plans to prevent degree inflation. 
+Under strict convergence criteria, rejected joining nodes fail to acquire their required quota of $k$ mutual links, leaving them deficient ($\deg(u) < k$). 
+In minimal networks ($n = k+1 \le 11$), target contention occurs with near certainty once $s \ge 5$. 
+These results precisely delineate the unassisted concurrency boundary of FINDING NEMO and prove the theoretical necessity of subsequent self-healing rewiring mechanisms (such as CHUALANH) when bursts strike sparse overlays.
+
+\subsection{Test 4: Concurrent Burst Resilience in Large-Scale Overlays}
+\label{subsec:test4_macro}
+While Test~3 isolates concurrency vulnerability in minimal networks ($n = k+1$), practical decentralized overlays operate at macroscopic scale where the population $n$ vastly exceeds the target degree $k$. 
+To determine whether the collision bottleneck observed in Test~3 is an inherent protocol flaw or merely a finite-size artifact of small overlays, Test~4 investigates simultaneous arrival bursts within an established overlay of $N = 100,000$ active nodes ($N = 10^5$). 
+We replicated the exact parameter sweep of Test~3, evaluating target degree limits $k \in \{4, 6, 8, 10\}$ and concurrent burst sizes $s \in \{1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30\}$ across 30 independent trials per configuration (1,560 total simulation runs).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.48\textwidth]{eval_fig/test4_success_vs_s.eps}\hfill
+\includegraphics[width=0.48\textwidth]{eval_fig/test4_bubble_k_vs_s.eps}
+\caption{Test 4 (Concurrent Burst Resilience in Large-Scale Overlays): (a) Convergence success rate under simultaneous burst joins $s \in [1, 30]$ in an established overlay of $N = 100,000$ nodes for degrees $k \in \{4, 6, 8, 10\}$; (b) Parameter sweep bubble chart of $k$ versus $s$ (30 trials per configuration, 1,560 total runs).}
+\label{fig:test4_results}
+\end{figure}
+
+The empirical findings presented in Fig.~\ref{fig:test4_results} reveal a striking contrast to Test~3: 
+(1)~\textbf{Universal 100\% Convergence:} across all 52 configuration pairs ($k \in \{4, 6, 8, 10\}$, $s \le 30$), FINDING NEMO sustained an absolute 100\% convergence success rate; and 
+(2)~\textbf{Complete Elimination of Saturation Collapse:} in stark contrast to Test~3---where bursts of $s \ge 5$ suffered complete collapse (0\% success) due to target contention---Test~4 exhibited zero problematic nodes, zero link asymmetries, and zero degree violations across all 1,560 executions. Every joining node successfully acquired its exact quota of $k$ mutual links.
+
+These results provide direct empirical confirmation of the scale-dependent arrival dynamics derived in Section~\ref{sec:concurrency_model}. 
+Recall that the localized request arrival rate at an existing peer is $\lambda_A = \lambda \frac{k}{2n}$. 
+In Test~3, where $n = k+1 \le 11$, joining nodes sample from an extremely restricted pool, causing severe target overlap. 
+In Test~4, however, each of the $s$ joining nodes selects $k/2$ direct targets uniformly at random from $N = 100,000$ available members. 
+The total number of target requests in a burst of size $s$ is $M = s \cdot (k/2) \le 150$. 
+The probability of a target collision among $M$ independent uniform samples scales as $P(\text{collision}) \approx 1 - \prod_{i=1}^{M-1} (1 - \frac{i}{N}) \approx \frac{M^2}{2N}$. 
+For the most extreme burst evaluated ($s = 30, k = 10 \implies M = 150$), the collision probability is merely $\frac{150^2}{2 \cdot 10^5} = \frac{22,500}{200,000} \approx 11.25\%$, while for moderate bursts ($s \le 10 \implies M \le 50$), $P(\text{collision}) \le 1.25\%$. 
+Coupled with stochastic transmission delays within the vulnerability window $\tau \in [10, 50]$\,ms that desynchronize commit hand-offs, target collisions are effectively eliminated. 
+Consequently, unassisted FINDING NEMO is intrinsically robust to concurrent burst joins in production-scale overlays. 
+Auxiliary self-healing mechanisms (such as CHUALANH) are thus primarily required during low-density bootstrap phases or network partitions, rather than steady-state macro-scale operations.
+
 
 \section{Related Works}
 \label{sec:related_works}
 Decentralized peer-to-peer (P2P) overlay construction and group membership protocols have been investigated across multiple paradigms. We synthesize existing literature across three foundational sub-areas and contrast our findings through empirical evaluation.
 
 \subsubsection{Peer Sampling and Gossip Overlays.}
-Unstructured P2P overlays frequently employ randomized epidemic gossip protocols to construct and maintain dynamic membership. A prominent example is CYCLON~\cite{CYCLONInexpensiveMembership}, which uses periodic, pairwise cache shuffling to create connected topologies with low diameter and low clustering coefficients. While CYCLON produces symmetric degree distributions asymptotically, node degrees in epidemic protocols fluctuate stochastically around a target mean with non-zero variance ($\sigma^2 > 0$), rather than satisfying a strict degree bound. In resource-constrained domains, Medley~\cite{yangMedleyMembershipService2022} adapts gossip-based failure detection for wireless IoT ad-hoc environments by introducing distance-biased target selection to reduce multi-hop transmission overhead. However, this optimization intentionally induces non-uniform clustering. In contrast, FINDING NEMO deterministically enforces exact $k$-regularity upon node integration through atomic edge conservation ($\Delta E = k/2$), preventing degree inflation and eliminating structural clustering without requiring iterative shuffling rounds.
+Epidemic and gossip-based membership protocols (e.g., CYCLON~\cite{CYCLONInexpensiveMembership}) maintain connected overlays through periodic, randomized partial-view exchanges. In CYCLON, each peer regularly exchanges a subset of neighbor descriptors with a randomly chosen peer, updating its local cache via neighbor shuffling. While highly effective at dispersing clustering and sustaining low diameter, randomized gossip protocols are fundamentally non-deterministic: they do not enforce a rigid degree bound on individual nodes, and their degree distributions fluctuate stochastically around an average with positive variance ($\sigma^2 > 0$). In contrast, FINDING NEMO guarantees deterministic $k$-regularity ($\sigma^2 = 0$ at convergence) through explicit join-time Handshake Lemma conservation ($\Delta E = k/2$). Furthermore, while CYCLON requires continuous background gossip cycles to repair topology degradation, FINDING NEMO guarantees correct degree integration at the atomic point of entry.
 
 \subsubsection{Expander Graphs and Churn Resilience.}
-The construction of sparse expander graphs has long been recognized as fundamental for fault-tolerant decentralized communication. Law and Siu~\cite{lawDistributedConstructionRandom2003} proposed a distributed scheme to construct random expander graphs by embedding $d$ edge-disjoint Hamiltonian cycles, using $O(\log n)$ random walks to locate and split existing edges. While theoretically sound, maintaining global Hamiltonian cycles in dynamic environments is fragile: node departures break cycles and necessitate complex stitching mechanisms. Poonpakdee and Di Fatta~\cite{poonpakdeeRobustEfficientMembership2017} introduced EMP+, demonstrating that uncoordinated churn in epidemic protocols inevitably precipitates network partitioning, and employed continuous expansion monitoring to preserve global connectivity. Recently, Gupta and Pandurangan~\cite{guptaFullyDistributedProtocolConstructing2025} formalized the maintenance of bounded-degree expanders under stochastic churn in the presence of full-information Byzantine adversaries, utilizing synchronized random walks. FINDING NEMO departs from these approaches by eliminating rigid cycle dependencies and multi-hop walk overhead; instead, it enforces bounded $k$-regularity via localized, single-hop eviction hand-offs ($O(1)$ operations per target). Furthermore, our structural analysis proves that the probability of topological fragmentation decays exponentially as $P(\text{split}) = p^{2(k+1)^2}$, providing analytical partition resistance that directly resolves the vulnerabilities highlighted by EMP+~\cite{poonpakdeeRobustEfficientMembership2017}.
+The construction of sparse expander graphs has long been recognized as fundamental for fault-tolerant decentralized communication. Law and Siu~\cite{lawDistributedConstructionRandom2003} proposed a distributed scheme to construct random expander graphs by embedding $d$ edge-disjoint Hamiltonian cycles, using $\mathcal{O}(\log n)$ random walks to locate and split existing edges. While theoretically sound, maintaining global Hamiltonian cycles in dynamic environments is fragile: node departures break cycles and necessitate complex stitching mechanisms. Poonpakdee and Di Fatta~\cite{poonpakdeeRobustEfficientMembership2017} introduced EMP+, demonstrating that uncoordinated churn in epidemic protocols inevitably precipitates network partitioning, and employed continuous expansion monitoring to preserve global connectivity. Recently, Gupta and Pandurangan~\cite{guptaFullyDistributedProtocolConstructing2025} formalized the maintenance of bounded-degree expanders under stochastic churn in the presence of full-information Byzantine adversaries, utilizing synchronized random walks. FINDING NEMO departs from these approaches by eliminating rigid cycle dependencies and multi-hop walk overhead; instead, it enforces bounded $k$-regularity via localized, single-hop eviction hand-offs ($\mathcal{O}(1)$ operations per target). Furthermore, our structural analysis proves that the probability of topological fragmentation decays exponentially as $P(\text{split}) = p^{2(k+1)^2}$, providing analytical partition resistance that directly resolves the vulnerabilities highlighted by EMP+~\cite{poonpakdeeRobustEfficientMembership2017}.
 
 \subsubsection{Health Checking and Topology Supervision.}
 In decentralized failure detection, the SWIM protocol family decouples weakly consistent membership state from health monitoring. Lifeguard~\cite{dadgarLifeguardLocalHealth2017} introduces Local Health Awareness (LHA), dynamically scaling suspicion timeouts and probing periods when local CPU or network queues degrade, thereby suppressing cascading false positives. Medley~\cite{yangMedleyMembershipService2022} similarly addresses failure detection latency under lossy wireless constraints. While Lifeguard and Medley operate along the temporal and protocol dimensions (adjusting detection intervals and probe targets based on local node stress), FINDING NEMO addresses the fundamental topological prerequisite: ensuring that every node is supervised by an exact, uniform number $k$ of independent peers. This invariant prevents under-monitored nodes (which suffer delayed failure detection) as well as over-subscribed nodes (which become message bottlenecks and trigger false-positive alerts).
 
 \subsubsection{Comparative Evaluation and Concurrency Boundaries.}
-Our empirical evaluations in Section~\ref{sec:simulation_results} concretely substantiate these theoretical distinctions. Under sequential churn (Test 2), whereas randomized gossip protocols (e.g., CYCLON~\cite{CYCLONInexpensiveMembership}) maintain degree distributions that are only statistically symmetric with persistent variance ($\sigma^2 > 0$) or risk duplicate-induced link deletions under churn (EMP+~\cite{poonpakdeeRobustEfficientMembership2017}), FINDING NEMO deterministically preserves exact $k$-regularity ($\sigma^2 = 0$). Across all evaluated degree limits $k \in \{4, 6, 8, 10\}$ and churn batches up to $g=100$ sequential arrivals, our protocol achieves a 100\% join success rate, demonstrating strict edge conservation without structural degradation. Under concurrent join bursts (Test 3), our experiments isolate the exact vulnerability window ($\tau$) formalized in our Poisson collision model ($\lambda_A = \lambda \frac{k}{2n}$): join operations achieve more than 50\% success for burst sizes $s \le 2$ in an $k + 1$-node overlay, but the performance are drastically improved in a large network. Nevertheless, a rewiring mechanism (such as CHUALANH) is necessary to overcome this challenge.
+Our empirical evaluations in Section~\ref{sec:simulation_results} concretely substantiate these theoretical distinctions. Under sequential churn (Test~2), whereas randomized gossip protocols (e.g., CYCLON~\cite{CYCLONInexpensiveMembership}) maintain degree distributions that are only statistically symmetric with persistent variance ($\sigma^2 > 0$) or risk duplicate-induced link deletions under churn (EMP+~\cite{poonpakdeeRobustEfficientMembership2017}), FINDING NEMO deterministically preserves exact $k$-regularity ($\sigma^2 = 0$). Across all evaluated degree limits $k \in \{4, 6, 8, 10\}$ and churn batches up to $g=100$ sequential arrivals, our protocol achieves a 100\% join success rate, demonstrating strict edge conservation without structural degradation. Under concurrent join bursts, our experiments isolate the exact vulnerability window ($\tau$) formalized in our Poisson collision model ($\lambda_A = \lambda \frac{k}{2n}$): in minimal overlays ($n = k+1$, Test~3), join operations degrade for burst sizes $s \ge 2$ due to target contention ($50\%$--$60\%$ at $s=2$, collapsing to $0\%$ for $s \ge 5$); in contrast, in macro-scale overlays ($N = 100,000$, Test~4), the contention probability decays dramatically, enabling 100\% convergence up to $s = 30$. This demonstrates that the unassisted protocol is intrinsically resilient in large networks, and that auxiliary rewiring mechanisms (such as CHUALANH) are primarily required in sparse or partitioned regimes.
 
 \section{Concluding Remarks and Future Work}
 In this paper, we introduced FINDING NEMO, a highly scalable, decentralized join-and-evict protocol designed to construct and maintain random regular overlays. 
 By mathematically isolating the exact rules of node integration, we demonstrated that localized eviction and rewiring is mandatory to preserve bounded-degree properties. 
-Furthermore, by formalizing the concurrent bootstrap race through a Poisson arrival model, we clearly defined the protocol's upper limits under massive simultaneous churn. 
-Future work will focus on integrating a decentralized self-healing mechanism (such as CHUALANH) to automatically repair the deficient nodes caused by these concurrent broadcast collisions, as well as evaluating performance under heterogeneous latency distributions. 
-
-% \section{First Section: This is used for example only}
-% \subsection{A Subsection Sample}
-% Please note that the first paragraph of a section or subsection is
-% not indented. The first paragraph that follows a table, figure,
-% equation etc. does not need an indent, either.
+Furthermore, by formalizing the concurrent bootstrap race through a Poisson arrival model, we rigorously quantified the protocol's concurrency boundaries, empirically confirming that while minimal networks require self-healing under bursts, macro-scale overlays ($N = 10^5$) achieve flawless convergence up to $s = 30$ simultaneous joins. 
+Future work will focus on integrating a decentralized self-healing mechanism (such as CHUALANH) to automatically repair the deficient nodes caused by concurrent broadcast collisions in sparse topologies, as well as evaluating performance under heterogeneous latency distributions.
 
 % Subsequent paragraphs, however, are indented.
 

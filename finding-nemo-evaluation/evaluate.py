@@ -84,50 +84,19 @@ def run_concurrent_burst_test(k, s, trials):
             
     return (success_count / trials) * 100 if trials > 0 else 0
 
-def run_large_overlay_burst_test(k, s, trials, initial_nodes=10_000_000):
+def run_large_overlay_burst_test(k, s, trials, initial_nodes=100_000):
     """
     Test 4 (Concurrent Burst in Large Overlay): Inject s nodes simultaneously
-    into an established large overlay of initial_nodes (e.g. 10M nodes).
+    into an established large overlay of initial_nodes (e.g. 100,000 nodes).
     """
     success_count = 0
     for _ in range(trials):
         sim = Simulation(k, total_nodes=initial_nodes)
         
-        def get_or_create_overlay_node(nid):
-            if nid in sim.nodes:
-                return sim.nodes[nid]
-            node = Node(nid, sim)
-            node.state = "IN_NETWORK"
-            # Assign k symbolic neighbors from the 10M network
-            node.neighbors = set(f"ext_{nid}_{i}" for i in range(k))
-            sim.nodes[nid] = node
-            return node
-
-        burst_nodes = []
         for i in range(s):
-            bnode = Node(f"burst_{i}", sim)
-            bnode.state = "JOINING"
-            sim.nodes[bnode.id] = bnode
-            burst_nodes.append(bnode)
-
-        for bnode in burst_nodes:
-            targets = [f"init_{tid}" for tid in random.sample(range(initial_nodes), k // 2)]
-            evictions = {}
-            for tid in targets:
-                tnode = get_or_create_overlay_node(tid)
-                candidates = [c for c in tnode.neighbors if c not in evictions.values()]
-                victim_id = random.choice(candidates if candidates else list(tnode.neighbors))
-                evictions[tid] = victim_id
-                if victim_id not in sim.nodes:
-                    vnode = Node(victim_id, sim)
-                    vnode.state = "IN_NETWORK"
-                    vnode.neighbors = set([tid] + [f"ext_{victim_id}_{j}" for j in range(k - 1)])
-                    sim.nodes[victim_id] = vnode
-            
-            bnode.original_plan = {'direct_targets': targets, 'evictions': evictions}
-            for target in targets:
-                victim = evictions[target]
-                sim.schedule(bnode.get_delay(), sim.nodes[target].receive_commit_direct, bnode.id, victim)
+            node_id = f"burst_{i}"
+            sim.nodes[node_id] = Node(node_id, sim)
+            sim.nodes[node_id].start()
 
         sim.run()
         if sim.is_successful():
@@ -149,7 +118,7 @@ def main():
     parser.add_argument('--k', type=int, help="Target degree limit", default=4)
     parser.add_argument('--g', type=int, help="Sequential additions (Test 2)", default=10)
     parser.add_argument('--s', type=int, help="Concurrent burst size (Test 3 & 4)", default=5)
-    parser.add_argument('--initial-nodes', type=int, help="Initial nodes in overlay (Test 4)", default=10_000_000)
+    parser.add_argument('--initial-nodes', type=int, help="Initial nodes in overlay (Test 4)", default=100_000)
     parser.add_argument('--trials', type=int, default=10, help="Number of trials")
     parser.add_argument('--member-name', type=str, default="results", help="Prefix for CSV")
     

@@ -115,18 +115,18 @@ def run_evaluation_suite(member_name="results", test1_trials=50, test2_trials=20
                 print(f"  k={k:2d} | Concurrent Burst (s)={s:2d} | Success={success_pct:5.1f}% | Time={dt:.2f}s")
 
     # -------------------------------------------------------------
-    # Test 4: Concurrent Burst in Large Overlay (N = 10,000,000)
+    # Test 4: Concurrent Burst in Large Overlay (N = 100,000)
     # -------------------------------------------------------------
     if run_only is None or run_only == 4:
         print("\n" + "-" * 70)
-        print(f"[TEST 4] Running Large Overlay Burst Tests (N=10M, trials={test4_trials} per config)...")
+        print(f"[TEST 4] Running Large Overlay Burst Tests (N=100K, trials={test4_trials} per config)...")
         print("-" * 70)
         k_values_t4 = [4, 6, 8, 10]
         s_values_t4 = [1, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20, 25, 30]
         for k in k_values_t4:
             for s in s_values_t4:
                 t0 = time.time()
-                success_pct = run_large_overlay_burst_test(k, s, test4_trials, initial_nodes=10_000_000)
+                success_pct = run_large_overlay_burst_test(k, s, test4_trials, initial_nodes=100_000)
                 dt = time.time() - t0
                 append_to_csv(file_t4, {
                     'k': k,
