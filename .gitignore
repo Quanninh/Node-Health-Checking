@@ -46,4 +46,5 @@ document/tex-fmt.exe
 document/latexindent.exe
 document/sections/tex-fmt.exe
 document/sections/latexindent.exe
+*.pdf
 
